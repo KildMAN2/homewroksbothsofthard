@@ -1,0 +1,16 @@
+# started on Tue May 26 17:57:30 2026
+
+
+ Performance counter stats for './hw1_optimized 1024 1024 30 123456789':
+
+             41.53 msec task-clock                #    0.989 CPUs utilized          
+                 1      context-switches          #   24.081 /sec                   
+                 0      cpu-migrations            #    0.000 /sec                   
+             1,152      page-faults               #   27.741 K/sec                  
+
+       0.041987567 seconds time elapsed
+
+       0.041626000 seconds user
+       0.000000000 seconds sys
+
+

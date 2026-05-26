@@ -1,0 +1,16 @@
+# started on Tue May 26 17:57:30 2026
+
+
+ Performance counter stats for './hw1_naive 1024 1024 30 123456789':
+
+            119.21 msec task-clock                #    0.909 CPUs utilized          
+                13      context-switches          #  109.053 /sec                   
+                 0      cpu-migrations            #    0.000 /sec                   
+               636      page-faults               #    5.335 K/sec                  
+
+       0.131107215 seconds time elapsed
+
+       0.107533000 seconds user
+       0.012407000 seconds sys
+
+

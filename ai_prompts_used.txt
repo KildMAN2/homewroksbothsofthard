@@ -1,0 +1,8 @@
+Prompt 1:
+"Create two C++ programs for the same deterministic workload: one naive and one optimized, where the optimized version demonstrates better cache behavior while preserving identical output."
+
+Prompt 2:
+"Generate a shell script that compiles both versions, checks output equality via checksum, and profiles both with perf stat counters (cycles, instructions, cache misses, branch misses)."
+
+Prompt 3:
+"Provide a short report template explaining approach, optimization rationale, hardware-level reasoning, and a profiling comparison section."
