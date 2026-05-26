@@ -1,72 +1,73 @@
 # HW1: Code Profiling, Optimization, and HWSW Understanding
 
 ## 1. General Approach
-We implemented a deterministic iterative image denoising workload in C++. The kernel repeatedly applies a 3x3 box blur over a large grayscale image. This creates a memory-intensive loop nest that is suitable for `perf`-based microarchitectural analysis.
+We implemented a deterministic DNA motif evolution workload in C++. A circular sequence of 2-bit bases (A/C/G/T) is updated over many iterations using 5-neighbor pattern scoring. This gives a non-trivial, compute-heavy loop that is suitable for profiling.
 
 Why this workload:
-- Non-trivial and compute-heavy over large input sizes.
-- Strong interaction between algorithm structure and cache behavior.
-- Easy to preserve exact correctness using deterministic initialization and checksum.
+- Meaningful sequence-processing style computation.
+- Hot loop sensitive to branches, data reuse, and instruction throughput.
+- Easy correctness checks via deterministic seed + checksum.
 
-## 2. Unoptimized Implementation (`hw1_naive.cpp`)
+## 2. Unoptimized Implementation (hw1_naive.cpp)
 ### What it does
-- Generates an image with pseudo-random bytes from a fixed seed.
-- Runs `iterations` blur steps.
-- In each step, for each interior pixel, directly loads all 9 neighboring values and computes `sum/9`.
-- Borders are kept unchanged.
+- Generates sequence values in `[0..3]` from a fixed seed.
+- Runs `iterations` evolution steps.
+- For each index, reads a 5-base neighborhood and computes score using explicit branch conditions.
+- Prints final checksum and base counts.
 
 ### Why it is not optimized
-- Repeats many redundant memory loads between adjacent pixels.
-- Poor temporal reuse in the inner loop: adjacent outputs reload overlapping neighborhoods.
-- Straightforward implementation prioritizes readability over data reuse.
+- Rebuilds neighborhood encoding from scratch for each position.
+- Branch-heavy scoring in the inner loop.
+- Repeated index arithmetic and memory loads.
 
 ### Profiling Results (fill with your measurements)
 - Runtime (wall): `____` sec
-- `cycles`: `____`
-- `instructions`: `____`
-- `IPC = instructions/cycles`: `____`
-- `cache-misses`: `____`
-- `branch-misses`: `____`
+- `cycles`: `____` (or N/A)
+- `instructions`: `____` (or N/A)
+- `IPC = instructions/cycles`: `____` (or N/A)
+- `cache-misses`: `____` (or N/A)
+- `branch-misses`: `____` (or N/A)
+- `task-clock`: `____`
 
-## 3. Optimized Implementation (`hw1_optimized.cpp`)
+## 3. Optimized Implementation (hw1_optimized.cpp)
 ### Optimization change
-We replaced direct 3x3 summation with a separable two-pass formulation:
-1. Horizontal pass computes 3-pixel sums and stores them in an intermediate buffer.
-2. Vertical pass combines three horizontal sums and divides by 9.
+We applied two equivalent transformations:
+1. Precompute a 1024-entry LUT for all 5-mer scores (`4^5` patterns).
+2. Use a rolling encoded window to derive the next 5-mer by bit-shift + one incoming base.
 
-This is mathematically equivalent to the original 3x3 box blur for interior pixels, and preserves identical output.
+This preserves identical output while reducing hot-loop overhead.
 
 ### Why this optimization
-- Reduces repeated memory accesses by reusing horizontal partial sums.
-- Improves spatial locality and cache utilization.
-- Decreases total arithmetic and load pressure for the same final computation.
+- Eliminates repeated branch evaluation from the critical path.
+- Reduces redundant neighborhood recomputation.
+- Improves inner-loop predictability and throughput.
 
 ### Hardware-level insight
-Modern CPUs are often memory-hierarchy sensitive. The naive kernel repeatedly fetches overlapping neighborhoods from L1/L2/L3, causing higher data movement. Precomputing horizontal sums converts the kernel into a more cache-friendly streaming pattern that typically lowers cycles and improves IPC.
+Branch-heavy, recomputation-heavy loops often underperform due to control-flow and per-element instruction overhead. LUT + rolling-window converts the kernel to a more regular operation stream, typically improving IPC and lowering cycles/task-clock.
 
 ### Profiling Results (fill with your measurements)
 - Runtime (wall): `____` sec
-- `cycles`: `____`
-- `instructions`: `____`
-- `IPC = instructions/cycles`: `____`
-- `cache-misses`: `____`
-- `branch-misses`: `____`
+- `cycles`: `____` (or N/A)
+- `instructions`: `____` (or N/A)
+- `IPC = instructions/cycles`: `____` (or N/A)
+- `cache-misses`: `____` (or N/A)
+- `branch-misses`: `____` (or N/A)
+- `task-clock`: `____`
 
 ## 4. Comparison and Discussion
 ### Key observations
 - Runtime speedup: `____x` (naive / optimized)
-- Cycle reduction: `____%`
-- Cache-miss change: `____%`
-- IPC change: `____%`
+- Cycle/task-clock reduction: `____%`
+- Branch/cache metric change: `____%`
 
 ### Explanation
-(Write 1-2 short paragraphs connecting your counters to behavior. Suggested points: lower data movement from reuse, fewer redundant loads, improved cache line utilization, and why that maps to lower cycles.)
+(Write 1-2 short paragraphs connecting your counters to behavior. Suggested points: fewer branches in hot loop, less recomputation, and better instruction/data path regularity.)
 
 ### Unexpected outcomes (optional)
-(Describe any metric that did not improve as expected and why that may happen.)
+(Describe any metric that did not improve as expected and why.)
 
 ## 5. Correctness Validation
-Both binaries are run with identical `(width, height, iterations, seed)` and compare checksums. The script exits with error if checksums differ.
+Both binaries run with identical `(length, iterations, seed)` and compare checksums. The script exits with an error if checksums differ.
 
 ## 6. AI Usage Disclosure
 Prompts used are listed in `ai_prompts_used.txt`.
@@ -75,7 +76,7 @@ Prompts used are listed in `ai_prompts_used.txt`.
 Use:
 ```bash
 chmod +x run_hw1_profile.sh
-./run_hw1_profile.sh 4096 4096 20 123456789
+./run_hw1_profile.sh 300000 20 123456789
 ```
 Perf outputs are saved to:
 - `results/perf_naive.txt`

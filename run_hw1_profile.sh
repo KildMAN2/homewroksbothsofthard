@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Defaults: large enough to expose cache/memory behavior but still runnable on laptops.
-WIDTH="${1:-4096}"
-HEIGHT="${2:-4096}"
-ITERS="${3:-20}"
-SEED="${4:-123456789}"
+# Defaults: large enough to expose CPU/cache behavior while remaining practical.
+LENGTH="${1:-4000000}"
+ITERS="${2:-50}"
+SEED="${3:-123456789}"
 
 CXX="${CXX:-g++}"
 CXXFLAGS="-O3 -march=native -std=c++17 -Wall -Wextra"
@@ -36,8 +35,8 @@ $CXX $CXXFLAGS hw1_naive.cpp -o hw1_naive
 $CXX $CXXFLAGS hw1_optimized.cpp -o hw1_optimized
 
 echo "[2/5] Running correctness check"
-NAIVE_OUT="$(./hw1_naive "$WIDTH" "$HEIGHT" "$ITERS" "$SEED")"
-OPT_OUT="$(./hw1_optimized "$WIDTH" "$HEIGHT" "$ITERS" "$SEED")"
+NAIVE_OUT="$(./hw1_naive "$LENGTH" "$ITERS" "$SEED")"
+OPT_OUT="$(./hw1_optimized "$LENGTH" "$ITERS" "$SEED")"
 
 echo "$NAIVE_OUT"
 echo "$OPT_OUT"
@@ -55,18 +54,18 @@ echo "Checksums match: $NAIVE_SUM"
 mkdir -p results
 
 echo "[3/5] Timing (wall clock)"
-/usr/bin/time -f "NAIVE wall=%e sec" ./hw1_naive "$WIDTH" "$HEIGHT" "$ITERS" "$SEED" 1>/dev/null
-/usr/bin/time -f "OPT   wall=%e sec" ./hw1_optimized "$WIDTH" "$HEIGHT" "$ITERS" "$SEED" 1>/dev/null
+/usr/bin/time -f "NAIVE wall=%e sec" ./hw1_naive "$LENGTH" "$ITERS" "$SEED" 1>/dev/null
+/usr/bin/time -f "OPT   wall=%e sec" ./hw1_optimized "$LENGTH" "$ITERS" "$SEED" 1>/dev/null
 
 echo "[4/5] perf stat for naive"
 run_perf_with_fallback \
   results/perf_naive.txt \
-  ./hw1_naive "$WIDTH" "$HEIGHT" "$ITERS" "$SEED"
+  ./hw1_naive "$LENGTH" "$ITERS" "$SEED"
 
 echo "[5/5] perf stat for optimized"
 run_perf_with_fallback \
   results/perf_optimized.txt \
-  ./hw1_optimized "$WIDTH" "$HEIGHT" "$ITERS" "$SEED"
+  ./hw1_optimized "$LENGTH" "$ITERS" "$SEED"
 
 echo "Done. Perf reports:"
 echo "  results/perf_naive.txt"

@@ -1,6 +1,6 @@
+#include <array>
 #include <chrono>
 #include <cstdint>
-#include <cstdlib>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -16,87 +16,150 @@ uint32_t xorshift32(uint32_t &state) {
     return x;
 }
 
-void fill_image(std::vector<uint8_t> &img, uint32_t seed) {
-    uint32_t state = seed;
-    for (size_t i = 0; i < img.size(); ++i) {
-        img[i] = static_cast<uint8_t>(xorshift32(state) & 0xFFu);
+void fill_sequence(std::vector<uint8_t> &seq, uint32_t seed) {
+    uint32_t s = seed;
+    for (size_t i = 0; i < seq.size(); ++i) {
+        seq[i] = static_cast<uint8_t>(xorshift32(s) & 0x3u);
     }
 }
 
-uint64_t checksum(const std::vector<uint8_t> &img) {
+int motif_score_reference(uint16_t code) {
+    const uint8_t a = static_cast<uint8_t>(code & 0x3u);
+    const uint8_t b = static_cast<uint8_t>((code >> 2) & 0x3u);
+    const uint8_t c = static_cast<uint8_t>((code >> 4) & 0x3u);
+    const uint8_t d = static_cast<uint8_t>((code >> 6) & 0x3u);
+    const uint8_t e = static_cast<uint8_t>((code >> 8) & 0x3u);
+
+    int score = 0;
+
+    if (a == c && c == e) {
+        score += 5;
+    }
+    if (b == d) {
+        score += 3;
+    }
+    if ((a + b + c + d + e) >= 8) {
+        score += 2;
+    }
+    if (a == 0 && b == 1 && c == 2 && d == 3) {
+        score += 7;
+    }
+    if (a == 3 && b == 2 && c == 1 && d == 0) {
+        score += 7;
+    }
+    if ((a == 0 && e == 3) || (a == 3 && e == 0)) {
+        score -= 2;
+    }
+    if ((b == 0 && d == 0) || (b == 3 && d == 3)) {
+        score -= 1;
+    }
+
+    return score;
+}
+
+std::array<int8_t, 1024> build_score_lut() {
+    std::array<int8_t, 1024> lut{};
+    for (int code = 0; code < 1024; ++code) {
+        lut[code] = static_cast<int8_t>(motif_score_reference(static_cast<uint16_t>(code)));
+    }
+    return lut;
+}
+
+uint64_t checksum(const std::vector<uint8_t> &seq) {
     uint64_t acc = 1469598103934665603ull;
-    for (size_t i = 0; i < img.size(); ++i) {
-        acc ^= static_cast<uint64_t>(img[i]) + (i & 0xFFu);
+    for (size_t i = 0; i < seq.size(); ++i) {
+        acc ^= (static_cast<uint64_t>(seq[i]) + (i & 0xFFu));
         acc *= 1099511628211ull;
     }
     return acc;
 }
 
-void blur_step_optimized(const std::vector<uint8_t> &in,
-                        std::vector<uint8_t> &out,
-                        std::vector<uint16_t> &horiz,
-                        int width,
-                        int height) {
-    out = in;
+void evolve_step_optimized(const std::vector<uint8_t> &in,
+                          std::vector<uint8_t> &out,
+                          const std::array<int8_t, 1024> &score_lut,
+                          int iteration) {
+    const int n = static_cast<int>(in.size());
 
-    for (int y = 0; y < height; ++y) {
-        const int row = y * width;
-        for (int x = 1; x < width - 1; ++x) {
-            const int idx = row + x;
-            horiz[idx] = static_cast<uint16_t>(in[idx - 1] + in[idx] + in[idx + 1]);
-        }
-    }
+    uint16_t code = static_cast<uint16_t>(
+        in[n - 2] |
+        (in[n - 1] << 2) |
+        (in[0] << 4) |
+        (in[1] << 6) |
+        (in[2] << 8));
 
-    for (int y = 1; y < height - 1; ++y) {
-        const int row = y * width;
-        const int row_up = row - width;
-        const int row_dn = row + width;
-        for (int x = 1; x < width - 1; ++x) {
-            const int idx = row + x;
-            const int sum = horiz[row_up + x] + horiz[idx] + horiz[row_dn + x];
-            out[idx] = static_cast<uint8_t>(sum / 9);
+    for (int i = 0; i < n; ++i) {
+        const int score = score_lut[code];
+        const uint8_t center = static_cast<uint8_t>((code >> 4) & 0x3u);
+        uint8_t next = static_cast<uint8_t>((center + (score & 0x3)) & 0x3);
+
+        if (((score ^ iteration ^ i) & 1) != 0) {
+            next ^= 0x1u;
         }
+
+        out[i] = next;
+
+        const int next_idx = i + 3;
+        const uint8_t incoming = in[(next_idx < n) ? next_idx : (next_idx - n)];
+        code = static_cast<uint16_t>((code >> 2) | (incoming << 8));
     }
 }
 
 }  // namespace
 
 int main(int argc, char **argv) {
-    if (argc != 5) {
-        std::cerr << "Usage: " << argv[0] << " <width> <height> <iterations> <seed>\n";
+    if (argc != 4) {
+        std::cerr << "Usage: " << argv[0] << " <length> <iterations> <seed>\n";
         return 1;
     }
 
-    const int width = std::stoi(argv[1]);
-    const int height = std::stoi(argv[2]);
-    const int iterations = std::stoi(argv[3]);
-    const uint32_t seed = static_cast<uint32_t>(std::stoul(argv[4]));
+    const int length = std::stoi(argv[1]);
+    const int iterations = std::stoi(argv[2]);
+    const uint32_t seed = static_cast<uint32_t>(std::stoul(argv[3]));
 
-    if (width < 3 || height < 3 || iterations < 1) {
-        std::cerr << "width and height must be >= 3, iterations must be >= 1\n";
+    if (length < 8 || iterations < 1) {
+        std::cerr << "length must be >= 8 and iterations must be >= 1\n";
         return 1;
     }
 
-    std::vector<uint8_t> a(static_cast<size_t>(width) * static_cast<size_t>(height));
-    std::vector<uint8_t> b(a.size());
-    std::vector<uint16_t> horiz(a.size());
+    std::vector<uint8_t> a(static_cast<size_t>(length));
+    std::vector<uint8_t> b(static_cast<size_t>(length));
+    const auto score_lut = build_score_lut();
 
-    fill_image(a, seed);
+    fill_sequence(a, seed);
 
     const auto start = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < iterations; ++i) {
-        blur_step_optimized(a, b, horiz, width, height);
+    for (int it = 0; it < iterations; ++it) {
+        evolve_step_optimized(a, b, score_lut, it);
         a.swap(b);
     }
     const auto end = std::chrono::high_resolution_clock::now();
 
-    const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    size_t count_a = 0;
+    size_t count_c = 0;
+    size_t count_g = 0;
+    size_t count_t = 0;
+    for (uint8_t v : a) {
+        if (v == 0) {
+            ++count_a;
+        } else if (v == 1) {
+            ++count_c;
+        } else if (v == 2) {
+            ++count_g;
+        } else {
+            ++count_t;
+        }
+    }
 
+    const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     std::cout << "RESULT checksum=" << checksum(a)
-              << " width=" << width
-              << " height=" << height
+              << " len=" << length
               << " iterations=" << iterations
+              << " A=" << count_a
+              << " C=" << count_c
+              << " G=" << count_g
+              << " T=" << count_t
               << "\n";
     std::cout << "TIME_MS " << elapsed_ms << "\n";
+
     return 0;
 }

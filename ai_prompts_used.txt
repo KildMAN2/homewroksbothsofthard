@@ -1,8 +1,8 @@
 Prompt 1:
-"Create two C++ programs for the same deterministic workload: one naive and one optimized, where the optimized version demonstrates better cache behavior while preserving identical output."
+"Create two C++ programs for a deterministic DNA motif evolution simulation: one naive and one optimized, where output remains identical for the same seed and parameters."
 
 Prompt 2:
-"Generate a shell script that compiles both versions, checks output equality via checksum, and profiles both with perf stat counters (cycles, instructions, cache misses, branch misses)."
+"Generate a shell script that compiles both versions, checks output equality via checksum, and profiles both with perf stat, including a fallback when hardware counters are not available."
 
 Prompt 3:
-"Provide a short report template explaining approach, optimization rationale, hardware-level reasoning, and a profiling comparison section."
+"Provide a short report template for HW1 that explains naive vs optimized design, hardware-level reasoning, profiling comparison, and reproducibility steps."
