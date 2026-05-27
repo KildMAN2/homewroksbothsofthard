@@ -33,8 +33,11 @@ run_perf_with_fallback() {
   shift
   local rc=0
 
-  run_perf_once "$EXT_HW_EVENTS" "$out_file" "$@"
-  rc=$?
+  if run_perf_once "$EXT_HW_EVENTS" "$out_file" "$@"; then
+    rc=0
+  else
+    rc=$?
+  fi
   if [[ $rc -eq 0 ]]; then
     echo "Used extended hardware+software perf events for $out_file"
     return 0
@@ -45,8 +48,11 @@ run_perf_with_fallback() {
     echo "Extended perf event set unavailable; retrying with core hardware events for $out_file"
   fi
 
-  run_perf_once "$CORE_HW_EVENTS" "$out_file" "$@"
-  rc=$?
+  if run_perf_once "$CORE_HW_EVENTS" "$out_file" "$@"; then
+    rc=0
+  else
+    rc=$?
+  fi
   if [[ $rc -eq 0 ]]; then
     echo "Used core hardware+software perf events for $out_file"
     return 0
