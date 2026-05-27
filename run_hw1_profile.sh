@@ -8,26 +8,56 @@ SEED="${3:-123456789}"
 
 CXX="${CXX:-g++}"
 CXXFLAGS="-O3 -march=native -std=c++17 -Wall -Wextra"
-HW_EVENTS="cycles,instructions,cache-references,cache-misses,branches,branch-misses,task-clock"
+EXT_HW_EVENTS="cycles,instructions,cache-references,cache-misses,branches,branch-misses,L1-dcache-loads,L1-dcache-load-misses,LLC-loads,LLC-load-misses,stalled-cycles-frontend,stalled-cycles-backend,task-clock"
+CORE_HW_EVENTS="cycles,instructions,cache-references,cache-misses,branches,branch-misses,task-clock"
 SW_EVENTS="task-clock,context-switches,cpu-migrations,page-faults"
+
+run_perf_once() {
+  local events="$1"
+  local out_file="$2"
+  shift 2
+
+  if ! perf stat -e "$events" -o "$out_file" "$@" 1>/dev/null 2>&1; then
+    return 1
+  fi
+
+  if grep -Eqi "not supported|unknown event|<not supported>|No permission|not counted|invalid|Cannot find PMU" "$out_file"; then
+    return 2
+  fi
+
+  return 0
+}
 
 run_perf_with_fallback() {
   local out_file="$1"
   shift
+  local rc=0
 
-  if perf stat -e "$HW_EVENTS" -o "$out_file" "$@" 1>/dev/null 2>&1; then
-    if grep -qi "not supported" "$out_file"; then
-      echo "Hardware perf events reported as unsupported; retrying with software-only events for $out_file"
-      perf stat -e "$SW_EVENTS" -o "$out_file" "$@" 1>/dev/null
-      return 0
-    fi
+  run_perf_once "$EXT_HW_EVENTS" "$out_file" "$@"
+  rc=$?
+  if [[ $rc -eq 0 ]]; then
+    echo "Used extended hardware+software perf events for $out_file"
+    return 0
+  fi
+  if [[ $rc -eq 2 ]]; then
+    echo "Some extended perf events unsupported; retrying with core hardware events for $out_file"
+  else
+    echo "Extended perf event set unavailable; retrying with core hardware events for $out_file"
+  fi
 
-    echo "Used hardware+software perf events for $out_file"
+  run_perf_once "$CORE_HW_EVENTS" "$out_file" "$@"
+  rc=$?
+  if [[ $rc -eq 0 ]]; then
+    echo "Used core hardware+software perf events for $out_file"
     return 0
   fi
 
   echo "Hardware perf events unavailable; retrying with software-only events for $out_file"
-  perf stat -e "$SW_EVENTS" -o "$out_file" "$@" 1>/dev/null
+  if ! perf stat -e "$SW_EVENTS" -o "$out_file" "$@" 1>/dev/null 2>&1; then
+    echo "perf stat unavailable on this kernel; recording wall-clock time only for $out_file"
+    /usr/bin/time -v "$@" 2>"$out_file" || \
+      { /usr/bin/time -f "wall=%e sec\nmax_rss_kb=%M" "$@" 2>"$out_file" || true; }
+  fi
 }
 
 echo "[1/5] Building binaries"
