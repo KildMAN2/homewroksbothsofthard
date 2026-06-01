@@ -8,16 +8,15 @@ SEED="${3:-123456789}"
 
 CXX="${CXX:-g++}"
 CXXFLAGS="-O3 -march=native -std=c++17 -Wall -Wextra"
-EXT_HW_EVENTS="cycles,instructions,cache-references,cache-misses,branches,branch-misses,L1-dcache-loads,L1-dcache-load-misses,LLC-loads,LLC-load-misses,stalled-cycles-frontend,stalled-cycles-backend,task-clock"
-CORE_HW_EVENTS="cycles,instructions,cache-references,cache-misses,branches,branch-misses,task-clock"
-SW_EVENTS="task-clock,context-switches,cpu-migrations,page-faults"
+MIXED_EVENTS="cpu-cycles,instructions,cache-references,cache-misses,branches,branch-misses,cpu-clock,page-faults,minor-faults,major-faults,context-switches,cpu-migrations"
+SW_EVENTS="cpu-clock,page-faults,minor-faults,major-faults,context-switches,cpu-migrations"
 
 run_perf_once() {
   local events="$1"
   local out_file="$2"
   shift 2
 
-  if ! perf stat -e "$events" -o "$out_file" "$@" 1>/dev/null 2>&1; then
+  if ! perf stat -B -e "$events" -o "$out_file" "$@" 1>/dev/null 2>&1; then
     return 1
   fi
 
@@ -33,32 +32,16 @@ run_perf_with_fallback() {
   shift
   local rc=0
 
-  if run_perf_once "$EXT_HW_EVENTS" "$out_file" "$@"; then
+  if run_perf_once "$MIXED_EVENTS" "$out_file" "$@"; then
     rc=0
   else
     rc=$?
   fi
   if [[ $rc -eq 0 ]]; then
-    echo "Used extended hardware+software perf events for $out_file"
+    echo "Used mixed hardware+software perf events for $out_file"
     return 0
   fi
-  if [[ $rc -eq 2 ]]; then
-    echo "Some extended perf events unsupported; retrying with core hardware events for $out_file"
-  else
-    echo "Extended perf event set unavailable; retrying with core hardware events for $out_file"
-  fi
-
-  if run_perf_once "$CORE_HW_EVENTS" "$out_file" "$@"; then
-    rc=0
-  else
-    rc=$?
-  fi
-  if [[ $rc -eq 0 ]]; then
-    echo "Used core hardware+software perf events for $out_file"
-    return 0
-  fi
-
-  echo "Hardware perf events unavailable; retrying with software-only events for $out_file"
+  echo "Some hardware perf events unsupported; retrying with software-only events for $out_file"
   if ! perf stat -e "$SW_EVENTS" -o "$out_file" "$@" 1>/dev/null 2>&1; then
     echo "perf stat unavailable on this kernel; recording wall-clock time only for $out_file"
     /usr/bin/time -v "$@" 2>"$out_file" || \
@@ -97,11 +80,13 @@ echo "[4/5] perf stat for naive"
 run_perf_with_fallback \
   results/perf_naive.txt \
   ./hw1_naive "$LENGTH" "$ITERS" "$SEED"
+cat results/perf_naive.txt
 
 echo "[5/5] perf stat for optimized"
 run_perf_with_fallback \
   results/perf_optimized.txt \
   ./hw1_optimized "$LENGTH" "$ITERS" "$SEED"
+cat results/perf_optimized.txt
 
 echo "Done. Perf reports:"
 echo "  results/perf_naive.txt"
