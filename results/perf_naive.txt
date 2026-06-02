@@ -1,16 +1,24 @@
-# started on Tue May 26 21:33:35 2026
+# started on Tue Jun  2 20:28:15 2026
 
 
- Performance counter stats for './hw1_naive 300000 20 123456789':
+ Performance counter stats for './hw1_naive 4000000 50 123456789':
 
-            460.47 msec task-clock                #    0.982 CPUs utilized          
-                23      context-switches          #   49.949 /sec                   
+                 0      cpu-cycles                #    0.000 GHz                    
+       21136552393      instructions                                                
+           1680074      cache-references          #  193.719 K/sec                  
+             15269      cache-misses              #    0.909 % of all cache refs    
+        2400296052      branches                  #  276.763 M/sec                  
+         257983712      branch-misses             #   10.75% of all branches        
+           8672.74 msec cpu-clock                 #    0.999 CPUs utilized          
+              2083      page-faults               #  240.178 /sec                   
+              2083      minor-faults              #  240.178 /sec                   
+                 0      major-faults              #    0.000 /sec                   
+                60      context-switches          #    6.918 /sec                   
                  0      cpu-migrations            #    0.000 /sec                   
-               270      page-faults               #  586.358 /sec                   
 
-       0.468942020 seconds time elapsed
+       8.685433690 seconds time elapsed
 
-       0.454850000 seconds user
-       0.005984000 seconds sys
+       8.667871000 seconds user
+       0.011994000 seconds sys
 
 

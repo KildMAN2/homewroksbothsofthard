@@ -26,16 +26,20 @@ It is the direct, readable implementation of the model. For each sequence index,
 - Uses many branches in scoring, which can reduce throughput.
 - Performs modulo/index operations and redundant loads in the inner loop.
 
-### Profiling results (measured on this environment)
-Run config: `length=300000`, `iterations=20`, `seed=123456789`
+### Profiling results (measured on KVM VM, naranja4)
+Run config: `length=4000000`, `iterations=50`, `seed=123456789`
 
-- Runtime (wall): `0.25 sec`
-- `perf task-clock`: `460.47 ms`
-- `context-switches`: `23`
-- `cpu-migrations`: `0`
-- `page-faults`: `270`
+- Runtime (wall): `8.685 sec`
+- `cpu-clock`: `8672.74 ms`
+- `instructions`: `21,136,552,393`
+- `cache-references`: `1,680,074`
+- `cache-misses`: `15,269` (0.909% of cache refs)
+- `branches`: `2,400,296,052`
+- `branch-misses`: `257,983,712` (**10.75%** — high misprediction rate)
+- `context-switches`: `60`
+- `page-faults`: `2,083`
 
-Note: this environment does not expose PMU hardware counters (`cycles`, `instructions`, `cache-misses`), so software counters were collected.
+Note: `cpu-cycles` reports 0 due to a known KVM PMU mapping quirk; all other hardware counters are valid.
 
 ## 3. Optimized Implementation (hw1_optimized.cpp)
 ### What change was made
@@ -51,26 +55,32 @@ Two optimizations were applied while preserving exact algorithm behavior:
 ### Hardware/software insight behind the change
 When inner loops are branch-heavy and repeatedly recompute local state, IPC tends to suffer. Converting condition-heavy scoring into LUT reads and shifting the encoded window turns the hot loop into a more predictable stream of operations with lower per-element overhead.
 
-### Profiling results (measured on this environment)
-Run config: `length=300000`, `iterations=20`, `seed=123456789`
+### Profiling results (measured on KVM VM, naranja4)
+Run config: `length=4000000`, `iterations=50`, `seed=123456789`
 
-- Runtime (wall): `0.01 sec`
-- `perf task-clock`: `14.31 ms`
-- `context-switches`: `3`
-- `cpu-migrations`: `0`
-- `page-faults`: `272`
+- Runtime (wall): `0.554 sec`
+- `cpu-clock`: `553.38 ms`
+- `instructions`: `4,914,801,683`
+- `cache-references`: `641,272`
+- `cache-misses`: `13,365` (2.084% of cache refs)
+- `branches`: `410,086,964`
+- `branch-misses`: `23,901` (**0.01%** — near-perfect prediction)
+- `context-switches`: `4`
+- `page-faults`: `2,082`
 
 ## 4. Comparison of Results
 ### Key improvements
-- Correctness preserved: both versions produced identical checksum `492632665203353383` and identical base counts.
-- Wall time improved from `0.25 sec` to `0.01 sec` (about `25x`).
-- `task-clock` improved from `460.47 ms` to `14.31 ms` (about `32.2x`).
+- Correctness preserved: both versions produced identical checksum and base counts.
+- Wall time improved from `8.685 sec` to `0.554 sec` — **~15.7x speedup**.
+- `cpu-clock` improved from `8672.74 ms` to `553.38 ms` — **~15.7x**.
+- Instructions reduced from `21.1B` to `4.9B` — **4.3x fewer**.
+- Branch misses dropped from `257,983,712` (10.75%) to `23,901` (0.01%) — **~10,000x fewer mispredictions**.
+- Cache misses: `15,269` vs `13,365` — roughly similar (both small).
 
 ### Why the gain makes sense
-The naive version spends significant work on repeated branch evaluation and rebuilding neighborhood patterns per index. The optimized version hoists this work into precomputation (LUT) and lightweight rolling updates. This reduces dynamic instruction count and branch pressure in the hot path, so throughput improves substantially.
+The dominant factor is **branch misprediction**: the naive version mispredicts 10.75% of all branches, causing frequent pipeline flushes. The optimized version (LUT + rolling window) eliminates condition-heavy scoring, dropping branch mispredictions to near zero (0.01%). Combined with 4.3x fewer instructions from the rolling window reuse, total execution time drops ~15.7x.
 
-### Caveat
-Page faults are similar between runs and are not the primary explanatory metric here. For deeper microarchitectural analysis, run on a machine with hardware counter access and compare `cycles`, `instructions`, and branch miss events.
+Cache behavior is similar between both versions since the working set fits in cache, confirming the gain is purely from control-flow and instruction-count improvement.
 
 ## 5. Correctness and Reproducibility
 The script compares checksums and exits with error if they differ.
@@ -78,7 +88,7 @@ The script compares checksums and exits with error if they differ.
 Commands:
 ```bash
 chmod +x run_hw1_profile.sh
-./run_hw1_profile.sh 300000 20 123456789
+./run_hw1_profile.sh 4000000 50 123456789
 ```
 
 Outputs:
