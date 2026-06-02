@@ -73,8 +73,10 @@ echo "Checksums match: $NAIVE_SUM"
 mkdir -p results
 
 echo "[3/5] Timing (wall clock)"
-/usr/bin/time -f "NAIVE wall=%e sec" ./hw1_naive "$LENGTH" "$ITERS" "$SEED" 1>/dev/null
-/usr/bin/time -f "OPT   wall=%e sec" ./hw1_optimized "$LENGTH" "$ITERS" "$SEED" 1>/dev/null
+NAIVE_WALL=$( { /usr/bin/time -f "%e" ./hw1_naive "$LENGTH" "$ITERS" "$SEED" > /dev/null; } 2>&1 )
+OPT_WALL=$( { /usr/bin/time -f "%e" ./hw1_optimized "$LENGTH" "$ITERS" "$SEED" > /dev/null; } 2>&1 )
+echo "NAIVE wall=${NAIVE_WALL} sec"
+echo "OPT   wall=${OPT_WALL} sec"
 
 echo "[4/5] perf stat for naive"
 run_perf_with_fallback \
@@ -88,6 +90,22 @@ run_perf_with_fallback \
   ./hw1_optimized "$LENGTH" "$ITERS" "$SEED"
 cat results/perf_optimized.txt
 
-echo "Done. Perf reports:"
+SPEEDUP=$(awk "BEGIN { printf \"%.2fx\", ${NAIVE_WALL} / ${OPT_WALL} }" 2>/dev/null || echo "N/A")
+
+{
+  printf "# HW1 Run Summary\n# %s\n# length=%s  iters=%s  seed=%s\n\n" \
+    "$(date)" "$LENGTH" "$ITERS" "$SEED"
+  printf "=== Correctness ===\n%s\n%s\nChecksums match: %s\n\n" \
+    "$NAIVE_OUT" "$OPT_OUT" "$NAIVE_SUM"
+  printf "=== Wall-clock Timing ===\nNAIVE   %s sec\nOPT     %s sec\nSpeedup %s\n\n" \
+    "$NAIVE_WALL" "$OPT_WALL" "$SPEEDUP"
+  printf "=== perf_naive.txt ===\n"
+  cat results/perf_naive.txt
+  printf "\n=== perf_optimized.txt ===\n"
+  cat results/perf_optimized.txt
+} > results/summary.txt
+
+echo "Done. Results saved:"
 echo "  results/perf_naive.txt"
 echo "  results/perf_optimized.txt"
+echo "  results/summary.txt"
