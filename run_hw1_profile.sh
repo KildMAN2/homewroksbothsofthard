@@ -9,6 +9,7 @@ SEED="${3:-123456789}"
 CXX="${CXX:-g++}"
 CXXFLAGS="-O3 -march=native -std=c++17 -Wall -Wextra"
 MIXED_EVENTS="cpu-cycles,instructions,cache-references,cache-misses,branches,branch-misses,cpu-clock,page-faults,minor-faults,major-faults,context-switches,cpu-migrations"
+TSC_SW_EVENTS="msr/tsc/,cpu-clock,page-faults,minor-faults,major-faults,context-switches,cpu-migrations"
 SW_EVENTS="cpu-clock,page-faults,minor-faults,major-faults,context-switches,cpu-migrations"
 
 run_perf_once() {
@@ -30,18 +31,17 @@ run_perf_once() {
 run_perf_with_fallback() {
   local out_file="$1"
   shift
-  local rc=0
 
   if run_perf_once "$MIXED_EVENTS" "$out_file" "$@"; then
-    rc=0
-  else
-    rc=$?
-  fi
-  if [[ $rc -eq 0 ]]; then
     echo "Used mixed hardware+software perf events for $out_file"
     return 0
   fi
-  echo "Some hardware perf events unsupported; retrying with software-only events for $out_file"
+  echo "Hardware PMU unavailable; trying TSC+software events for $out_file"
+  if run_perf_once "$TSC_SW_EVENTS" "$out_file" "$@"; then
+    echo "Used TSC+software perf events for $out_file"
+    return 0
+  fi
+  echo "TSC unavailable; retrying with software-only events for $out_file"
   if ! perf stat -e "$SW_EVENTS" -o "$out_file" "$@" 1>/dev/null 2>&1; then
     echo "perf stat unavailable on this kernel; recording wall-clock time only for $out_file"
     /usr/bin/time -v "$@" 2>"$out_file" || \
