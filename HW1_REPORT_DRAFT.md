@@ -29,15 +29,15 @@ It is the direct, readable implementation of the model. For each sequence index,
 ### Profiling results (measured on KVM VM, naranja4)
 Run config: `length=4000000`, `iterations=50`, `seed=123456789`
 
-- Runtime (wall): `8.685 sec`
-- `cpu-clock`: `8672.74 ms`
-- `instructions`: `21,136,552,393`
-- `cache-references`: `1,680,074`
-- `cache-misses`: `15,269` (0.909% of cache refs)
-- `branches`: `2,400,296,052`
-- `branch-misses`: `257,983,712` (**10.75%** — high misprediction rate)
-- `context-switches`: `60`
-- `page-faults`: `2,083`
+- Runtime (wall): `8.684 sec`
+- `cpu-clock`: `8666.29 ms`
+- `instructions`: `21,136,918,723`
+- `cache-references`: `1,589,872`
+- `cache-misses`: `14,814` (0.932% of cache refs)
+- `branches`: `2,400,362,572`
+- `branch-misses`: `257,521,029` (**10.73%** — high misprediction rate)
+- `context-switches`: `80`
+- `page-faults`: `2,084`
 
 Note: `cpu-cycles` reports 0 due to a known KVM PMU mapping quirk; all other hardware counters are valid.
 
@@ -58,24 +58,24 @@ When inner loops are branch-heavy and repeatedly recompute local state, IPC tend
 ### Profiling results (measured on KVM VM, naranja4)
 Run config: `length=4000000`, `iterations=50`, `seed=123456789`
 
-- Runtime (wall): `0.554 sec`
-- `cpu-clock`: `553.38 ms`
-- `instructions`: `4,914,801,683`
-- `cache-references`: `641,272`
-- `cache-misses`: `13,365` (2.084% of cache refs)
-- `branches`: `410,086,964`
-- `branch-misses`: `23,901` (**0.01%** — near-perfect prediction)
+- Runtime (wall): `0.552 sec`
+- `cpu-clock`: `551.50 ms`
+- `instructions`: `4,914,880,559`
+- `cache-references`: `605,828`
+- `cache-misses`: `11,347` (1.873% of cache refs)
+- `branches`: `410,098,509`
+- `branch-misses`: `24,108` (**0.01%** — near-perfect prediction)
 - `context-switches`: `4`
-- `page-faults`: `2,082`
+- `page-faults`: `2,084`
 
 ## 4. Comparison of Results
 ### Key improvements
 - Correctness preserved: both versions produced identical checksum and base counts.
-- Wall time improved from `8.685 sec` to `0.554 sec` — **~15.7x speedup**.
-- `cpu-clock` improved from `8672.74 ms` to `553.38 ms` — **~15.7x**.
+- Wall time improved from `8.684 sec` to `0.552 sec` — **~15.7x speedup**.
+- `cpu-clock` improved from `8666.29 ms` to `551.50 ms` — **~15.7x**.
 - Instructions reduced from `21.1B` to `4.9B` — **4.3x fewer**.
-- Branch misses dropped from `257,983,712` (10.75%) to `23,901` (0.01%) — **~10,000x fewer mispredictions**.
-- Cache misses: `15,269` vs `13,365` — roughly similar (both small).
+- Branch misses dropped from `257,521,029` (10.73%) to `24,108` (0.01%) — **~10,000x fewer mispredictions**.
+- Cache misses: `14,814` vs `11,347` — roughly similar (both small).
 
 ### Why the gain makes sense
 The dominant factor is **branch misprediction**: the naive version mispredicts 10.75% of all branches, causing frequent pipeline flushes. The optimized version (LUT + rolling window) eliminates condition-heavy scoring, dropping branch mispredictions to near zero (0.01%). Combined with 4.3x fewer instructions from the rolling window reuse, total execution time drops ~15.7x.
