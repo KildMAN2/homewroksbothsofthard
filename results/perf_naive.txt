@@ -1,25 +1,25 @@
-# started on Tue Jun  2 21:43:00 2026
+# started on Fri Jun  5 12:01:13 2026
 
 
  Performance counter stats for './hw1_naive 4000000 50 123456789':
 
                  0      cpu-cycles                #    0.000 GHz                    
-       21136918723      instructions                                                
-           1589872      cache-references          #  183.455 K/sec                  
-             14814      cache-misses              #    0.932 % of all cache refs    
-        2400362572      branches                  #  276.977 M/sec                  
-         257521029      branch-misses             #   10.73% of all branches        
-           8666.29 msec cpu-clock                 #    0.998 CPUs utilized          
-              2084      page-faults               #  240.472 /sec                   
-              2084      minor-faults              #  240.472 /sec                   
+       21136929068      instructions                                                
+           1652636      cache-references          #  190.751 K/sec                  
+              6527      cache-misses              #    0.395 % of all cache refs    
+        2400364292      branches                  #  277.056 M/sec                  
+         257405585      branch-misses             #   10.72% of all branches        
+           8663.83 msec cpu-clock                 #    0.998 CPUs utilized          
+              2083      page-faults               #  240.425 /sec                   
+              2083      minor-faults              #  240.425 /sec                   
                  0      major-faults              #    0.000 /sec                   
-                80      context-switches          #    9.231 /sec                   
+                76      context-switches          #    8.772 /sec                   
                  0      cpu-migrations            #    0.000 /sec                   
 
-       8.683685364 seconds time elapsed
+       8.683926300 seconds time elapsed
 
-       8.666230000 seconds user
-       0.008006000 seconds sys
+       8.659941000 seconds user
+       0.012000000 seconds sys
 
 
 

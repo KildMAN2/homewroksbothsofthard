@@ -30,14 +30,14 @@ It is the direct, readable implementation of the model. For each sequence index,
 Run config: `length=4000000`, `iterations=50`, `seed=123456789`
 
 - Runtime (wall): `8.684 sec`
-- `cpu-clock`: `8666.29 ms`
-- `instructions`: `21,136,918,723`
-- `cache-references`: `1,589,872`
-- `cache-misses`: `14,814` (0.932% of cache refs)
-- `branches`: `2,400,362,572`
-- `branch-misses`: `257,521,029` (**10.73%** — high misprediction rate)
-- `context-switches`: `80`
-- `page-faults`: `2,084`
+- `cpu-clock`: `8663.83 ms`
+- `instructions`: `21,136,929,068`
+- `cache-references`: `1,652,636`
+- `cache-misses`: `6,527` (0.395% of cache refs)
+- `branches`: `2,400,364,292`
+- `branch-misses`: `257,405,585` (**10.72%** — high misprediction rate)
+- `context-switches`: `76`
+- `page-faults`: `2,083`
 
 Note: `cpu-cycles` reports 0 due to a known KVM PMU mapping quirk; all other hardware counters are valid.
 
@@ -64,14 +64,14 @@ The direction was expected — replacing branches with a LUT and reducing redund
 Run config: `length=4000000`, `iterations=50`, `seed=123456789`
 
 - Runtime (wall): `0.552 sec`
-- `cpu-clock`: `551.50 ms`
-- `instructions`: `4,914,880,559`
-- `cache-references`: `605,828`
-- `cache-misses`: `11,347` (1.873% of cache refs)
-- `branches`: `410,098,509`
-- `branch-misses`: `24,108` (**0.01%** — near-perfect prediction)
-- `context-switches`: `4`
-- `page-faults`: `2,084`
+- `cpu-clock`: `551.32 ms`
+- `instructions`: `4,915,036,624`
+- `cache-references`: `606,216`
+- `cache-misses`: `9,813` (1.619% of cache refs)
+- `branches`: `410,122,516`
+- `branch-misses`: `25,118` (**0.01%** — near-perfect prediction)
+- `context-switches`: `7`
+- `page-faults`: `2,086`
 
 ## 4. Comparison of Results
 ### Key improvements
@@ -79,7 +79,7 @@ Run config: `length=4000000`, `iterations=50`, `seed=123456789`
 - Wall time improved from `8.684 sec` to `0.552 sec` — **~15.7x speedup**.
 - `cpu-clock` improved from `8666.29 ms` to `551.50 ms` — **~15.7x**.
 - Instructions reduced from `21.1B` to `4.9B` — **4.3x fewer**.
-- Branch misses dropped from `257,521,029` (10.73%) to `24,108` (0.01%) — **~10,000x fewer mispredictions**.
+- Branch misses dropped from `257,405,585` (10.72%) to `25,118` (0.01%) — **~10,000x fewer mispredictions**.
 - Cache misses: `14,814` vs `11,347` — roughly similar (both small).
 
 ### Why the gain makes sense

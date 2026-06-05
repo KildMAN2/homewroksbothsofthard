@@ -1,25 +1,26 @@
-# started on Tue Jun  2 21:43:08 2026
+# started on Fri Jun  5 12:01:22 2026
 
 
  Performance counter stats for './hw1_optimized 4000000 50 123456789':
 
                  0      cpu-cycles                #    0.000 GHz                    
-        4914880559      instructions                                                
-            605828      cache-references          #    1.099 M/sec                  
-             11347      cache-misses              #    1.873 % of all cache refs    
-         410098509      branches                  #  743.606 M/sec                  
-             24108      branch-misses             #    0.01% of all branches        
-            551.50 msec cpu-clock                 #    0.999 CPUs utilized          
-              2084      page-faults               #    3.779 K/sec                  
-              2084      minor-faults              #    3.779 K/sec                  
+        4915036624      instructions                                                
+            606216      cache-references          #    1.100 M/sec                  
+              9813      cache-misses              #    1.619 % of all cache refs    
+         410122516      branches                  #  743.894 M/sec                  
+             25118      branch-misses             #    0.01% of all branches        
+            551.32 msec cpu-clock                 #    0.999 CPUs utilized          
+              2086      page-faults               #    3.784 K/sec                  
+              2086      minor-faults              #    3.784 K/sec                  
                  0      major-faults              #    0.000 /sec                   
-                 4      context-switches          #    7.253 /sec                   
+                 7      context-switches          #   12.697 /sec                   
                  0      cpu-migrations            #    0.000 /sec                   
 
-       0.552101872 seconds time elapsed
+       0.552143280 seconds time elapsed
 
-       0.547970000 seconds user
-       0.004000000 seconds sys
+       0.543807000 seconds user
+       0.007997000 seconds sys
+
 
 
 
