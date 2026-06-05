@@ -31,9 +31,9 @@ This task was chosen because the scoring logic is branch-heavy and data-dependen
 | cpu-clock | 8,666 ms |
 | instructions | 21,136,918,723 |
 | branches | 2,400,362,572 |
-| **branch-misses** | **257,405,585 (10.72%)** |
+| **branch-misses** | **257,814,384 (10.74%)** |
 | cache-references | 1,589,872 |
-| cache-misses | 6,527 (0.395%) |
+| cache-misses | 7,666 (0.473%) |
 
 > `cpu-cycles` reads 0 due to a known KVM PMU mapping quirk; all other hardware counters are real.
 
@@ -58,9 +58,9 @@ This task was chosen because the scoring logic is branch-heavy and data-dependen
 | cpu-clock | 551.5 ms |
 | instructions | 4,914,880,559 |
 | branches | 410,098,509 |
-| **branch-misses** | **25,118 (0.01%)** |
+| **branch-misses** | **22,944 (0.01%)** |
 | cache-references | 605,828 |
-| cache-misses | 9,813 (1.619%) |
+| cache-misses | 9,586 (1.513%) |
 
 **Expected or surprising?** The direction was expected — fewer branches and less redundant work always help. The **15.7× magnitude** was somewhat surprising. The profiling data explains it: the naive version was not merely slow, it was operating far below its theoretical throughput because every ~9th branch caused a full pipeline flush. Once that bottleneck was removed, the CPU's out-of-order engine could fully pipeline the remaining arithmetic.
 
@@ -70,10 +70,10 @@ This task was chosen because the scoring logic is branch-heavy and data-dependen
 
 | Metric | Naive | Optimized | Ratio |
 |---|---|---|---|
-| Wall time | 8.684 s | 0.552 s | **15.7×** |
+| Wall time | 8.684 s | 0.555 s | **15.7×** |
 | Instructions | 21.1 B | 4.9 B | **4.3×** |
-| Branch misses | 257.4 M (10.72%) | 25,118 (0.01%) | **~10,200×** |
-| Cache misses | 14,814 (0.93%) | 11,347 (1.87%) | ~1.3× |
+| Branch misses | 257.8 M (10.74%) | 22,944 (0.01%) | **~11,200×** |
+| Cache misses | 7,666 (0.47%) | 9,586 (1.51%) | ~1.3× |
 
 **Why the gain makes sense (ECE-level explanation):**
 
