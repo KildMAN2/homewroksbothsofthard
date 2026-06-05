@@ -1,18 +1,64 @@
 # HW1 Run Summary
-# Fri Jun  5 12:38:43 UTC 2026
+# Fri Jun  5 12:53:38 UTC 2026
 # length=4000000  iters=50  seed=123456789
 
 === Correctness ===
 RESULT checksum=6802204499193881765 len=4000000 iterations=50 A=1188158 C=1201211 G=810462 T=800169
-TIME_MS 8597
-RESULT checksum=6802204499193881765 len=4000000 iterations=50 A=1188158 C=1201211 G=810462 T=800169
-TIME_MS 530
 Checksums match: 6802204499193881765
 
 === Wall-clock Timing ===
-NAIVE   8.64 sec
+NAIVE   8.66 sec
 OPT     0.55 sec
-Speedup 15.71x
+Speedup 15.74x
+
+=== perf_naive.txt ===
+# started on Fri Jun  5 12:53:38 2026
+
+
+ Performance counter stats for './hw1_naive 4000000 50 123456789':
+
+                 0      cpu-cycles                #    0.000 GHz                    
+       21134979151      instructions                                                
+           1664866      cache-references          #  192.531 K/sec                  
+              8516      cache-misses              #    0.512 % of all cache refs    
+        2400006297      branches                  #  277.546 M/sec                  
+         254994930      branch-misses             #   10.62% of all branches        
+           8647.24 msec cpu-clock                 #    0.998 CPUs utilized          
+              2082      page-faults               #  240.770 /sec                   
+              2082      minor-faults              #  240.770 /sec                   
+                 0      major-faults              #    0.000 /sec                   
+                52      context-switches          #    6.013 /sec                   
+                 0      cpu-migrations            #    0.000 /sec                   
+
+       8.660600365 seconds time elapsed
+
+       8.647121000 seconds user
+       0.007995000 seconds sys
+
+
+=== perf_optimized.txt ===
+# started on Fri Jun  5 12:53:47 2026
+
+
+ Performance counter stats for './hw1_optimized 4000000 50 123456789':
+
+                 0      cpu-cycles                #    0.000 GHz                    
+        4914628180      instructions                                                
+            631689      cache-references          #    1.139 M/sec                  
+             10549      cache-misses              #    1.670 % of all cache refs    
+         410050783      branches                  #  739.400 M/sec                  
+             23518      branch-misses             #    0.01% of all branches        
+            554.57 msec cpu-clock                 #    0.999 CPUs utilized          
+              2082      page-faults               #    3.754 K/sec                  
+              2082      minor-faults              #    3.754 K/sec                  
+                 0      major-faults              #    0.000 /sec                   
+                 4      context-switches          #    7.213 /sec                   
+                 0      cpu-migrations            #    0.000 /sec                   
+
+       0.555170672 seconds time elapsed
+
+       0.550988000 seconds user
+       0.003992000 seconds sys
 
 === perf_naive.txt ===
 # started on Fri Jun  5 12:38:43 2026
