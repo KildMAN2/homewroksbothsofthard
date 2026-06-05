@@ -2,11 +2,137 @@
 
 ---
 
+## Purpose of the Code
+
+These two programs are a **performance profiling experiment**. The goal is to implement the same computation twice — once in the most straightforward way (naive), and once with hardware-aware optimizations — then measure and explain the speedup.
+
+The experiment demonstrates two classic CPU-level optimization techniques:
+
+| Technique | Problem it solves |
+|---|---|
+| **Lookup table (LUT)** | Eliminates unpredictable branches in a scoring function |
+| **Rolling window encoding** | Eliminates redundant memory loads in a sliding-window loop |
+
+### Concrete Example: What "Same Computation, Faster" Means
+
+Suppose `length=8`, `iterations=1`, `seed=42`. Both programs will:
+
+1. Generate the **same** 8-base sequence from seed 42, e.g.: `[2, 0, 1, 3, 0, 2, 1, 0]`
+2. For each position, read the 5-base window centered on it (wrapping around the ends)
+3. Score the window and compute a new base
+4. Produce the **same** output sequence and checksum
+
+For position `i=2` (center base = `1`), the window is `[2, 0, 1, 3, 0]`:
+- Pack into 10-bit code: `2 | (0<<2) | (1<<4) | (3<<6) | (0<<8)` = `0b0011010010` = `210`
+- **Naive:** evaluate 7 `if` statements on the unpacked bases → score = +3 (rule 2: b==d, both 0)
+- **Optimized:** look up `score_lut[210]` → same answer, zero branches
+
+The final printed result — checksum, base counts, and structure — is **bit-for-bit identical** between both versions. Only the time differs.
+
+### How to Run
+
+```bash
+# Build
+g++ -O2 -o hw1_naive    hw1_naive.cpp
+g++ -O2 -o hw1_optimized hw1_optimized.cpp
+
+# Run  (length=4000000, iterations=50, seed=123456789)
+./hw1_naive     4000000 50 123456789
+./hw1_optimized 4000000 50 123456789
+```
+
+Both print the same `RESULT` line, e.g.:
+```
+RESULT checksum=11858510826495703989 A=999842 C=999645 G=1000406 T=1000107
+TIME_MS 8684       ← naive
+TIME_MS 553        ← optimized  (≈15.7× faster)
+```
+
+---
+
 ## The Problem: DNA Motif Cellular Automaton
 
 Both programs simulate a **circular sequence** of 4 million bases (A, C, G, T — encoded as 0, 1, 2, 3 in 2 bits each). At every iteration, each position in the sequence is updated by looking at its two left and two right neighbors (a 5-base window), scoring the pattern according to biological-style rules, and computing a new base value. This repeats for 50 iterations.
 
 Both programs take three arguments: `length iterations seed` and always produce the **exact same output** for the same input.
+
+---
+
+## What the Code Actually Does — Step-by-Step Example
+
+Let's trace through a tiny sequence of **6 bases** for **1 iteration** to see exactly what happens.
+
+### Step 1 — Initialize the sequence from a seed
+
+The seed deterministically generates bases in `{0,1,2,3}` → `{A,C,G,T}`:
+
+```
+Index:    0    1    2    3    4    5
+Base:     2    0    3    1    2    0      (G A T C G A)
+```
+
+The sequence is **circular** — index -1 wraps to index 5, index 6 wraps to index 0.
+
+---
+
+### Step 2 — For each position, read its 5-base window
+
+Each position `i` looks at `[i-2, i-1, i, i+1, i+2]` (wrapping at ends):
+
+| Position i | Window indices | Window values | Packed code (binary) |
+|---|---|---|---|
+| 0 | [4, 5, 0, 1, 2] | [2, 0, 2, 0, 3] | `11 00 10 00 10` = 562 |
+| 1 | [5, 0, 1, 2, 3] | [0, 2, 0, 3, 1] | `01 11 00 10 00` = 456 |
+| 2 | [0, 1, 2, 3, 4] | [2, 0, 3, 1, 2] | `10 01 11 00 10` = 626 |
+| 3 | [1, 2, 3, 4, 5] | [0, 3, 1, 2, 0] | `00 10 01 11 00` = 156 |
+| 4 | [2, 3, 4, 5, 0] | [3, 1, 2, 0, 2] | `10 00 10 01 11` = 551 |
+| 5 | [3, 4, 5, 0, 1] | [1, 2, 0, 2, 0] | `00 10 00 10 01` = 137 |
+
+---
+
+### Step 3 — Score each window using the 7 rules
+
+Take position `i=2`, window = `[2, 0, 3, 1, 2]` → a=2, b=0, c=3, d=1, e=2:
+
+| Rule | Check | Result | Score |
+|---|---|---|---|
+| 1 | a==c && c==e → 2==3? | ✗ | +0 |
+| 2 | b==d → 0==1? | ✗ | +0 |
+| 3 | a+b+c+d+e = 8 >= 8? | ✓ | +2 |
+| 4 | a==0,b==1,c==2,d==3? | ✗ | +0 |
+| 5 | a==3,b==2,c==1,d==0? | ✗ | +0 |
+| 6 | (a==0&&e==3)\|\|(a==3&&e==0)? | ✗ | +0 |
+| 7 | (b==0&&d==0)\|\|(b==3&&d==3)? | ✗ | +0 |
+
+**Total score = +2**
+
+---
+
+### Step 4 — Compute the new base
+
+```cpp
+uint8_t next = (in[i] + (score & 0x3)) & 0x3;
+if (((score ^ iteration ^ i) & 1) != 0)
+    next ^= 0x1;
+```
+
+For i=2, iteration=0, score=2:
+- `next = (3 + (2 & 3)) & 3 = (3 + 2) & 3 = 5 & 3 = 1`
+- `(2 ^ 0 ^ 2) & 1 = 0` → no flip
+- **New base at position 2 = 1 (C)**  ← was 3 (T)
+
+---
+
+### Step 5 — After the full iteration
+
+All 6 positions are updated simultaneously (reads from old buffer, writes to new buffer):
+
+```
+Before:  G  A  T  C  G  A   (2 0 3 1 2 0)
+After:   ?  ?  C  ?  ?  ?   (each position updated by its own window score)
+```
+
+This repeats for 50 iterations over 4,000,000 bases. The final state is summarized by counting A/C/G/T frequencies and computing a 64-bit checksum.
 
 ---
 
