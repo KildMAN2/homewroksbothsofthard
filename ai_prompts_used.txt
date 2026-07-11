@@ -1,8 +1,12 @@
-Prompt 1:
-"Create two C++ programs for a deterministic DNA motif evolution simulation: one naive and one optimized, where output remains identical for the same seed and parameters."
+AI Tools Used: GitHub Copilot (Claude Sonnet 4.6)
 
-Prompt 2:
-"Generate a shell script that compiles both versions, checks output equality via checksum, and profiles both with perf stat, including a fallback when hardware counters are not available."
+Prompt 1: "Create a C++ DNA motif evolution simulation — naive version with branch-heavy scoring and one optimized using a precomputed LUT and rolling window. Same I/O and checksum for both."
 
-Prompt 3:
-"Provide a short report template for HW1 that explains naive vs optimized design, hardware-level reasoning, profiling comparison, and reproducibility steps."
+Prompt 2: "Write a shell script to compile, correctness-check, and perf-profile both versions with hardware/software counter fallback."
+
+Prompt 3: "Help write a 3-page HW1 report covering naive design, LUT+rolling-window optimization, perf comparison, and the hardware reasoning behind the 15.7x speedup."
+
+Optimizations applied and understood:
+- LUT: precomputes all 1024 possible 5-mer scores, eliminating 7 data-dependent branches per element.
+- Rolling window: maintains the 10-bit neighborhood incrementally (shift+mask) instead of 5 separate indexed loads per step.
+- Hardware insight: branch mispredictions on random-like data cost ~15-20 pipeline cycles each; removing branches entirely via LUT recovered that lost IPC.
