@@ -21,11 +21,21 @@ echo -e "${CYAN}========================================${NC}\n"
 # ── 1. Build ──────────────────────────────────────────────────────────────────
 
 echo -e "${YELLOW}[1/4] Building Traditional architecture...${NC}"
-(cd "$TRAD_DIR" && make -s)
+g++ -O2 -std=c++17 -g -Wall \
+    -o "$TRAD_BIN" \
+    "$TRAD_DIR/hotel_system.cpp" "$TRAD_DIR/main.cpp"
+g++ -O2 -std=c++17 -g -Wall \
+    -o "$TRAD_EXT_BIN" \
+    "$TRAD_DIR/hotel_system.cpp" "$TRAD_DIR/feature_extension.cpp"
 echo -e "${GREEN}      Built: $TRAD_BIN and $TRAD_EXT_BIN${NC}"
 
 echo -e "${YELLOW}[2/4] Building FaaS architecture...${NC}"
-(cd "$FAAS_DIR" && make -s)
+g++ -O2 -std=c++17 -g -Wall \
+    -o "$FAAS_BIN" \
+    "$FAAS_DIR/storage.cpp" "$FAAS_DIR/faas_functions.cpp" "$FAAS_DIR/main.cpp"
+g++ -O2 -std=c++17 -g -Wall \
+    -o "$FAAS_EXT_BIN" \
+    "$FAAS_DIR/storage.cpp" "$FAAS_DIR/faas_functions.cpp" "$FAAS_DIR/feature_extension.cpp"
 echo -e "${GREEN}      Built: $FAAS_BIN and $FAAS_EXT_BIN${NC}\n"
 
 # ── 2. Run ────────────────────────────────────────────────────────────────────
