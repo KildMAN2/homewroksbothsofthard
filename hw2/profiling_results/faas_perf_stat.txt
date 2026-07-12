@@ -1,10 +1,10 @@
 
- Performance counter stats for 'bash -c for i in $(seq 1 200); do "FaaS/hotel_faas" > /dev/null; done' (5 runs):
+ Performance counter stats for 'FaaS/hotel_faas benchmark' (5 runs):
 
-         837437014      cycles                                                        ( +-  0.16% )
-         917360969      instructions              #    1.09  insn per cycle           ( +-  0.12% )
-               574      cache-misses                                                  ( +-113.63% )
-               296      context-switches                                              ( +-  0.25% )
+        1419352888      cycles                                                        ( +-  0.04% )
+        1627120203      instructions              #    1.15  insn per cycle           ( +-  0.00% )
+                93      cache-misses                                                  ( +-616.02% )
+                13      context-switches                                              ( +- 10.43% )
 
-          0.423295 +- 0.000565 seconds time elapsed  ( +-  0.13% )
+          0.597090 +- 0.000123 seconds time elapsed  ( +-  0.02% )
 

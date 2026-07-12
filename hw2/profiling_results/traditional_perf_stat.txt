@@ -1,10 +1,10 @@
 
- Performance counter stats for 'bash -c for i in $(seq 1 200); do "Traditional/hotel_traditional" > /dev/null; done' (5 runs):
+ Performance counter stats for 'Traditional/hotel_traditional benchmark' (5 runs):
 
-         753569158      cycles                                                        ( +-  0.66% )
-         813568466      instructions              #    1.07  insn per cycle           ( +-  0.12% )
-               541      cache-misses                                                  ( +-304.54% )
-               293      context-switches                                              ( +-  0.49% )
+          45507954      cycles                                                        ( +-  1.64% )
+          64419929      instructions              #    1.40  insn per cycle           ( +-  0.02% )
+                92      cache-misses                                                  ( +-3121.08% )
+                 3      context-switches                                              ( +-  8.16% )
 
-            0.4521 +- 0.0651 seconds time elapsed  ( +- 14.40% )
+           0.02113 +- 0.00139 seconds time elapsed  ( +-  6.55% )
 
