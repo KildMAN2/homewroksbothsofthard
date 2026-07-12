@@ -1,127 +1,131 @@
-/*
- * Part 3 — Feature Extension: Dynamic Room Pricing
- *
- * New feature: adjust room prices based on current occupancy.
- * If occupancy > 80% → surge pricing (+30%)
- * If occupancy < 30% → discount pricing (-20%)
- *
- * FaaS ARCHITECTURE — Extension Analysis
- * ────────────────────────────────────────
- * To add this feature in the FaaS design:
- *
- *  RISK:  Low
- *  EFFORT: Add ONE new standalone function — nothing else changes.
- *    1. Write apply_dynamic_pricing() as an isolated stateless function
- *    2. Register it in the orchestrator
- *    3. Trigger it after check_in_guest or check_out_guest events
- *
- *  ADVANTAGE: The new function reads occupancy from the store and writes
- *  updated prices back. It has zero dependency on any other function's
- *  internals. Existing functions are completely untouched.
- *  It can be tested and deployed in isolation.
- *
- * This file is a standalone compilable demo of just the new function.
- */
+﻿// Part 3 -- Feature Extension: Emergency Maintenance + Auto Room Reassignment
+//
+// FaaS Architecture Analysis:
+//   To add this feature we ONLY added NEW files:
+//     faas_functions.h  <- unchanged
+//     faas_functions.cpp <- unchanged
+//   All new logic lives in this file as independent static functions.
+//   Zero changes to existing code.
+//
+// Trade-off:
+//   + Existing functions untouched (zero regression risk)
+//   + Each new function has one responsibility and is independently testable
+//   - A failure between steps leaves storage in a partial state
+//   - The full flow requires reading multiple files to understand
 
 #include <iostream>
-#include <string>
-#include <map>
-#include <functional>
-#include <algorithm>
+#include <vector>
+#include "faas_functions.h"
 
-using EventData  = std::map<std::string, std::string>;
-using ResultData = std::map<std::string, std::string>;
+// ─── New extension functions (no existing files modified) ─────────────────────
 
-// Shared store (same external store used by all FaaS functions)
-static std::map<std::string, std::string> store;
-
-static std::string storeGet(const std::string& key, const std::string& def = "") {
-    return store.count(key) ? store.at(key) : def;
+static std::vector<int> find_affected_reservations(int roomId,
+                                                    const HotelStorage& s) {
+    std::vector<int> result;
+    for (const Reservation& res : s.reservations)
+        if (res.roomId == roomId && res.active)
+            result.push_back(res.id);
+    return result;
 }
 
-// ── NEW function: apply_dynamic_pricing ───────────────────────────────────────
-// Completely independent — reads occupancy from store, writes prices back.
-// No other function needs to change.
-ResultData applyDynamicPricing(const EventData& /*ev*/) {
-    ResultData res;
-
-    // Count occupied/reserved rooms
-    int total = 0, occupied = 0;
-    for (auto& kv : store) {
-        if (kv.first.size() > 5 &&
-            kv.first.substr(0, 5) == "room." &&
-            kv.first.find(".status") != std::string::npos) {
-            total++;
-            if (kv.second == "OCCUPIED" || kv.second == "RESERVED")
-                occupied++;
-        }
-    }
-
-    double rate       = total > 0 ? (double)occupied / total : 0.0;
-    double multiplier = 1.0;
-    if      (rate > 0.80) multiplier = 1.30;
-    else if (rate < 0.30) multiplier = 0.80;
-
-    // Update prices for each room independently
-    for (auto& kv : store) {
-        if (kv.first.size() > 5 &&
-            kv.first.substr(0, 5) == "room." &&
-            kv.first.find(".price") != std::string::npos &&
-            kv.first.find(".adj")   == std::string::npos) {
-            double base    = std::stod(kv.second);
-            double adjusted = base * multiplier;
-            // Write adjusted price as a separate key — base price untouched
-            std::string rid = kv.first.substr(5,
-                              kv.first.find(".price") - 5);
-            store["room." + rid + ".adj_price"] = std::to_string(adjusted);
-        }
-    }
-
-    res["status"]     = "OK";
-    res["occupancy"]  = std::to_string((int)(rate * 100));
-    res["multiplier"] = std::to_string(multiplier);
-    res["message"]    = "Dynamic pricing applied — occupancy "
-                        + std::to_string((int)(rate * 100))
-                        + "%, multiplier x" + std::to_string(multiplier);
-    std::cout << "[apply_dynamic_pricing] " << res["message"] << "\n";
-    return res;
+static int find_replacement_room(RoomType needed, int excludeId,
+                                  const HotelStorage& s) {
+    for (const Room& r : s.rooms)
+        if (r.id != excludeId && r.type == needed && r.status == RoomStatus::AVAILABLE)
+            return r.id;
+    return -1;
 }
 
-// ── Demonstration ─────────────────────────────────────────────────────────────
+static bool reassign_reservation(int resId, int newRoomId, HotelStorage& s) {
+    for (Reservation& res : s.reservations) {
+        if (res.id == resId && res.active) {
+            res.roomId = newRoomId;
+            for (Room& r : s.rooms)
+                if (r.id == newRoomId) { r.status = RoomStatus::RESERVED; break; }
+            return true;
+        }
+    }
+    return false;
+}
+
+static void notify_guest(int guestId, const std::string& msg,
+                          const HotelStorage& s) {
+    for (const Guest& g : s.guests)
+        if (g.id == guestId) {
+            std::cout << "  [notify_guest] SMS to " << g.name
+                      << " (" << g.phone << "): " << msg << "\n";
+            return;
+        }
+}
+
+// Orchestrator: calls the chain of independent functions
+static void emergency_chain(int requestId, int roomId,
+                             const std::string& issue, HotelStorage& s) {
+    std::cout << "[FaaS chain] EMERGENCY room " << roomId << ": " << issue << "\n";
+
+    // Step 1: use existing report_maintenance (unmodified)
+    report_maintenance({requestId, roomId, issue, "EMERGENCY"}, s);
+    std::cout << "  [report_maintenance] Room " << roomId << " -> MAINTENANCE\n";
+
+    // Step 2: new function
+    auto affected = find_affected_reservations(roomId, s);
+    std::cout << "  [find_affected_reservations] " << affected.size()
+              << " reservation(s) affected\n";
+
+    for (int resId : affected) {
+        int guestId = -1;
+        RoomType rtype = RoomType::SINGLE;
+        for (const Reservation& r : s.reservations)
+            if (r.id == resId) { guestId = r.guestId; break; }
+        for (const Room& r : s.rooms)
+            if (r.id == roomId) { rtype = r.type; break; }
+
+        // Step 3: new function
+        int newRoom = find_replacement_room(rtype, roomId, s);
+        if (newRoom == -1) {
+            std::cout << "  [find_replacement_room] No replacement for Res #" << resId << "\n";
+            continue;
+        }
+        std::cout << "  [find_replacement_room] Replacement: Room " << newRoom << "\n";
+
+        // Step 4: new function
+        reassign_reservation(resId, newRoom, s);
+        std::cout << "  [reassign_reservation] Res #" << resId
+                  << ": Room " << roomId << " -> Room " << newRoom << "\n";
+
+        // Step 5: new function
+        if (guestId != -1)
+            notify_guest(guestId,
+                "Your room has been changed to room " + std::to_string(newRoom) +
+                " due to an emergency.", s);
+    }
+}
 
 int main() {
-    std::cout << "=== Feature Extension Demo: Dynamic Pricing (FaaS) ===\n\n";
+    std::cout << "===== FaaS: Part 3 Feature Extension Demo =====\n\n";
+    std::cout << "Feature: Emergency Maintenance + Automatic Room Reassignment\n";
+    std::cout << "Cost: 0 existing files modified. 4 new functions added here.\n\n";
 
-    // Simulate store state (as if check_in_guest already ran for 5/6 rooms)
-    store["room.101.status"] = "OCCUPIED"; store["room.101.price"] = "80";
-    store["room.102.status"] = "OCCUPIED"; store["room.102.price"] = "80";
-    store["room.201.status"] = "OCCUPIED"; store["room.201.price"] = "140";
-    store["room.202.status"] = "OCCUPIED"; store["room.202.price"] = "140";
-    store["room.301.status"] = "OCCUPIED"; store["room.301.price"] = "300";
-    store["room.302.status"] = "AVAILABLE";store["room.302.price"] = "300";
-    // Occupancy = 5/6 = 83% -> surge pricing
+    HotelStorage s;
+    add_guest({1, "Alice Johnson", "555-1001"}, s);
+    add_guest({2, "Bob Martinez",  "555-1002"}, s);
+    add_room({101, RoomType::SINGLE, 80.0,  1}, s);
+    add_room({102, RoomType::SINGLE, 80.0,  1}, s);   // replacement
+    add_room({201, RoomType::DOUBLE, 140.0, 2}, s);
+    create_reservation({1, 1, 101, "2024-06-01", "2024-06-05"}, s);
+    create_reservation({2, 2, 201, "2024-06-01", "2024-06-03"}, s);
+    check_in({1}, s);
+    check_in({2}, s);
 
-    applyDynamicPricing({});
+    std::cout << "Initial state:\n";
+    display_available_rooms(s);
 
-    std::cout << "\nAdjusted prices (base -> adjusted):\n";
-    for (auto& kv : store) {
-        if (kv.first.find(".adj_price") != std::string::npos) {
-            std::string rid = kv.first.substr(5,
-                              kv.first.find(".adj_price") - 5);
-            std::cout << "  Room " << rid
-                      << ": $" << storeGet("room." + rid + ".price")
-                      << " -> $" << kv.second << "\n";
-        }
-    }
+    std::cout << "\n--- Emergency: Pipe burst in Room 101 ---\n";
+    emergency_chain(1, 101, "Pipe burst -- water leak", s);
 
-    std::cout << "\nChanges required in the FaaS architecture:\n"
-              << "  1. Write apply_dynamic_pricing() — ONE new file/function\n"
-              << "  2. Register it in the orchestrator\n"
-              << "  3. Trigger it as a downstream event after check_in/check_out\n"
-              << "\n"
-              << "Risk: Low — zero changes to any existing function.\n"
-              << "A bug in pricing cannot corrupt check-in or reservation logic.\n"
-              << "The function can be tested, deployed, and rolled back independently.\n";
+    std::cout << "\nState after emergency:\n";
+    display_available_rooms(s);
 
+    std::cout << "\n===== Extension Demo Complete =====\n";
     return 0;
 }

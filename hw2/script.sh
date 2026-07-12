@@ -9,8 +9,8 @@ TRAD_DIR="Traditional"
 FAAS_DIR="FaaS"
 TRAD_BIN="$TRAD_DIR/hotel_traditional"
 FAAS_BIN="$FAAS_DIR/hotel_faas"
-TRAD_EXT_BIN="$TRAD_DIR/hotel_trad_extension"
-FAAS_EXT_BIN="$FAAS_DIR/hotel_faas_extension"
+TRAD_EXT_BIN="$TRAD_DIR/hotel_traditional_ext"
+FAAS_EXT_BIN="$FAAS_DIR/hotel_faas_ext"
 
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 
@@ -21,25 +21,23 @@ echo -e "${CYAN}========================================${NC}\n"
 # ── 1. Build ──────────────────────────────────────────────────────────────────
 
 echo -e "${YELLOW}[1/4] Building Traditional architecture...${NC}"
-g++ -O2 -std=c++14 -o "$TRAD_BIN"     "$TRAD_DIR/main.cpp"
-g++ -O2 -std=c++14 -o "$TRAD_EXT_BIN" "$TRAD_DIR/feature_extension.cpp"
-echo -e "${GREEN}      Built: $TRAD_BIN${NC}"
+(cd "$TRAD_DIR" && make -s)
+echo -e "${GREEN}      Built: $TRAD_BIN and $TRAD_EXT_BIN${NC}"
 
 echo -e "${YELLOW}[2/4] Building FaaS architecture...${NC}"
-g++ -O2 -std=c++14 -o "$FAAS_BIN"     "$FAAS_DIR/main.cpp"
-g++ -O2 -std=c++14 -o "$FAAS_EXT_BIN" "$FAAS_DIR/feature_extension.cpp"
-echo -e "${GREEN}      Built: $FAAS_BIN${NC}\n"
+(cd "$FAAS_DIR" && make -s)
+echo -e "${GREEN}      Built: $FAAS_BIN and $FAAS_EXT_BIN${NC}\n"
 
 # ── 2. Run ────────────────────────────────────────────────────────────────────
 
 echo -e "${YELLOW}[3/4] Running implementations...${NC}\n"
 
-echo -e "${CYAN}--- Traditional Output ---${NC}"
-"$TRAD_BIN"
+echo -e "${CYAN}--- Traditional Output (demo) ---${NC}"
+"$TRAD_BIN" demo
 echo ""
 
-echo -e "${CYAN}--- FaaS Output ---${NC}"
-"$FAAS_BIN"
+echo -e "${CYAN}--- FaaS Output (demo) ---${NC}"
+"$FAAS_BIN" demo
 echo ""
 
 echo -e "${CYAN}--- Feature Extension: Traditional ---${NC}"
@@ -56,25 +54,23 @@ echo -e "${YELLOW}[4/4] Performance Profiling...${NC}\n"
 
 RESULTS_DIR="profiling_results"
 mkdir -p "$RESULTS_DIR"
-BENCH_RUNS=200
 
 # Helper: run perf if available, otherwise use /usr/bin/time
 run_profile() {
     local label="$1"
     local binary="$2"
     local out_prefix="$3"
-    local bench_cmd
-    bench_cmd="for i in \$(seq 1 $BENCH_RUNS); do \"$binary\" > /dev/null; done"
     echo -e "${CYAN}--- $label ---${NC}"
+    echo "Benchmark workload: $BENCH_RUNS iterations in-process"
 
     if command -v perf &>/dev/null; then
         perf stat -r 5 -e cycles,instructions,cache-misses,context-switches \
-               bash -c "$bench_cmd" 2> "$RESULTS_DIR/${out_prefix}_perf_stat.txt"
+               "$binary" benchmark > /dev/null 2> "$RESULTS_DIR/${out_prefix}_perf_stat.txt"
         cat "$RESULTS_DIR/${out_prefix}_perf_stat.txt"
 
         # Optional syscall summary if strace exists
         if command -v strace &>/dev/null; then
-            strace -c bash -c "$bench_cmd" > /dev/null 2> "$RESULTS_DIR/${out_prefix}_syscalls.txt"
+            strace -c "$binary" benchmark > /dev/null 2> "$RESULTS_DIR/${out_prefix}_syscalls.txt"
             echo "\nTop syscalls:"
             head -20 "$RESULTS_DIR/${out_prefix}_syscalls.txt"
         fi
@@ -82,7 +78,7 @@ run_profile() {
 
     if [ -x /usr/bin/time ]; then
         /usr/bin/time -f "real=%e user=%U sys=%S maxrss=%MKB" \
-            bash -c "$bench_cmd" > /dev/null 2> "$RESULTS_DIR/${out_prefix}_time.txt"
+            "$binary" benchmark > /dev/null 2> "$RESULTS_DIR/${out_prefix}_time.txt"
         cat "$RESULTS_DIR/${out_prefix}_time.txt"
     else
         echo "Warning: /usr/bin/time not found."
