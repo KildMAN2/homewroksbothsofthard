@@ -56,22 +56,25 @@ echo -e "${YELLOW}[4/4] Performance Profiling...${NC}\n"
 
 RESULTS_DIR="profiling_results"
 mkdir -p "$RESULTS_DIR"
+BENCH_RUNS=200
 
 # Helper: run perf if available, otherwise use /usr/bin/time
 run_profile() {
     local label="$1"
     local binary="$2"
     local out_prefix="$3"
+    local bench_cmd
+    bench_cmd="for i in \$(seq 1 $BENCH_RUNS); do \"$binary\" > /dev/null; done"
     echo -e "${CYAN}--- $label ---${NC}"
 
     if command -v perf &>/dev/null; then
         perf stat -r 5 -e cycles,instructions,cache-misses,context-switches \
-             "$binary" 2> "$RESULTS_DIR/${out_prefix}_perf_stat.txt"
+               bash -c "$bench_cmd" 2> "$RESULTS_DIR/${out_prefix}_perf_stat.txt"
         cat "$RESULTS_DIR/${out_prefix}_perf_stat.txt"
 
         # Optional syscall summary if strace exists
         if command -v strace &>/dev/null; then
-            strace -c "$binary" > /dev/null 2> "$RESULTS_DIR/${out_prefix}_syscalls.txt"
+            strace -c bash -c "$bench_cmd" > /dev/null 2> "$RESULTS_DIR/${out_prefix}_syscalls.txt"
             echo "\nTop syscalls:"
             head -20 "$RESULTS_DIR/${out_prefix}_syscalls.txt"
         fi
@@ -79,7 +82,7 @@ run_profile() {
 
     if [ -x /usr/bin/time ]; then
         /usr/bin/time -f "real=%e user=%U sys=%S maxrss=%MKB" \
-            "$binary" > /dev/null 2> "$RESULTS_DIR/${out_prefix}_time.txt"
+            bash -c "$bench_cmd" > /dev/null 2> "$RESULTS_DIR/${out_prefix}_time.txt"
         cat "$RESULTS_DIR/${out_prefix}_time.txt"
     else
         echo "Warning: /usr/bin/time not found."
