@@ -10,25 +10,27 @@ Choose one of the suggested systems or propose your own:
 - University course management
 - Other realistic system scenario
 
-**Selected System:** [TO BE CHOSEN]
+**Selected System:** Hotel management system
 
 ### 2. Required Operations/Services
 List at least 7 meaningful operations for your chosen system:
-1. 
-2. 
-3. 
-4. 
-5. 
-6. 
-7. 
-8. (additional)
+1. reserveRoom
+2. cancelReservation
+3. checkInGuest
+4. checkOutGuest
+5. assignHousekeepingToFloor
+6. updateStaffShift
+7. orderRoomService
+8. handleMaintenanceRequest
+9. checkRestaurantCapacity
+10. generateDailyReport
 
 ### 3. Implementation Plan
 
 #### Part 1: Traditional Architecture
-- Language: (C/C++/Python)
-- Design approach: (monolithic/modular/service-based)
-- Core components and structure
+- Language: C++
+- Design approach: monolithic/service-based in a single process
+- Core components and structure: HotelSystem class with shared in-memory state
 
 #### Part 2: FaaS Architecture
 - Each operation becomes an independent stateless function
@@ -36,8 +38,8 @@ List at least 7 meaningful operations for your chosen system:
 - Clear function interfaces
 
 #### Part 3: Feature Extension
-- Proposed new feature: [TBD after implementations]
-- Difficulty analysis for each architecture
+- Proposed new feature: Dynamic room pricing based on occupancy
+- Difficulty analysis for each architecture: implemented in feature_extension.cpp files
 
 #### Part 4: Performance Evaluation
 - Profiling tool: perf (or alternative)

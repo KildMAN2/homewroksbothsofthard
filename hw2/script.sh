@@ -54,45 +54,44 @@ echo ""
 
 echo -e "${YELLOW}[4/4] Performance Profiling...${NC}\n"
 
+RESULTS_DIR="profiling_results"
+mkdir -p "$RESULTS_DIR"
+
 # Helper: run perf if available, otherwise use /usr/bin/time
 run_profile() {
     local label="$1"
     local binary="$2"
+    local out_prefix="$3"
     echo -e "${CYAN}--- $label ---${NC}"
+
     if command -v perf &>/dev/null; then
-        perf stat -e cycles,instructions,cache-misses,context-switches \
-             "$binary" > /dev/null 2>&1 || \
-        perf stat "$binary" > /dev/null
-    elif command -v time &>/dev/null; then
-        /usr/bin/time -v "$binary" > /dev/null 2>&1 || \
-        { echo "  (timing with shell built-in)"; time "$binary" > /dev/null; }
-    else
-        echo "  perf and /usr/bin/time not available; timing with date:"
-        START=$(date +%s%N)
-        "$binary" > /dev/null
-        END=$(date +%s%N)
-        echo "  Elapsed: $(( (END - START) / 1000000 )) ms"
+        perf stat -r 5 -e cycles,instructions,cache-misses,context-switches \
+             "$binary" 2> "$RESULTS_DIR/${out_prefix}_perf_stat.txt"
+        cat "$RESULTS_DIR/${out_prefix}_perf_stat.txt"
+
+        # Optional syscall summary if strace exists
+        if command -v strace &>/dev/null; then
+            strace -c "$binary" > /dev/null 2> "$RESULTS_DIR/${out_prefix}_syscalls.txt"
+            echo "\nTop syscalls:"
+            head -20 "$RESULTS_DIR/${out_prefix}_syscalls.txt"
+        fi
     fi
+
+    if [ -x /usr/bin/time ]; then
+        /usr/bin/time -f "real=%e user=%U sys=%S maxrss=%MKB" \
+            "$binary" > /dev/null 2> "$RESULTS_DIR/${out_prefix}_time.txt"
+        cat "$RESULTS_DIR/${out_prefix}_time.txt"
+    else
+        echo "Warning: /usr/bin/time not found."
+    fi
+
     echo ""
 }
 
-# Run each binary 3 times to get stable measurements
-for RUN in 1 2 3; do
-    echo -e "${YELLOW}  Pass $RUN / 3${NC}"
-    run_profile "Traditional (pass $RUN)" "$TRAD_BIN"
-    run_profile "FaaS        (pass $RUN)" "$FAAS_BIN"
-done
+run_profile "Traditional" "$TRAD_BIN" "traditional"
+run_profile "FaaS" "$FAAS_BIN" "faas"
 
-# Full perf record (generates perf.data for deeper analysis)
-if command -v perf &>/dev/null; then
-    echo -e "${CYAN}--- Detailed perf record (Traditional) ---${NC}"
-    perf record -o perf_traditional.data -g "$TRAD_BIN" > /dev/null 2>&1
-    perf report -i perf_traditional.data --stdio 2>/dev/null | head -40
-
-    echo -e "${CYAN}--- Detailed perf record (FaaS) ---${NC}"
-    perf record -o perf_faas.data -g "$FAAS_BIN" > /dev/null 2>&1
-    perf report -i perf_faas.data --stdio 2>/dev/null | head -40
-fi
+echo -e "${GREEN}Saved profiling outputs under: $RESULTS_DIR${NC}"
 
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  All steps complete.${NC}"
