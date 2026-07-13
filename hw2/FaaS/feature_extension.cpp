@@ -1,17 +1,17 @@
 ﻿// Part 3 -- Feature Extension: Emergency Maintenance + Auto Room Reassignment
 //
 // FaaS Architecture Analysis:
-//   To add this feature we ONLY added NEW files:
-//     faas_functions.h  <- unchanged
+//   To add this feature we ONLY added NEW functions in this file:
+//     faas_functions.h   <- unchanged
 //     faas_functions.cpp <- unchanged
-//   All new logic lives in this file as independent static functions.
-//   Zero changes to existing code.
+//   All new logic lives here as independent functions. Zero changes to
+//   existing code.
 //
 // Trade-off:
 //   + Existing functions untouched (zero regression risk)
 //   + Each new function has one responsibility and is independently testable
-//   - A failure between steps leaves storage in a partial state
-//   - The full flow requires reading multiple files to understand
+//   - A failure between steps leaves storage in a partial state (no atomicity)
+//   - The full flow requires reading multiple functions to understand
 
 #include <iostream>
 #include <vector>
@@ -22,48 +22,44 @@
 static std::vector<int> find_affected_reservations(int roomId,
                                                     const HotelStorage& s) {
     std::vector<int> result;
-    for (const Reservation& res : s.reservations)
-        if (res.roomId == roomId && res.active)
-            result.push_back(res.id);
+    for (const auto& kv : s.reservations)
+        if (kv.second.roomId == roomId && kv.second.active)
+            result.push_back(kv.second.id);
     return result;
 }
 
 static int find_replacement_room(RoomType needed, int excludeId,
                                   const HotelStorage& s) {
-    for (const Room& r : s.rooms)
-        if (r.id != excludeId && r.type == needed && r.status == RoomStatus::AVAILABLE)
-            return r.id;
+    for (const auto& kv : s.rooms)
+        if (kv.first != excludeId && kv.second.type == needed &&
+            kv.second.status == RoomStatus::AVAILABLE)
+            return kv.first;
     return -1;
 }
 
 static bool reassign_reservation(int resId, int newRoomId, HotelStorage& s) {
-    for (Reservation& res : s.reservations) {
-        if (res.id == resId && res.active) {
-            res.roomId = newRoomId;
-            for (Room& r : s.rooms)
-                if (r.id == newRoomId) { r.status = RoomStatus::RESERVED; break; }
-            return true;
-        }
-    }
-    return false;
+    auto it = s.reservations.find(resId);
+    if (it == s.reservations.end() || !it->second.active) return false;
+    it->second.roomId = newRoomId;
+    auto rit = s.rooms.find(newRoomId);
+    if (rit != s.rooms.end()) rit->second.status = RoomStatus::RESERVED;
+    return true;
 }
 
 static void notify_guest(int guestId, const std::string& msg,
                           const HotelStorage& s) {
-    for (const Guest& g : s.guests)
-        if (g.id == guestId) {
-            std::cout << "  [notify_guest] SMS to " << g.name
-                      << " (" << g.phone << "): " << msg << "\n";
-            return;
-        }
+    auto it = s.guests.find(guestId);
+    if (it != s.guests.end())
+        std::cout << "  [notify_guest] SMS to " << it->second.name
+                  << " (" << it->second.phone << "): " << msg << "\n";
 }
 
-// Orchestrator: calls the chain of independent functions
+// Orchestrator: chains the independent functions
 static void emergency_chain(int requestId, int roomId,
                              const std::string& issue, HotelStorage& s) {
     std::cout << "[FaaS chain] EMERGENCY room " << roomId << ": " << issue << "\n";
 
-    // Step 1: use existing report_maintenance (unmodified)
+    // Step 1: reuse existing report_maintenance (unmodified)
     report_maintenance({requestId, roomId, issue, "EMERGENCY"}, s);
     std::cout << "  [report_maintenance] Room " << roomId << " -> MAINTENANCE\n";
 
@@ -72,13 +68,14 @@ static void emergency_chain(int requestId, int roomId,
     std::cout << "  [find_affected_reservations] " << affected.size()
               << " reservation(s) affected\n";
 
+    RoomType rtype = RoomType::SINGLE;
+    auto roomIt = s.rooms.find(roomId);
+    if (roomIt != s.rooms.end()) rtype = roomIt->second.type;
+
     for (int resId : affected) {
         int guestId = -1;
-        RoomType rtype = RoomType::SINGLE;
-        for (const Reservation& r : s.reservations)
-            if (r.id == resId) { guestId = r.guestId; break; }
-        for (const Room& r : s.rooms)
-            if (r.id == roomId) { rtype = r.type; break; }
+        auto rIt = s.reservations.find(resId);
+        if (rIt != s.reservations.end()) guestId = rIt->second.guestId;
 
         // Step 3: new function
         int newRoom = find_replacement_room(rtype, roomId, s);

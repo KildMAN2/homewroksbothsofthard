@@ -70,13 +70,7 @@ static void run_demo() {
 }
 
 static void run_benchmark() {
-    HotelStorage s;
-    s.guests.reserve(10001);
-    s.rooms.reserve(1001);
-    s.reservations.reserve(11000);
-    s.payments.reserve(10001);
-    s.cleaningTasks.reserve(10001);
-    s.maintenanceRequests.reserve(5001);
+    HotelStorage s;   // std::map storage -- no pre-allocation needed
 
     for (int i = 1; i <= 10000; i++)
         add_guest({i, "Guest_" + std::to_string(i), "555-" + std::to_string(i)}, s);
