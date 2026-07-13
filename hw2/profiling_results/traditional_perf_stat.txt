@@ -1,10 +1,10 @@
 
  Performance counter stats for 'Traditional/hotel_traditional benchmark' (5 runs):
 
-          45507954      cycles                                                        ( +-  1.64% )
-          64419929      instructions              #    1.40  insn per cycle           ( +-  0.02% )
-                92      cache-misses                                                  ( +-3121.08% )
-                 3      context-switches                                              ( +-  8.16% )
+          47137175      cycles                                                        ( +-  0.45% )
+          64420637      instructions              #    1.35  insn per cycle           ( +-  0.01% )
+             14897      cache-misses                                                  ( +- 17.80% )
+                 3      context-switches                                              ( +- 13.33% )
 
-           0.02113 +- 0.00139 seconds time elapsed  ( +-  6.55% )
+           0.02281 +- 0.00199 seconds time elapsed  ( +-  8.74% )
 
