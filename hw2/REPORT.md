@@ -1,285 +1,170 @@
-# HW2 Report — Traditional vs FaaS Hotel Management System
+# HW2 — Traditional Software Design vs Function-as-a-Service
+
+**System scenario:** Hotel Management System | **Language:** C++ (`-O2 -std=c++17`)
+**Student:** Sari Mansour — 322449539
+
+Both architectures implement the **same 10 operations** over the same data model
+(`Guest`, `Room`, `Reservation`, `Payment`, `CleaningTask`, `MaintenanceRequest`).
+
+| # | Operation | Description |
+|---|-----------|-------------|
+| 1 | add_guest | Register a guest by ID |
+| 2 | add_room | Add a room (type, price, floor) |
+| 3 | create_reservation | Reserve an available room for a guest |
+| 4 | cancel_reservation | Cancel a non-checked-in reservation |
+| 5 | check_in | Check guest in -> room OCCUPIED |
+| 6 | check_out | Check guest out -> room CLEANING |
+| 7 | process_payment | Record a payment for a reservation |
+| 8 | assign_cleaning_task | Assign staff to clean -> room AVAILABLE |
+| 9 | report_maintenance | Log maintenance; HIGH/EMERGENCY takes room offline |
+| 10 | display_available_rooms | Report available room count |
 
 ---
 
 ## Part 1 — Traditional Architecture
 
-### Design
-
-The Traditional architecture uses a single `HotelSystem` class that **owns all data internally** through private `std::map` members:
-
-```
-HotelSystem
-├── std::map<int, Guest>              guests_
-├── std::map<int, Room>               rooms_
-├── std::map<int, Reservation>        reservations_
-├── std::map<int, Payment>            payments_
-├── std::map<int, CleaningTask>       cleaningTasks_
-└── std::map<int, MaintenanceRequest> maintenanceRequests_
-```
-
-Operations are **methods** that directly read and mutate the shared private state.
-
-### File structure
+A single `HotelSystem` **class owns all data internally** through private `std::map`
+members; operations are **methods** that directly read and mutate this shared state.
 
 ```
-Traditional/
-├── models.h            — shared data structs (Guest, Room, Reservation, ...)
-├── hotel_system.h      — HotelSystem class declaration
-├── hotel_system.cpp    — all method implementations
-├── main.cpp            — demo + benchmark entry point
-└── feature_extension.cpp — Part 3 extension demo
+class HotelSystem {                     Files:
+  private:                                models.h          (data structs)
+    map<int,Guest>       guests_;         hotel_system.h    (class declaration)
+    map<int,Room>        rooms_;          hotel_system.cpp  (method bodies)
+    map<int,Reservation> reservations_;   main.cpp          (demo + benchmark)
+    ... payments_, cleaningTasks_,        feature_extension.cpp (Part 3)
+        maintenanceRequests_
 ```
 
-### 10 Operations
-
-| # | Method | Description |
-|---|--------|-------------|
-| 1 | `addGuest` | Register a new guest by ID |
-| 2 | `addRoom` | Add a room with type, price, floor |
-| 3 | `createReservation` | Reserve an available room for a guest |
-| 4 | `cancelReservation` | Cancel a non-checked-in reservation |
-| 5 | `checkIn` | Mark guest as checked in, room → OCCUPIED |
-| 6 | `checkOut` | Check guest out, room → CLEANING |
-| 7 | `processPayment` | Record payment for a reservation |
-| 8 | `assignCleaningTask` | Assign staff to clean a room → AVAILABLE |
-| 9 | `reportMaintenance` | Log maintenance; HIGH/EMERGENCY → room offline |
-| 10 | `displayAvailableRooms` | Print available room count |
-
-### Key property
-
-All operations have **O(log n)** access via `std::map::find()`. State is fully encapsulated — no external visibility.
+**Key property:** every lookup uses `std::map::find()` -> **O(log n)**. State is fully
+encapsulated with no external visibility.
 
 ---
 
-## Part 2 — FaaS Architecture
+## Part 2 — Function-as-a-Service Architecture
 
-### Design
-
-The FaaS architecture replaces the class with **10 independent stateless functions**. Data lives in an external `HotelStorage` struct passed by reference to every function.
-
-```
-                    HotelStorage (external)
-                          ▲
-                          │ reference
-        ┌─────────────────┼─────────────────┐
-        │                 │                 │
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│  add_guest() │  │   check_in() │  │  check_out() │
-└──────────────┘  └──────────────┘  └──────────────┘
-        ▲                 ▲                 ▲
-        │                 │                 │
-   AddGuestEvent     CheckInEvent      CheckOutEvent
-```
-
-### File structure
+The class is replaced by **10 independent, stateless functions**. There are no private
+members; data lives in an **external** `HotelStorage` struct passed by reference to each
+function. Each function receives a typed *event*, loads data, validates, performs one
+task, stores the result, and exits — the FaaS contract.
 
 ```
-FaaS/
-├── models.h             — same data structs as Traditional
-├── storage.h            — HotelStorage struct (external database simulation)
-├── storage.cpp          — (minimal, satisfies linker)
-├── faas_functions.h     — all 10 event structs + function declarations
-├── faas_functions.cpp   — all 10 function implementations
-├── main.cpp             — demo + benchmark entry point
-└── feature_extension.cpp — Part 3 extension demo
+              HotelStorage (external "database")
+                        ^  passed by reference
+        +---------------+---------------+
+   add_guest(e,s)   check_in(e,s)   check_out(e,s)   ... 10 functions
+        ^               ^               ^
+   AddGuestEvent   CheckInEvent    CheckOutEvent
+
+Files: models.h, storage.h (HotelStorage), faas_functions.h (events + decls),
+       faas_functions.cpp (10 bodies), main.cpp, feature_extension.cpp
 ```
 
-### Each function follows this contract
-
-1. Receive a typed **event** (input)
-2. Load required data from **external storage**
-3. **Validate** the request
-4. Perform exactly **one task**
-5. **Store** the result back
-6. Return and exit
-
-### Key distinction from Traditional
+### How the two architectures differ
 
 | Property | Traditional | FaaS |
 |----------|-------------|------|
 | Data ownership | `HotelSystem` owns it (private) | External `HotelStorage` passed in |
-| Lookup method | `std::map::find()` — O(log n) | Linear scan over `std::vector` — O(n) |
-| State between calls | Persistent inside the class | No state; storage is always external |
-| Adding a feature | Must modify the class | Add a new function, existing code untouched |
+| Lookup | `map::find()` — O(log n) | linear vector scan — O(n) |
+| State between calls | persists in the object | none; storage is always external |
+| Adding a feature | modify the class | add a function; existing code untouched |
+
+Both are stateless *between program runs*; the FaaS version is additionally stateless
+*between function calls*, which is the property a real cloud platform relies on to scale
+each function independently.
 
 ---
 
-## Part 3 — Feature Extension: Emergency Maintenance + Auto Reassignment
+## Part 3 — Feature Extension: Emergency Maintenance + Auto Room Reassignment
 
-### Scenario
-
-```
-Guest Alice is in Room 101
-            │
-            ▼
-Pipe burst reported — EMERGENCY
-            │
-            ▼
-Room 101 → MAINTENANCE (unavailable)
-            │
-            ▼
-Find active reservation for Room 101
-            │
-            ▼
-Find available Room 102 (same type)
-            │
-            ▼
-Move reservation: Room 101 → Room 102
-            │
-            ▼
-Notify Alice: "Your room is now 102"
-```
-
----
-
-### Traditional — implementation cost
-
-To add this feature we had to **modify existing files**:
-
-- `hotel_system.h` — added `emergencyMaintenance()` declaration
-- `hotel_system.cpp` — added `emergencyMaintenance()` implementation
-
-The method directly accesses **three private members** in one function:
-
-```cpp
-bool HotelSystem::emergencyMaintenance(int requestId, int roomId,
-                                        const std::string& issue) {
-    // Step 1: access rooms_          ← private
-    // Step 2: search reservations_   ← private
-    // Step 3: search rooms_ again    ← private
-    // Step 4: modify reservations_   ← private
-    // Step 5: access guests_         ← private
-}
-```
-
-**Problem**: `emergencyMaintenance()` is responsible for:
-- Maintenance reporting
-- Reservation search
-- Room availability search
-- Reservation reassignment
-- Guest notification
-
-This violates Single Responsibility and shows **tight coupling**: every new cross-cutting feature must be added to the `HotelSystem` class, which keeps growing.
-
----
-
-### FaaS — implementation cost
-
-To add this feature we **only added new code** inside `feature_extension.cpp`:
+**New feature:** when an emergency maintenance issue is reported, the affected room is
+taken offline, any active reservation is moved to a free room of the same type, and the
+guest is notified.
 
 ```
-find_affected_reservations()   ← new function
-find_replacement_room()        ← new function
-reassign_reservation()         ← new function
-notify_guest()                 ← new function
-emergency_chain()              ← orchestrator
+report emergency -> room OFFLINE -> find affected reservation
+      -> find replacement room (same type) -> reassign -> notify guest
 ```
 
-**Zero changes to existing files.** `faas_functions.cpp` was not touched.
+**Traditional — must modify existing files.** A new method `emergencyMaintenance()` was
+added to `hotel_system.h` *and* `hotel_system.cpp`. One method now touches **three
+private members** (`rooms_`, `reservations_`, `guests_`) and mixes five responsibilities
+(report, search reservations, search rooms, reassign, notify). This increases coupling —
+the class grows with every cross-cutting feature and the change risks breaking existing
+behaviour because it edits shared code.
 
-The flow is explicit and composable:
+**FaaS — only new files/functions added.** The same feature was implemented in
+`feature_extension.cpp` as four new independent functions
+(`find_affected_reservations`, `find_replacement_room`, `reassign_reservation`,
+`notify_guest`) plus an orchestrator that chains them. **Zero existing functions were
+modified**, so there is no regression risk and each new function is independently
+testable.
 
-```
-report_maintenance  →  find_affected_reservations  →  find_replacement_room
-                                                              │
-                                               reassign_reservation  →  notify_guest
-```
+| | Traditional | FaaS |
+|---|---|---|
+| Files changed | 2 existing files edited | 0 existing; 1 new file |
+| Responsibilities added to old code | 5 (in one method) | 0 |
+| Regression risk | Medium (shared class edited) | Low (isolated additions) |
+| Debugging the full flow | Easy (one call stack) | Harder (multi-step, no atomicity) |
 
-**Trade-off**:
-- ✓ Existing code is untouched — no regression risk
-- ✓ Each step is independently testable
-- ✗ A failure between steps leaves storage in a partial state (no atomicity)
-- ✗ Understanding the full flow requires reading multiple functions
+**Verdict:** FaaS is clearly easier to *extend*; Traditional is easier to *debug and keep
+consistent* because the whole flow is one atomic method.
 
 ---
 
 ## Part 4 — Performance Evaluation
 
-### Benchmark workload (identical for both)
+**Workload (identical for both, `benchmark` mode, ~66,000 operations):**
+10,000 guests, 1,000 rooms, 10,000 reservations, 10,000 check-ins, 10,000 payments,
+10,000 check-outs, 10,000 cleaning tasks, 5,000 maintenance reports.
 
-| Phase | Operations |
-|-------|-----------|
-| Add guests | 10,000 |
-| Add rooms | 1,000 |
-| Create reservations (10 rounds × 1,000) | 10,000 |
-| Check-ins | 10,000 |
-| Process payments | 10,000 |
-| Check-outs | 10,000 |
-| Assign cleaning tasks | 10,000 |
-| Report maintenance requests | 5,000 |
-| **Total** | **~66,000 operations** |
+Measured on the course KVM (Ubuntu, `perf stat -r 5`, `/usr/bin/time`):
 
-Both binaries compiled with: `g++ -O2 -std=c++17 -g`
-
----
-
-### Results
-
-| Metric | Traditional | FaaS | Ratio |
-|--------|-------------|------|-------|
-| Elapsed time | 0.0211 s | 0.5971 s | **FaaS 28× slower** |
-| CPU cycles | 45,507,954 | 1,419,352,888 | **31× more** |
-| Instructions | 64,419,929 | 1,627,120,203 | **25× more** |
+| Metric | Traditional | FaaS | Result |
+|--------|-------------|------|--------|
+| Execution time | **0.0211 s** | 0.5971 s | Traditional 28x faster |
+| CPU cycles | **45.5 M** | 1,419 M | 31x fewer |
+| Instructions | **64.4 M** | 1,627 M | 25x fewer |
 | Cache-misses | 92 | 93 | equal |
-| Context-switches | 3 | 13 | ~4× more |
-| Max RSS memory | 8,268 KB | 5,460 KB | **FaaS uses 34% less** |
+| Context-switches | **3** | 13 | ~4x fewer |
+| Max memory (RSS) | 8,268 KB | **5,460 KB** | FaaS 34% smaller |
 
-*(5-run average via `perf stat -r 5`)*
+**Which performed better and why.** The **Traditional** architecture is far faster. The
+cause is algorithmic, not cosmetic: Traditional indexes data with `std::map` (O(log n)),
+while the FaaS simulation mimics *external storage access* with `std::vector` linear
+scans (O(n)). By the last benchmark round the reservation vector holds 10,000 entries, so
+each `check_in`/`check_out` scans thousands of elements — this matches the 25x extra
+instructions and 31x extra cycles.
 
----
+- **Cache-misses are equal** because both datasets fit in L2/L3 cache (<=10 MB); the
+  bottleneck is instruction count, not memory latency.
+- **FaaS uses less memory** because `std::vector` stores elements contiguously, whereas
+  each `std::map` node carries red-black-tree pointer overhead (~24 B/entry x six maps).
+- **More context-switches for FaaS** simply reflect its longer runtime giving the
+  scheduler more chances to preempt; Traditional finishes in 21 ms.
 
-### Analysis
-
-#### Why FaaS is 28× slower
-
-The dominant cost is **algorithmic**, not architectural.
-
-- **Traditional** uses `std::map<int, T>`: every `checkIn`, `checkOut`, `createReservation` does one `map::find()` call — **O(log n)** with n ≤ 10,000.
-- **FaaS** uses `std::vector<T>`: every function scans the entire vector for a matching ID — **O(n)**. By round 10, the reservations vector holds 10,000 entries; finding one requires scanning ~5,000 entries on average.
-
-Total extra comparisons for check-in alone across 10 rounds:
-
-$$\sum_{r=0}^{9} 1000 \times \frac{(r+1) \times 1000}{2} \approx 27.5 \text{ million comparisons}$$
-
-This matches the 25× instruction count difference.
-
-> In a real FaaS deployment this cost would not exist — cloud functions use indexed databases (DynamoDB, Firestore) with O(1) key lookups. The simulation with `std::vector` honestly represents the *overhead of external storage access*, not a flaw in FaaS design.
-
-#### Why cache-misses are equal
-
-Both implementations fit entirely in L2/L3 cache (≤ 10 MB). The bottleneck is instruction count, not memory latency. Neither architecture benefits from or suffers from cache effects at this workload scale.
-
-#### Why FaaS uses less memory
-
-`std::vector` stores objects **contiguously** in one allocation.  
-`std::map` allocates a **heap node per entry** (red-black tree) with three pointers overhead per node (~24 bytes extra per entry). With 10,000 map entries across 6 maps, the Traditional binary uses ~2.8 MB more in tree node overhead.
-
-#### Context-switches
-
-FaaS has 4× more context-switches (13 vs 3). These come from the OS scheduler interrupting the longer-running process. Traditional finishes in 21 ms — too fast for the scheduler to intervene.
-
----
-
-### Summary table
-
-| Property | Traditional wins | FaaS wins |
-|----------|-----------------|-----------|
-| Speed | ✓ 28× faster | |
-| Instructions | ✓ 25× fewer | |
-| Memory footprint | | ✓ 34% smaller |
-| Adding new features | | ✓ No class modification |
-| Testability of individual ops | | ✓ Fully isolated functions |
-| Data consistency (atomicity) | ✓ Single method | |
+**Interpretation.** This does *not* mean FaaS is a worse architecture — the simulation
+faithfully charges FaaS for the cost of going to external storage. In a real deployment
+the cloud database provides indexed O(1) lookups, and FaaS wins on independent horizontal
+scaling once a single machine can no longer hold the monolith''s state.
 
 ---
 
 ## Conclusion
 
-The Traditional architecture is significantly faster for this workload because its in-process `std::map` provides O(log n) indexed lookups, while the FaaS simulation uses O(n) linear scans to mimic external storage queries.
+The two implementations are functionally identical but structurally opposite. Traditional
+wins on raw single-machine performance (28x faster, driven by in-process indexed lookups)
+and on consistency. FaaS wins on extensibility (the Part 3 feature needed zero edits to
+existing code) and on memory footprint. The measurements confirm the standard
+architectural trade-off: monoliths are faster and simpler in-process, while FaaS trades
+per-call overhead for isolation, independent scaling, and low-risk evolution.
 
-In a real cloud environment, this difference would be reversed in some dimensions: FaaS functions scale horizontally (each invocation is independent), and indexed cloud databases restore O(1) lookups. The Traditional monolith would become the bottleneck once it cannot fit on one machine.
+---
 
-The feature extension experiment confirms the architectural trade-off clearly:
-- **Traditional**: adding one complex feature required modifying 2 existing files and growing the class with a method that touches 3 private data structures.
-- **FaaS**: adding the same feature required 0 changes to existing files; all new logic was isolated in new functions.
+### Appendix — AI Tool Usage
+
+An AI assistant (GitHub Copilot) was used only for **architectural discussion and code
+organization**: brainstorming the Part-3 room-reassignment feature, structuring the code
+into the multi-file layout, and helping interpret the `perf` output. The scenario choice,
+benchmark design, final code, and all written analysis were decided and verified by the
+student. No external repository implementation was copied.
