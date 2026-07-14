@@ -1,0 +1,10 @@
+
+ Performance counter stats for 'Traditional/hotel_traditional benchmark' (5 runs):
+
+         428231406      branches                                                      ( +-  0.00% )
+           2577349      branch-misses             #    0.60% of all branches          ( +-  0.21% )
+          43287240      cache-references                                              ( +-  0.58% )
+               468      cache-misses              #    0.001 % of all cache refs      ( +-272.03% )
+
+           0.65616 +- 0.00162 seconds time elapsed  ( +-  0.25% )
+
