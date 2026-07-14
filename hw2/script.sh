@@ -106,6 +106,15 @@ run_profile() {
                "$binary" benchmark > /dev/null 2> "$RESULTS_DIR/${out_prefix}_perf_stat_cache.txt"
         cat "$RESULTS_DIR/${out_prefix}_perf_stat_cache.txt"
 
+        # Software events (page-faults, migrations) are always available even
+        # when the hardware PMU is limited/virtualized. These directly probe
+        # memory-allocation and scheduler behavior -- e.g. testing whether
+        # FaaS's per-call std::map<string,string> allocations show up as more
+        # minor page faults than Traditional's in-process method calls.
+        perf stat -r 5 -e page-faults,minor-faults,major-faults,cpu-migrations \
+               "$binary" benchmark > /dev/null 2> "$RESULTS_DIR/${out_prefix}_perf_stat_mem.txt"
+        cat "$RESULTS_DIR/${out_prefix}_perf_stat_mem.txt"
+
         # Optional syscall summary if strace exists
         if command -v strace &>/dev/null; then
             strace -c "$binary" benchmark > /dev/null 2> "$RESULTS_DIR/${out_prefix}_syscalls.txt"
@@ -128,7 +137,31 @@ run_profile() {
 run_profile "Traditional" "$TRAD_BIN" "traditional"
 run_profile "FaaS" "$FAAS_BIN" "faas"
 
+# Consolidated summary file (mirrors HW1's results/summary.txt) so all
+# metrics for both architectures can be reviewed/copied from one place.
+{
+    printf "# HW2 Profiling Summary\n# %s\n\n" "$(date)"
+    printf "=== Traditional: core (cycles/instructions/context-switches) ===\n"
+    cat "$RESULTS_DIR/traditional_perf_stat.txt"
+    printf "\n=== Traditional: branches/cache ===\n"
+    cat "$RESULTS_DIR/traditional_perf_stat_cache.txt"
+    printf "\n=== Traditional: page-faults/migrations ===\n"
+    cat "$RESULTS_DIR/traditional_perf_stat_mem.txt"
+    printf "\n=== Traditional: /usr/bin/time ===\n"
+    cat "$RESULTS_DIR/traditional_time.txt"
+
+    printf "\n\n=== FaaS: core (cycles/instructions/context-switches) ===\n"
+    cat "$RESULTS_DIR/faas_perf_stat.txt"
+    printf "\n=== FaaS: branches/cache ===\n"
+    cat "$RESULTS_DIR/faas_perf_stat_cache.txt"
+    printf "\n=== FaaS: page-faults/migrations ===\n"
+    cat "$RESULTS_DIR/faas_perf_stat_mem.txt"
+    printf "\n=== FaaS: /usr/bin/time ===\n"
+    cat "$RESULTS_DIR/faas_time.txt"
+} > "$RESULTS_DIR/summary.txt"
+
 echo -e "${GREEN}Saved profiling outputs under: $RESULTS_DIR${NC}"
+echo -e "${GREEN}Consolidated summary: $RESULTS_DIR/summary.txt${NC}"
 
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  All steps complete.${NC}"
