@@ -2,7 +2,7 @@
 #include <iostream>
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FaaS Hotel Management System -- 10 independent function handlers
+// FaaS Hotel Management System -- 11 independent function handlers
 //
 // Each handler follows the real FaaS contract:
 //   1. Receive a generic event payload (string key/value pairs, like JSON)
@@ -45,14 +45,25 @@ ResultData create_reservation(const EventData& e, HotelStorage& s) {
     int id      = std::stoi(e.at("id"));
     int guestId = std::stoi(e.at("guestId"));
     int roomId  = std::stoi(e.at("roomId"));
+    std::string checkIn  = e.at("checkIn");
+    std::string checkOut = e.at("checkOut");
 
     if (!s.guests.count(guestId)) return {{"success", "false"}, {"reason", "no_guest"}};
     auto rit = s.rooms.find(roomId);
-    if (rit == s.rooms.end() || rit->second.status != RoomStatus::AVAILABLE)
-        return {{"success", "false"}, {"reason", "room_unavailable"}};
+    if (rit == s.rooms.end()) return {{"success", "false"}, {"reason", "no_room"}};
 
-    s.reservations[id] = {id, guestId, roomId, e.at("checkIn"), e.at("checkOut"), true, false};
-    rit->second.status = RoomStatus::RESERVED;
+    // Reject only if an existing ACTIVE reservation for this room overlaps the
+    // requested date range. The room's current physical status (e.g. OCCUPIED
+    // right now) does not by itself block booking a future, non-overlapping stay.
+    for (const auto& kv : s.reservations) {
+        const Reservation& r = kv.second;
+        if (r.roomId == roomId && r.active && overlaps(checkIn, checkOut, r.checkIn, r.checkOut))
+            return {{"success", "false"}, {"reason", "date_conflict"}};
+    }
+
+    s.reservations[id] = {id, guestId, roomId, checkIn, checkOut, true, false};
+    if (rit->second.status == RoomStatus::AVAILABLE)
+        rit->second.status = RoomStatus::RESERVED;
     return {{"success", "true"}};
 }
 
@@ -117,11 +128,25 @@ ResultData assign_cleaning_task(const EventData& e, HotelStorage& s) {
         return {{"success", "false"}};
 
     s.cleaningTasks[id] = {id, roomId, staffId, false};
-    rit->second.status = RoomStatus::AVAILABLE;
+    // Task is only ASSIGNED here -- the room stays CLEANING until
+    // complete_cleaning_task() runs.
     return {{"success", "true"}};
 }
 
-// 9. report_maintenance
+// 9. complete_cleaning_task
+ResultData complete_cleaning_task(const EventData& e, HotelStorage& s) {
+    int id = std::stoi(e.at("id"));
+    auto it = s.cleaningTasks.find(id);
+    if (it == s.cleaningTasks.end() || it->second.completed)
+        return {{"success", "false"}};
+
+    it->second.completed = true;
+    auto rit = s.rooms.find(it->second.roomId);
+    if (rit != s.rooms.end()) rit->second.status = RoomStatus::AVAILABLE;
+    return {{"success", "true"}};
+}
+
+// 10. report_maintenance
 ResultData report_maintenance(const EventData& e, HotelStorage& s) {
     int id     = std::stoi(e.at("id"));
     int roomId = std::stoi(e.at("roomId"));
@@ -137,7 +162,7 @@ ResultData report_maintenance(const EventData& e, HotelStorage& s) {
     return {{"success", "true"}};
 }
 
-// 10. display_available_rooms
+// 11. display_available_rooms
 ResultData display_available_rooms(const EventData& /*e*/, HotelStorage& s) {
     int avail = 0;
     for (const auto& kv : s.rooms)

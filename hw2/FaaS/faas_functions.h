@@ -19,15 +19,22 @@ using ResultData = std::map<std::string, std::string>;
 // Signature every FaaS handler implements.
 using FaaSFn = std::function<ResultData(const EventData&, HotelStorage&)>;
 
-// ─── The 10 independent function handlers ─────────────────────────────────────
+// ─── The 11 independent function handlers ─────────────────────────────────────
 ResultData add_guest             (const EventData& e, HotelStorage& s);
 ResultData add_room              (const EventData& e, HotelStorage& s);
+// Reserves the room for [checkIn, checkOut) if no OTHER active reservation for
+// that room overlaps the requested date range (see models.h::overlaps).
 ResultData create_reservation    (const EventData& e, HotelStorage& s);
 ResultData cancel_reservation    (const EventData& e, HotelStorage& s);
 ResultData check_in              (const EventData& e, HotelStorage& s);
 ResultData check_out             (const EventData& e, HotelStorage& s);
 ResultData process_payment       (const EventData& e, HotelStorage& s);
+// Assigns a cleaning task to a room currently CLEANING. The room stays
+// CLEANING until complete_cleaning_task() runs -- assigning a task must not
+// itself mean the cleaning is already done.
 ResultData assign_cleaning_task  (const EventData& e, HotelStorage& s);
+// Marks a previously assigned cleaning task as finished and frees the room.
+ResultData complete_cleaning_task(const EventData& e, HotelStorage& s);
 ResultData report_maintenance    (const EventData& e, HotelStorage& s);
 ResultData display_available_rooms(const EventData& e, HotelStorage& s);
 

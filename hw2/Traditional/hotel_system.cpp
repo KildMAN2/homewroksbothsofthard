@@ -19,9 +19,20 @@ bool HotelSystem::createReservation(int id, int guestId, int roomId,
     if (!guests_.count(guestId)) return false;
     auto rit = rooms_.find(roomId);
     if (rit == rooms_.end()) return false;
-    if (rit->second.status != RoomStatus::AVAILABLE) return false;
+
+    // Reject only if an existing ACTIVE reservation for this room overlaps the
+    // requested date range. A room's current physical status (e.g. OCCUPIED
+    // right now) does not by itself block booking a future, non-overlapping stay.
+    for (const auto& kv : reservations_) {
+        const Reservation& r = kv.second;
+        if (r.roomId == roomId && r.active &&
+            overlaps(checkIn, checkOut, r.checkIn, r.checkOut))
+            return false;
+    }
+
     reservations_[id] = {id, guestId, roomId, checkIn, checkOut, true, false};
-    rit->second.status = RoomStatus::RESERVED;
+    if (rit->second.status == RoomStatus::AVAILABLE)
+        rit->second.status = RoomStatus::RESERVED;
     return true;
 }
 
@@ -67,7 +78,18 @@ bool HotelSystem::assignCleaningTask(int taskId, int roomId, int staffId) {
     auto rit = rooms_.find(roomId);
     if (rit == rooms_.end() || rit->second.status != RoomStatus::CLEANING) return false;
     cleaningTasks_[taskId] = {taskId, roomId, staffId, false};
-    rit->second.status = RoomStatus::AVAILABLE;
+    // Task is only ASSIGNED here -- the room stays CLEANING until the task is
+    // completed via completeCleaningTask(). Assigning a task must not itself
+    // mean the room is already clean.
+    return true;
+}
+
+bool HotelSystem::completeCleaningTask(int taskId) {
+    auto it = cleaningTasks_.find(taskId);
+    if (it == cleaningTasks_.end() || it->second.completed) return false;
+    it->second.completed = true;
+    auto rit = rooms_.find(it->second.roomId);
+    if (rit != rooms_.end()) rit->second.status = RoomStatus::AVAILABLE;
     return true;
 }
 

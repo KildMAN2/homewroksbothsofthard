@@ -58,7 +58,9 @@ static void run_demo() {
 
     std::cout << "\n--- Cleaning Task ---\n";
     hotel.assignCleaningTask(1, 101, 10);
-    std::cout << "  [assignCleaningTask] Room 101 -> Staff #10 (Room -> AVAILABLE)\n\n";
+    std::cout << "  [assignCleaningTask] Room 101 -> Staff #10 assigned (Room stays CLEANING)\n";
+    hotel.completeCleaningTask(1);
+    std::cout << "  [completeCleaningTask] Task #1 done (Room 101 -> AVAILABLE)\n\n";
 
     hotel.displayAvailableRooms();
 
@@ -92,7 +94,11 @@ static void run_benchmark() {
         for (int i = 0; i < 1000; i++) hotel.checkIn(baseResId + i);
         for (int i = 0; i < 1000; i++) hotel.processPayment(payId++, baseResId + i, 200.0);
         for (int i = 0; i < 1000; i++) hotel.checkOut(baseResId + i);
-        for (int i = 1; i <= 1000; i++) hotel.assignCleaningTask(taskId++, i, (round % 5) + 1);
+        for (int i = 1; i <= 1000; i++) {
+            hotel.assignCleaningTask(taskId, i, (round % 5) + 1);
+            hotel.completeCleaningTask(taskId);
+            taskId++;
+        }
         for (int i = 1; i <= 500;  i++) hotel.reportMaintenance(maintId++, (i-1)%1000+1, "Issue", "MEDIUM");
     }
 }

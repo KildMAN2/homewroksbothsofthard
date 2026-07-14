@@ -4,12 +4,25 @@
 //   To add this feature we ONLY added NEW functions in this file:
 //     faas_functions.h   <- unchanged
 //     faas_functions.cpp <- unchanged
-//   All new logic lives here as independent functions. Zero changes to
-//   existing code.
+//   All new logic lives here as independent functions.
+//
+//   Orchestrator note: this file builds its OWN local FaaSOrchestrator
+//   instance (see main() below) and registers only the existing handlers it
+//   reuses (add_guest, add_room, create_reservation, check_in,
+//   report_maintenance, display_available_rooms). The main system's
+//   orchestrator setup in main.cpp is NOT touched. The four new functions
+//   below (find_affected_reservations, find_replacement_room,
+//   reassign_reservation, notify_guest) are plain internal helpers operating
+//   directly on HotelStorage -- they represent internal workflow/orchestration
+//   steps, not independently-triggered external events, so they are not
+//   registered as FaaS handlers.
 //
 // Trade-off:
-//   + Existing functions untouched (zero regression risk)
+//   + Existing handlers untouched, so the risk of regressions in existing
+//     operations is lower (not zero -- see below)
 //   + Each new function has one responsibility and is independently testable
+//   - Integration errors can still occur through the shared HotelStorage: a
+//     bug in the new chain can corrupt data that existing handlers later read
 //   - A failure between steps leaves storage in a partial state (no atomicity)
 //   - The full flow requires reading multiple functions to understand
 

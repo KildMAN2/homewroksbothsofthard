@@ -49,3 +49,14 @@ struct MaintenanceRequest {
     std::string priority;   // LOW / MEDIUM / HIGH / EMERGENCY
     bool        resolved;
 };
+
+// Two date ranges [newCheckIn, newCheckOut) and [oldCheckIn, oldCheckOut) overlap
+// iff each starts before the other ends. Same-day checkout/check-in (e.g. an
+// old stay ending "2024-07-13" and a new one starting "2024-07-13") is NOT an
+// overlap. Assumes ISO-8601 "YYYY-MM-DD" strings, which compare correctly
+// lexicographically.
+inline bool overlaps(const std::string& newCheckIn, const std::string& newCheckOut,
+                      const std::string& oldCheckIn, const std::string& oldCheckOut) {
+    return newCheckIn < oldCheckOut && oldCheckIn < newCheckOut;
+}
+

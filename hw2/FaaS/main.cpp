@@ -2,7 +2,7 @@
 #include <string>
 #include "faas_functions.h"
 
-// Register all 10 handlers under their event name -- mirrors configuring
+// Register all 11 handlers under their event name -- mirrors configuring
 // triggers/routes on a real FaaS platform (API Gateway -> Lambda mapping).
 static FaaSOrchestrator buildOrchestrator() {
     FaaSOrchestrator orch;
@@ -14,6 +14,7 @@ static FaaSOrchestrator buildOrchestrator() {
     orch.registerFunction("check_out", check_out);
     orch.registerFunction("process_payment", process_payment);
     orch.registerFunction("assign_cleaning_task", assign_cleaning_task);
+    orch.registerFunction("complete_cleaning_task", complete_cleaning_task);
     orch.registerFunction("report_maintenance", report_maintenance);
     orch.registerFunction("display_available_rooms", display_available_rooms);
     return orch;
@@ -76,7 +77,9 @@ static void run_demo() {
 
     std::cout << "\n--- Cleaning Task ---\n";
     orch.invoke("assign_cleaning_task", {{"id","1"},{"roomId","101"},{"staffId","10"}}, s);
-    std::cout << "  [assign_cleaning_task] Room 101 -> Staff #10 (Room -> AVAILABLE)\n\n";
+    std::cout << "  [assign_cleaning_task] Room 101 -> Staff #10 assigned (Room stays CLEANING)\n";
+    orch.invoke("complete_cleaning_task", {{"id","1"}}, s);
+    std::cout << "  [complete_cleaning_task] Task #1 done (Room 101 -> AVAILABLE)\n\n";
 
     orch.invoke("display_available_rooms", {}, s);
 
@@ -141,6 +144,7 @@ static void run_benchmark() {
                 {{"id", std::to_string(taskId)},
                  {"roomId", std::to_string(i)},
                  {"staffId", std::to_string((round % 5) + 1)}}, s);
+            orch.invoke("complete_cleaning_task", {{"id", std::to_string(taskId)}}, s);
             taskId++;
         }
 
