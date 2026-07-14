@@ -1,1 +1,1 @@
-real=0.78 user=0.78 sys=0.00 maxrss=8612KB
+real=0.06 user=0.06 sys=0.00 maxrss=8700KB
