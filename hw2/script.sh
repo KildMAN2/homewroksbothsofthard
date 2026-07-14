@@ -18,6 +18,25 @@ echo -e "${CYAN}========================================${NC}"
 echo -e "${CYAN}  HW2: Hotel Management System${NC}"
 echo -e "${CYAN}========================================${NC}\n"
 
+# ── 0. Cleanup + disk space guard ──────────────────────────────────────────────
+# Rebuilding repeatedly can leave stale binaries/objects around, and a full
+# /tmp is a common cause of "No space left on device" during compilation on
+# shared VMs. Clean previous build artifacts and point the compiler's temp
+# files at a local, project-owned directory instead of the (possibly full)
+# system /tmp.
+echo -e "${YELLOW}[0/4] Cleaning previous build artifacts...${NC}"
+rm -f "$TRAD_DIR"/*.o "$FAAS_DIR"/*.o
+rm -f "$TRAD_BIN" "$TRAD_EXT_BIN" "$FAAS_BIN" "$FAAS_EXT_BIN"
+
+BUILD_TMPDIR="$(pwd)/.build_tmp"
+mkdir -p "$BUILD_TMPDIR"
+export TMPDIR="$BUILD_TMPDIR"
+trap 'rm -rf "$BUILD_TMPDIR"' EXIT
+
+echo "Disk usage for current filesystem:"
+df -h . | awk 'NR==1 || NR==2'
+echo ""
+
 # ── 1. Build ──────────────────────────────────────────────────────────────────
 
 echo -e "${YELLOW}[1/4] Building Traditional architecture...${NC}"
@@ -74,7 +93,8 @@ run_profile() {
     echo "Benchmark workload: $BENCH_RUNS iterations in-process"
 
     if command -v perf &>/dev/null; then
-        perf stat -r 5 -e cycles,instructions,cache-misses,context-switches \
+        perf stat -r 5 \
+               -e cycles,instructions,branches,branch-misses,cache-references,cache-misses,context-switches \
                "$binary" benchmark > /dev/null 2> "$RESULTS_DIR/${out_prefix}_perf_stat.txt"
         cat "$RESULTS_DIR/${out_prefix}_perf_stat.txt"
 
