@@ -1,5 +1,15 @@
 ﻿#include "hotel_system.h"
+#include <algorithm>
 #include <iostream>
+
+namespace {
+// Removes one occurrence of `id` from `ids`, if present. O(k) in the length
+// of that room's own reservation list (small), not in the total system size.
+void removeId(std::vector<int>& ids, int id) {
+    auto it = std::find(ids.begin(), ids.end(), id);
+    if (it != ids.end()) ids.erase(it);
+}
+}
 
 bool HotelSystem::addGuest(int id, const std::string& name, const std::string& phone) {
     if (guests_.count(id)) return false;
@@ -20,17 +30,18 @@ bool HotelSystem::createReservation(int id, int guestId, int roomId,
     auto rit = rooms_.find(roomId);
     if (rit == rooms_.end()) return false;
 
-    // Reject only if an existing ACTIVE reservation for this room overlaps the
-    // requested date range. A room's current physical status (e.g. OCCUPIED
-    // right now) does not by itself block booking a future, non-overlapping stay.
-    for (const auto& kv : reservations_) {
-        const Reservation& r = kv.second;
-        if (r.roomId == roomId && r.active &&
-            overlaps(checkIn, checkOut, r.checkIn, r.checkOut))
+    // Reject only if an existing ACTIVE reservation for THIS room overlaps the
+    // requested date range. Scanning only roomReservationIndex_[roomId] keeps
+    // this bounded by that one room's active bookings, instead of scanning
+    // every reservation ever created system-wide.
+    for (int existingId : roomReservationIndex_[roomId]) {
+        const Reservation& r = reservations_.at(existingId);
+        if (r.active && overlaps(checkIn, checkOut, r.checkIn, r.checkOut))
             return false;
     }
 
     reservations_[id] = {id, guestId, roomId, checkIn, checkOut, true, false};
+    roomReservationIndex_[roomId].push_back(id);
     if (rit->second.status == RoomStatus::AVAILABLE)
         rit->second.status = RoomStatus::RESERVED;
     return true;
@@ -41,6 +52,7 @@ bool HotelSystem::cancelReservation(int reservationId) {
     if (it == reservations_.end() || !it->second.active || it->second.checkedIn)
         return false;
     it->second.active = false;
+    removeId(roomReservationIndex_[it->second.roomId], reservationId);
     auto rit = rooms_.find(it->second.roomId);
     if (rit != rooms_.end()) rit->second.status = RoomStatus::AVAILABLE;
     return true;
@@ -62,6 +74,7 @@ bool HotelSystem::checkOut(int reservationId) {
         return false;
     it->second.checkedIn = false;
     it->second.active    = false;
+    removeId(roomReservationIndex_[it->second.roomId], reservationId);
     auto rit = rooms_.find(it->second.roomId);
     if (rit != rooms_.end()) rit->second.status = RoomStatus::CLEANING;
     return true;

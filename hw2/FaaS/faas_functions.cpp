@@ -1,5 +1,15 @@
 ﻿#include "faas_functions.h"
+#include <algorithm>
 #include <iostream>
+
+namespace {
+// Removes one occurrence of `id` from `ids`, if present. O(k) in the length
+// of that room's own reservation list (small), not in the total system size.
+void removeId(std::vector<int>& ids, int id) {
+    auto it = std::find(ids.begin(), ids.end(), id);
+    if (it != ids.end()) ids.erase(it);
+}
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FaaS Hotel Management System -- 11 independent function handlers
@@ -52,16 +62,18 @@ ResultData create_reservation(const EventData& e, HotelStorage& s) {
     auto rit = s.rooms.find(roomId);
     if (rit == s.rooms.end()) return {{"success", "false"}, {"reason", "no_room"}};
 
-    // Reject only if an existing ACTIVE reservation for this room overlaps the
-    // requested date range. The room's current physical status (e.g. OCCUPIED
-    // right now) does not by itself block booking a future, non-overlapping stay.
-    for (const auto& kv : s.reservations) {
-        const Reservation& r = kv.second;
-        if (r.roomId == roomId && r.active && overlaps(checkIn, checkOut, r.checkIn, r.checkOut))
+    // Reject only if an existing ACTIVE reservation for THIS room overlaps the
+    // requested date range. Scanning only roomReservationIndex[roomId] keeps
+    // this bounded by that one room's active bookings, instead of scanning
+    // every reservation ever created system-wide.
+    for (int existingId : s.roomReservationIndex[roomId]) {
+        const Reservation& r = s.reservations.at(existingId);
+        if (r.active && overlaps(checkIn, checkOut, r.checkIn, r.checkOut))
             return {{"success", "false"}, {"reason", "date_conflict"}};
     }
 
     s.reservations[id] = {id, guestId, roomId, checkIn, checkOut, true, false};
+    s.roomReservationIndex[roomId].push_back(id);
     if (rit->second.status == RoomStatus::AVAILABLE)
         rit->second.status = RoomStatus::RESERVED;
     return {{"success", "true"}};
@@ -74,6 +86,7 @@ ResultData cancel_reservation(const EventData& e, HotelStorage& s) {
     if (it == s.reservations.end() || !it->second.active || it->second.checkedIn)
         return {{"success", "false"}};
     it->second.active = false;
+    removeId(s.roomReservationIndex[it->second.roomId], resId);
     auto rit = s.rooms.find(it->second.roomId);
     if (rit != s.rooms.end()) rit->second.status = RoomStatus::AVAILABLE;
     return {{"success", "true"}};
@@ -99,6 +112,7 @@ ResultData check_out(const EventData& e, HotelStorage& s) {
         return {{"success", "false"}};
     it->second.checkedIn = false;
     it->second.active    = false;
+    removeId(s.roomReservationIndex[it->second.roomId], resId);
     auto rit = s.rooms.find(it->second.roomId);
     if (rit != s.rooms.end()) rit->second.status = RoomStatus::CLEANING;
     return {{"success", "true"}};

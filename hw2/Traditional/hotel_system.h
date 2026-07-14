@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "models.h"
 #include <map>
+#include <vector>
 #include <string>
 
 class HotelSystem {
@@ -40,4 +41,10 @@ private:
     std::map<int, Payment>            payments_;
     std::map<int, CleaningTask>       cleaningTasks_;
     std::map<int, MaintenanceRequest> maintenanceRequests_;
+    // roomId -> IDs of that room's currently-active reservations. Keeps the
+    // date-overlap check in createReservation() bounded by the (small) number
+    // of active bookings for ONE room instead of the total reservation count
+    // ever created (which would otherwise be an O(n) scan across all rooms
+    // and grow without bound over the system's lifetime).
+    std::map<int, std::vector<int>>   roomReservationIndex_;
 };
