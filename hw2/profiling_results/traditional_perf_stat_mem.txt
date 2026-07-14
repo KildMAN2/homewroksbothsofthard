@@ -1,0 +1,10 @@
+
+ Performance counter stats for 'Traditional/hotel_traditional benchmark' (5 runs):
+
+              1343      page-faults                                                   ( +-  0.04% )
+              1343      minor-faults                                                  ( +-  0.04% )
+                 0      major-faults                                                
+                 0      cpu-migrations                                              
+
+          0.023670 +- 0.000125 seconds time elapsed  ( +-  0.53% )
+

@@ -1,9 +1,9 @@
 
  Performance counter stats for 'FaaS/hotel_faas benchmark' (5 runs):
 
-         151274641      cycles                                                        ( +-  0.14% )
-         321699619      instructions              #    2.12  insn per cycle           ( +-  0.03% )
-                 7      context-switches                                              ( +- 18.07% )
+         151811809      cycles                                                        ( +-  0.81% )
+         322040463      instructions              #    2.12  insn per cycle           ( +-  0.05% )
+                 7      context-switches                                              ( +- 16.66% )
 
-         0.0644793 +- 0.0000596 seconds time elapsed  ( +-  0.09% )
+          0.064534 +- 0.000496 seconds time elapsed  ( +-  0.77% )
 

@@ -1,0 +1,10 @@
+
+ Performance counter stats for 'FaaS/hotel_faas benchmark' (5 runs):
+
+              1349      page-faults                                                   ( +-  0.06% )
+              1349      minor-faults                                                  ( +-  0.06% )
+                 0      major-faults                                                
+                 0      cpu-migrations                                              
+
+          0.063965 +- 0.000176 seconds time elapsed  ( +-  0.28% )
+

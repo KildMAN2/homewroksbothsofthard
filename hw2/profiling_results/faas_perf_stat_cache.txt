@@ -1,10 +1,10 @@
 
  Performance counter stats for 'FaaS/hotel_faas benchmark' (5 runs):
 
-          75948328      branches                                                      ( +-  0.02% )
-            504325      branch-misses             #    0.66% of all branches          ( +-  0.41% )
-            230846      cache-references                                              ( +-  0.67% )
-                94      cache-misses              #    0.041 % of all cache refs      ( +-696.05% )
+          75985329      branches                                                      ( +-  0.10% )
+            520858      branch-misses             #    0.68% of all branches          ( +-  1.45% )
+            227680      cache-references                                              ( +-  1.63% )
+               104      cache-misses              #    0.045 % of all cache refs      ( +-618.61% )
 
-          0.063787 +- 0.000194 seconds time elapsed  ( +-  0.30% )
+          0.063986 +- 0.000181 seconds time elapsed  ( +-  0.28% )
 
