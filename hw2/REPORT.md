@@ -164,42 +164,59 @@ cost of the **FaaS invocation model** (event marshaling + name-based dispatch) r
 than a data-structure artifact. All metrics below are the **mean of 5 runs** as reported
 by `perf stat -r 5`.
 
+> **Methodology note.** Because a shared KVM guest can expose only a few hardware PMU
+> counter slots, hardware events were split into two separate `perf stat -r 5` calls per
+> binary (cycles/instructions/context-switches in one call, branches/branch-misses/
+> cache-references/cache-misses in the other) to avoid counter eviction. An earlier
+> version of this benchmark showed `cycles` reading exactly `0` when all events were
+> requested in a single call — that measurement was discarded and re-collected this way.
+> A separate issue was also caught by profiling itself: the first version of the
+> date-overlap check (Part 2/3) scanned **every reservation ever created** instead of
+> only the reservations for the specific room being booked, which inflated instruction
+> counts by ~20x for both architectures equally and masked the real architectural gap.
+> That was fixed with a per-room reservation index (`roomReservationIndex`) before this
+> final measurement was taken.
+
 | Metric | Traditional (mean, 5 runs) | FaaS (mean, 5 runs) | Result |
 |--------|-------------|------|--------|
-| Execution time | **0.0216 s** | 0.0580 s | FaaS 2.7x slower |
-| CPU cycles | **45.6 M** | 136.0 M | FaaS 3.0x more |
-| Instructions | **64.4 M** | 292.9 M | FaaS 4.5x more |
-| Instructions/cycle | 1.37 | 2.15 | FaaS higher despite more instructions |
-| Cache-misses (`cache-misses` event) | 71 misses | 33 misses | both very low; see caveat below |
-| Context-switches | 3 | 7 | FaaS more (longer runtime) |
-| Max memory (RSS) | 8,224 KB | 8,644 KB | FaaS +5% |
+| Execution time | **0.0252 s** | 0.0645 s | FaaS 2.6x slower |
+| CPU cycles | **55.2 M** | 151.3 M | FaaS 2.7x more |
+| Instructions | **71.4 M** | 321.7 M | FaaS 4.5x more |
+| Instructions/cycle | 1.28 | 2.12 | FaaS higher despite more instructions |
+| Branches | 16.8 M | 75.9 M | FaaS 4.5x more (tracks instruction count) |
+| Branch-misses | 603,139 (3.58% of branches) | 504,325 (0.66% of branches) | FaaS mispredicts far less per branch |
+| Cache-references | 191,192 | 230,846 | FaaS +21% |
+| Cache-misses | 62 misses | 94 misses | both very low; see caveat below |
+| Context-switches | 4 | 7 | FaaS more (longer runtime) |
+| Max memory (RSS) | 8,336 KB | 8,700 KB | FaaS +4.4% |
 
-**Which performed better and why.** **Traditional is faster**, by about **2.7x** in wall
-time and **3x** in CPU cycles. Because both versions use identical `std::map` storage,
+**Which performed better and why.** **Traditional is faster**, by about **2.6x** in wall
+time and **2.7x** in CPU cycles. Because both versions use identical `std::map` storage,
 none of this gap comes from the data structure — it is the cost of the **FaaS invocation
 model**:
 
 - **Event marshaling.** Every call builds a `std::map<string,string>` and converts each
   argument with `std::to_string`; every handler parses it back with `std::stoi`/`std::stod`.
   This happens for every one of the ~66,000 operations and is the most likely dominant
-  cost — it is consistent with why FaaS needs **4.5x more instructions** for the same
-  logical work.
+  cost — it is consistent with why FaaS needs **4.5x more instructions** (and
+  proportionally 4.5x more branches) for the same logical work.
 - **Name-based dispatch.** `FaaSOrchestrator::invoke()` performs a `std::string` key
   lookup in a `std::map<string, std::function<...>>` and then an indirect call through
   `std::function`, versus a direct (often inlined) method call in Traditional.
-- **Higher IPC (2.15 vs 1.37) despite more instructions.** FaaS achieved higher
-  instructions-per-cycle even though it executed far more instructions overall. This
-  suggests that many of its additional instructions (string formatting/parsing) were
-  executed efficiently by the processor. Determining the exact reason with confidence
-  would require additional measurements — branch misses, frontend/backend stalls, and
-  cache-reference counts — which were not collected in this run
-  (e.g. `perf stat -e cycles,instructions,branches,branch-misses,cache-references,cache-misses`).
-  We report the IPC numbers as an observation, not a proven explanation.
-- **Cache-misses.** The measured values (71 vs 33) are very low relative to tens of
+- **Higher IPC (2.12 vs 1.28) despite more instructions.** With branch data now
+  collected, FaaS's branch-misprediction rate (0.66%) is more than 5x lower than
+  Traditional's (3.58%), even though FaaS executes 4.5x more branches in absolute terms.
+  This is consistent with (though does not on its own fully prove) the higher IPC:
+  FaaS's marshaling code is largely straight-line string parsing with simple,
+  well-predicted branches, while Traditional's map-based logic (tree traversals, the
+  per-room overlap check) has proportionally more data-dependent branches. A complete
+  causal explanation would still benefit from frontend/backend stall-cycle breakdowns,
+  which were not collected here.
+- **Cache-misses.** The measured values (62 vs 94) are very low relative to tens of
   millions of instructions, and both counts carry large relative variance across the 5
   runs (this event is noisy at such low absolute counts). Because of that, no strong
   conclusion — such as "the working set fits in cache" — is drawn from this metric alone.
-- **Memory is nearly identical (+5% for FaaS)** — the extra allocations are the small,
+- **Memory is nearly identical (+4.4% for FaaS)** — the extra allocations are the small,
   transient event/result maps, which are freed immediately after each call.
 
 **Interpretation.** This implementation simulates the FaaS programming model inside one
@@ -216,7 +233,7 @@ quantify only the marshaling-and-dispatch tax of the FaaS programming model itse
 ## Conclusion
 
 The two implementations are functionally identical but structurally opposite.
-Traditional wins on raw single-machine performance (2.7x faster wall time, 3x fewer
+Traditional wins on raw single-machine performance (2.6x faster wall time, 2.7x fewer
 cycles) in this local simulation, because a direct method call over in-process state has
 zero marshaling or routing cost. For the specific emergency-reassignment feature in Part
 3, the FaaS design required fewer modifications to existing components and was easier to
