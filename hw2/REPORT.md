@@ -43,8 +43,11 @@ class HotelSystem {                     Files:
         maintenanceRequests_
 ```
 
-**Key property:** every lookup uses `std::map::find()` -> **O(log n)**. State is fully
-encapsulated with no external visibility.
+**Key property:** direct entity lookups by ID use `std::map::find()` and therefore take
+**O(log n)**. Operations that search across multiple rooms or reservations (e.g. finding
+a replacement room, listing available rooms) require an additional linear traversal over
+the relevant collection and are not O(log n). State is fully encapsulated with no
+external visibility.
 
 ---
 
@@ -118,17 +121,18 @@ private members** (`rooms_`, `reservations_`, `guests_`) and mixes five responsi
 the class grows with every cross-cutting feature and the change risks breaking existing
 behaviour because it edits shared code.
 
-**FaaS — only new functions added, in a separate orchestrator.** The same feature was
-implemented entirely in `feature_extension.cpp` as four new independent functions
+**FaaS — modeled as a new FaaS workflow, not four independent handlers.** The same
+feature was implemented entirely in `feature_extension.cpp`: one externally invoked chain
+function (`emergency_chain`) coordinates four small, stateless helper functions
 (`find_affected_reservations`, `find_replacement_room`, `reassign_reservation`,
-`notify_guest`) plus a chain function that calls them in sequence. This file builds its
-**own local `FaaSOrchestrator` instance** and registers only the existing handlers it
-reuses (`add_guest`, `add_room`, `create_reservation`, `check_in`, `report_maintenance`,
+`notify_guest`) over the external `HotelStorage`. This is closer to a FaaS orchestration
+workflow containing helper functions than four independently triggered, independently
+deployable FaaS services — the four helpers are not registered in the `FaaSOrchestrator`
+and are not individually invocable by name. The file builds its **own local
+`FaaSOrchestrator` instance** and registers only the existing handlers it reuses
+(`add_guest`, `add_room`, `create_reservation`, `check_in`, `report_maintenance`,
 `display_available_rooms`) — the main system's orchestrator setup in `main.cpp` is not
-touched, so no existing registration code was modified. The four new functions are plain
-helpers that operate directly on `HotelStorage`; they represent internal
-workflow/orchestration steps rather than independently-triggered external events, so they
-are not registered as FaaS handlers themselves.
+touched, so no existing handler registration was modified.
 
 Because no existing handlers were modified, **the risk of introducing regressions into
 existing operations is lower** — but not zero: the new chain writes into the same shared
@@ -136,27 +140,38 @@ existing operations is lower** — but not zero: the new chain writes into the s
 in `reassign_reservation` (for example) could still corrupt state that `check_in` or
 `process_payment` later rely on.
 
+> **Scope limitation.** `emergencyMaintenance()` / `emergency_chain()` reassigns the
+> `roomId` of any matching **active** reservation, regardless of whether that guest has
+> already checked in. For a genuinely **future** reservation this is sufficient. For a
+> guest who is **already checked in**, updating the stored room number alone does not
+> perform an actual physical relocation (new key, moved luggage, updated occupancy
+> status) — that case is out of scope for this simplified, partial Part 3 implementation
+> and is not specially handled.
+
 | | Traditional | FaaS |
 |---|---|---|
-| Files changed | 2 existing files edited | 0 existing files edited; 1 new file |
-| Responsibilities added to old code | 5 (in one method) | 0 |
+| Existing application source files modified (`hotel_system.*` / `faas_functions.*`) | 2 | 0 |
+| Where the new logic lives | added into `hotel_system.h`/`hotel_system.cpp` (grows the core class) | added entirely within `feature_extension.cpp` (separate file; core handlers untouched) |
+| Build/script changes required | 0 (extension binary was already wired into `script.sh`) | 0 (extension binary was already wired into `script.sh`) |
 | Regression risk | Medium (shared class edited directly) | Lower, but not zero (shared storage still reused) |
 | Debugging the full flow | Easy (one call stack) | Harder (multi-step, no atomicity) |
 
 **Verdict.** For this specific emergency-reassignment feature, the FaaS design required
 fewer modifications to existing components and was easier to extend, because it could add
 the new behaviour without touching a single existing handler or the main orchestrator
-registration. The Traditional design remained easier to debug and provided simpler
-consistency management, because the whole flow executes as one atomic method with a
-single call stack instead of a multi-step chain over shared storage.
+registration. The Traditional design remained easier to trace and manage, because the
+whole flow executes as one synchronous method call within a single call stack instead of
+a multi-step chain over shared storage — this is simpler consistency management in this
+single-process implementation, not a transactional guarantee.
 
 ---
 
 ## Part 4 — Performance Evaluation
 
-**Workload (identical for both, `benchmark` mode, ~66,000 operations):**
+**Workload (identical for both, `benchmark` mode, ~76,000 operations):**
 10,000 guests, 1,000 rooms, 10,000 reservations, 10,000 check-ins, 10,000 payments,
-10,000 check-outs, 10,000 cleaning tasks, 5,000 maintenance reports.
+10,000 check-outs, 10,000 cleaning-task assignments, 10,000 cleaning-task completions,
+5,000 maintenance reports.
 
 Measured on the course KVM (Ubuntu, `perf stat -r 5`, `/usr/bin/time`). Both
 implementations use the same indexed `std::map` storage, so this experiment isolates the
@@ -195,11 +210,13 @@ time and **2.7x** in CPU cycles. Because both versions use identical `std::map` 
 none of this gap comes from the data structure — it is the cost of the **FaaS invocation
 model**:
 
-- **Event marshaling.** Every call builds a `std::map<string,string>` and converts each
-  argument with `std::to_string`; every handler parses it back with `std::stoi`/`std::stod`.
-  This happens for every one of the ~66,000 operations and is the most likely dominant
-  cost — it is consistent with why FaaS needs **4.5x more instructions** (and
-  proportionally 4.5x more branches) for the same logical work.
+- **Event marshaling and allocation.** Every call constructs a node-based
+  `std::map<string,string>`, which allocates a tree node plus heap storage for each key
+  and value string, then converts each argument with `std::to_string`; every handler
+  parses it back with `std::stoi`/`std::stod`. This happens for every one of the ~76,000
+  operations and is the most likely dominant cost — it is consistent with why FaaS needs
+  **4.5x more instructions** (and proportionally 4.5x more branches) for the same logical
+  work.
 - **Name-based dispatch.** `FaaSOrchestrator::invoke()` performs a `std::string` key
   lookup in a `std::map<string, std::function<...>>` and then an indirect call through
   `std::function`, versus a direct (often inlined) method call in Traditional.
@@ -212,10 +229,13 @@ model**:
   per-room overlap check) has proportionally more data-dependent branches. A complete
   causal explanation would still benefit from frontend/backend stall-cycle breakdowns,
   which were not collected here.
-- **Cache-misses.** The measured values (62 vs 94) are very low relative to tens of
-  millions of instructions, and both counts carry large relative variance across the 5
-  runs (this event is noisy at such low absolute counts). Because of that, no strong
-  conclusion — such as "the working set fits in cache" — is drawn from this metric alone.
+- **Cache-misses.** The raw `perf` output was checked and confirmed to report the actual
+  `cache-misses` event (not a different cache-level event, and with no `<not supported>`
+  / `<not counted>` markers) — the counters simply produced genuinely very low, noisy
+  absolute values (62 vs 94, with variance up to ±984% across the 5 runs) relative to tens
+  of millions of instructions. Because of that variance, generic hardware cache counters
+  are reported here for completeness but no conclusion — such as "the working set fits in
+  cache" — is drawn from this metric, and it is not used to support the final conclusion.
 - **Memory is nearly identical (+4.4% for FaaS)** — the extra allocations are the small,
   transient event/result maps, which are freed immediately after each call.
 
@@ -232,18 +252,30 @@ quantify only the marshaling-and-dispatch tax of the FaaS programming model itse
 
 ## Conclusion
 
-The two implementations are functionally identical but structurally opposite.
-Traditional wins on raw single-machine performance (2.6x faster wall time, 2.7x fewer
-cycles) in this local simulation, because a direct method call over in-process state has
-zero marshaling or routing cost. For the specific emergency-reassignment feature in Part
-3, the FaaS design required fewer modifications to existing components and was easier to
-extend, while the Traditional design remained easier to debug and kept simpler
-consistency guarantees. FaaS's stateless, event-driven handler contract is also what
-would allow independent deployment and horizontal scaling in a real cloud environment —
-a property this local, single-process benchmark does not itself measure. The results
-confirm the standard architectural trade-off: a monolith is faster and simpler in one
-process, while FaaS trades a measurable per-call tax (event marshaling + name-based
-dispatch) for isolation, independent scaling, and lower-risk feature extension.
+The two implementations provide the same hotel-management functionality but use
+substantially different structures. In this local, single-process experiment, the
+Traditional implementation performed better, completing the workload approximately 2.6
+times faster and using 2.7 times fewer CPU cycles. The main reason is that Traditional
+operations use typed, direct method calls, while every simulated FaaS invocation
+constructs string-based event payloads, performs conversions and allocations, looks up a
+handler by name, and invokes it indirectly.
+
+For the emergency room-reassignment feature, the FaaS design required no modifications to
+existing application handlers and allowed the new workflow to be implemented in a
+separate source file. The Traditional design required changes to the central class but
+remained easier to trace and manage synchronously through one call stack. Therefore, for
+this particular feature, the FaaS structure provided easier extension with lower
+regression risk, while the Traditional structure provided simpler debugging and
+consistency management.
+
+The FaaS programming model is designed to enable isolation and independent scaling in a
+real deployment, although those properties are not implemented or measured by this local
+simulation. This experiment evaluates only a local simulation of the FaaS programming
+model — it does not measure real cloud properties such as cold starts, network
+communication, remote databases, process isolation, or automatic scaling. The results
+therefore quantify only the local cost of marshaling and dispatch, and the reduced number
+of existing components changed for the selected extension — not the total performance of
+a deployed cloud FaaS system.
 
 ---
 
