@@ -54,13 +54,16 @@ static void notify_guest(int guestId, const std::string& msg,
                   << " (" << it->second.phone << "): " << msg << "\n";
 }
 
-// Orchestrator: chains the independent functions
-static void emergency_chain(int requestId, int roomId,
+// Chains the independent functions/handlers for this feature
+static void emergency_chain(FaaSOrchestrator& orch, int requestId, int roomId,
                              const std::string& issue, HotelStorage& s) {
     std::cout << "[FaaS chain] EMERGENCY room " << roomId << ": " << issue << "\n";
 
-    // Step 1: reuse existing report_maintenance (unmodified)
-    report_maintenance({requestId, roomId, issue, "EMERGENCY"}, s);
+    // Step 1: reuse existing report_maintenance handler (unmodified) via the
+    // same event-dispatch path used for every other operation.
+    orch.invoke("report_maintenance",
+        {{"id", std::to_string(requestId)}, {"roomId", std::to_string(roomId)},
+         {"description", issue}, {"priority", "EMERGENCY"}}, s);
     std::cout << "  [report_maintenance] Room " << roomId << " -> MAINTENANCE\n";
 
     // Step 2: new function
@@ -104,24 +107,32 @@ int main() {
     std::cout << "Cost: 0 existing files modified. 4 new functions added here.\n\n";
 
     HotelStorage s;
-    add_guest({1, "Alice Johnson", "555-1001"}, s);
-    add_guest({2, "Bob Martinez",  "555-1002"}, s);
-    add_room({101, RoomType::SINGLE, 80.0,  1}, s);
-    add_room({102, RoomType::SINGLE, 80.0,  1}, s);   // replacement
-    add_room({201, RoomType::DOUBLE, 140.0, 2}, s);
-    create_reservation({1, 1, 101, "2024-06-01", "2024-06-05"}, s);
-    create_reservation({2, 2, 201, "2024-06-01", "2024-06-03"}, s);
-    check_in({1}, s);
-    check_in({2}, s);
+    FaaSOrchestrator orch;
+    orch.registerFunction("add_guest", add_guest);
+    orch.registerFunction("add_room", add_room);
+    orch.registerFunction("create_reservation", create_reservation);
+    orch.registerFunction("check_in", check_in);
+    orch.registerFunction("report_maintenance", report_maintenance);
+    orch.registerFunction("display_available_rooms", display_available_rooms);
+
+    orch.invoke("add_guest", {{"id","1"},{"name","Alice Johnson"},{"phone","555-1001"}}, s);
+    orch.invoke("add_guest", {{"id","2"},{"name","Bob Martinez"},{"phone","555-1002"}}, s);
+    orch.invoke("add_room", {{"id","101"},{"type","SINGLE"},{"price","80.0"},{"floor","1"}}, s);
+    orch.invoke("add_room", {{"id","102"},{"type","SINGLE"},{"price","80.0"},{"floor","1"}}, s); // replacement
+    orch.invoke("add_room", {{"id","201"},{"type","DOUBLE"},{"price","140.0"},{"floor","2"}}, s);
+    orch.invoke("create_reservation", {{"id","1"},{"guestId","1"},{"roomId","101"},{"checkIn","2024-06-01"},{"checkOut","2024-06-05"}}, s);
+    orch.invoke("create_reservation", {{"id","2"},{"guestId","2"},{"roomId","201"},{"checkIn","2024-06-01"},{"checkOut","2024-06-03"}}, s);
+    orch.invoke("check_in", {{"reservationId","1"}}, s);
+    orch.invoke("check_in", {{"reservationId","2"}}, s);
 
     std::cout << "Initial state:\n";
-    display_available_rooms(s);
+    orch.invoke("display_available_rooms", {}, s);
 
     std::cout << "\n--- Emergency: Pipe burst in Room 101 ---\n";
-    emergency_chain(1, 101, "Pipe burst -- water leak", s);
+    emergency_chain(orch, 1, 101, "Pipe burst -- water leak", s);
 
     std::cout << "\nState after emergency:\n";
-    display_available_rooms(s);
+    orch.invoke("display_available_rooms", {}, s);
 
     std::cout << "\n===== Extension Demo Complete =====\n";
     return 0;

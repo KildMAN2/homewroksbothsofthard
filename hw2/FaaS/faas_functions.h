@@ -1,30 +1,45 @@
 ﻿#pragma once
 #include "storage.h"
 #include <string>
+#include <map>
+#include <functional>
 
-// ─── Event types ─────────────────────────────────────────────────────────────
-// Each function receives one typed event describing the requested action.
+// ─── Generic event/result payloads ────────────────────────────────────────────
+// A real FaaS platform (AWS Lambda, Azure Functions, ...) invokes a function
+// with a serialized payload (typically JSON) and gets back a serialized
+// result. We model that faithfully with string-keyed maps: every argument is
+// marshaled to a string on the caller side and parsed back inside the
+// handler -- this is real, unavoidable FaaS overhead, not a data-structure
+// trick. HotelStorage itself stays a std::map (same indexed store as
+// Traditional) so the benchmark isolates the cost of the FaaS invocation
+// model, not the cost of a slower collection type.
+using EventData  = std::map<std::string, std::string>;
+using ResultData = std::map<std::string, std::string>;
 
-struct AddGuestEvent          { int id; std::string name; std::string phone; };
-struct AddRoomEvent           { int id; RoomType type; double pricePerNight; int floor; };
-struct CreateReservationEvent { int id; int guestId; int roomId;
-                                std::string checkIn; std::string checkOut; };
-struct CancelReservationEvent { int reservationId; };
-struct CheckInEvent           { int reservationId; };
-struct CheckOutEvent          { int reservationId; };
-struct ProcessPaymentEvent    { int id; int reservationId; double amount; };
-struct AssignCleaningTaskEvent{ int id; int roomId; int staffId; };
-struct ReportMaintenanceEvent { int id; int roomId;
-                                std::string description; std::string priority; };
+// Signature every FaaS handler implements.
+using FaaSFn = std::function<ResultData(const EventData&, HotelStorage&)>;
 
-// ─── Function declarations (implemented in faas_functions.cpp) ────────────────
-bool add_guest            (const AddGuestEvent&           e, HotelStorage& s);
-bool add_room             (const AddRoomEvent&            e, HotelStorage& s);
-bool create_reservation   (const CreateReservationEvent&  e, HotelStorage& s);
-bool cancel_reservation   (const CancelReservationEvent&  e, HotelStorage& s);
-bool check_in             (const CheckInEvent&            e, HotelStorage& s);
-bool check_out            (const CheckOutEvent&           e, HotelStorage& s);
-bool process_payment      (const ProcessPaymentEvent&     e, HotelStorage& s);
-bool assign_cleaning_task (const AssignCleaningTaskEvent& e, HotelStorage& s);
-bool report_maintenance   (const ReportMaintenanceEvent&  e, HotelStorage& s);
-void display_available_rooms(const HotelStorage& s);
+// ─── The 10 independent function handlers ─────────────────────────────────────
+ResultData add_guest             (const EventData& e, HotelStorage& s);
+ResultData add_room              (const EventData& e, HotelStorage& s);
+ResultData create_reservation    (const EventData& e, HotelStorage& s);
+ResultData cancel_reservation    (const EventData& e, HotelStorage& s);
+ResultData check_in              (const EventData& e, HotelStorage& s);
+ResultData check_out             (const EventData& e, HotelStorage& s);
+ResultData process_payment       (const EventData& e, HotelStorage& s);
+ResultData assign_cleaning_task  (const EventData& e, HotelStorage& s);
+ResultData report_maintenance    (const EventData& e, HotelStorage& s);
+ResultData display_available_rooms(const EventData& e, HotelStorage& s);
+
+// ─── Orchestrator ──────────────────────────────────────────────────────────────
+// Models the API-Gateway / event-router layer of a real FaaS platform:
+// handlers are registered under a NAME and invoked through a string-keyed
+// lookup + std::function indirection, instead of being called directly.
+class FaaSOrchestrator {
+public:
+    void registerFunction(const std::string& name, FaaSFn fn);
+    ResultData invoke(const std::string& name, const EventData& event, HotelStorage& storage);
+
+private:
+    std::map<std::string, FaaSFn> registry_;
+};
