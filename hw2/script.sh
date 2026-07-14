@@ -93,10 +93,18 @@ run_profile() {
     echo "Benchmark workload: $BENCH_RUNS iterations in-process"
 
     if command -v perf &>/dev/null; then
-        perf stat -r 5 \
-               -e cycles,instructions,branches,branch-misses,cache-references,cache-misses,context-switches \
+        # NOTE: KVM/virtualized guests typically expose only a few hardware
+        # PMU counter slots. Requesting too many hardware events in one
+        # `perf stat` call can cause multiplexing to evict one of them
+        # entirely (observed: "cycles" reading exactly 0). Splitting into two
+        # smaller runs keeps each within the available counter budget.
+        perf stat -r 5 -e cycles,instructions,context-switches \
                "$binary" benchmark > /dev/null 2> "$RESULTS_DIR/${out_prefix}_perf_stat.txt"
         cat "$RESULTS_DIR/${out_prefix}_perf_stat.txt"
+
+        perf stat -r 5 -e branches,branch-misses,cache-references,cache-misses \
+               "$binary" benchmark > /dev/null 2> "$RESULTS_DIR/${out_prefix}_perf_stat_cache.txt"
+        cat "$RESULTS_DIR/${out_prefix}_perf_stat_cache.txt"
 
         # Optional syscall summary if strace exists
         if command -v strace &>/dev/null; then
