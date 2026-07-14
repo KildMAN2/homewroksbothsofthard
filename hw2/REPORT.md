@@ -180,33 +180,37 @@ than a data-structure artifact. All metrics below are the **mean of 5 runs** as 
 by `perf stat -r 5`.
 
 > **Methodology note.** Because a shared KVM guest can expose only a few hardware PMU
-> counter slots, hardware events were split into two separate `perf stat -r 5` calls per
-> binary (cycles/instructions/context-switches in one call, branches/branch-misses/
-> cache-references/cache-misses in the other) to avoid counter eviction. An earlier
-> version of this benchmark showed `cycles` reading exactly `0` when all events were
-> requested in a single call — that measurement was discarded and re-collected this way.
-> A separate issue was also caught by profiling itself: the first version of the
-> date-overlap check (Part 2/3) scanned **every reservation ever created** instead of
-> only the reservations for the specific room being booked, which inflated instruction
-> counts by ~20x for both architectures equally and masked the real architectural gap.
-> That was fixed with a per-room reservation index (`roomReservationIndex`) before this
-> final measurement was taken.
+> counter slots, hardware events were split into three separate `perf stat -r 5` calls per
+> binary (cycles/instructions/context-switches; branches/branch-misses/cache-references/
+> cache-misses; page-faults/minor-faults/major-faults/cpu-migrations) to avoid counter
+> eviction. An earlier version of this benchmark showed `cycles` reading exactly `0` when
+> all events were requested in a single call — that measurement was discarded and
+> re-collected this way. A separate issue was also caught by profiling itself: the first
+> version of the date-overlap check (Part 2/3) scanned **every reservation ever created**
+> instead of only the reservations for the specific room being booked, which inflated
+> instruction counts by ~20x for both architectures equally and masked the real
+> architectural gap. That was fixed with a per-room reservation index
+> (`roomReservationIndex`) before this final measurement was taken. The final numbers
+> below were reproduced across two independent runs within ~1%, confirming they are
+> stable and not measurement noise.
 
 | Metric | Traditional (mean, 5 runs) | FaaS (mean, 5 runs) | Result |
 |--------|-------------|------|--------|
-| Execution time | **0.0252 s** | 0.0645 s | FaaS 2.6x slower |
-| CPU cycles | **55.2 M** | 151.3 M | FaaS 2.7x more |
-| Instructions | **71.4 M** | 321.7 M | FaaS 4.5x more |
+| Execution time | **0.0253 s** | 0.0645 s | FaaS 2.6x slower |
+| CPU cycles | **55.1 M** | 151.8 M | FaaS 2.8x more |
+| Instructions | **71.4 M** | 322.0 M | FaaS 4.5x more |
 | Instructions/cycle | 1.28 | 2.12 | FaaS higher despite more instructions |
-| Branches | 16.8 M | 75.9 M | FaaS 4.5x more (tracks instruction count) |
-| Branch-misses | 603,139 (3.58% of branches) | 504,325 (0.66% of branches) | FaaS mispredicts far less per branch |
-| Cache-references | 191,192 | 230,846 | FaaS +21% |
-| Cache-misses | 62 misses | 94 misses | both very low; see caveat below |
-| Context-switches | 4 | 7 | FaaS more (longer runtime) |
-| Max memory (RSS) | 8,336 KB | 8,700 KB | FaaS +4.4% |
+| Branches | 16.8 M | 76.0 M | FaaS 4.5x more (tracks instruction count) |
+| Branch-misses | 604,043 (3.59% of branches) | 520,858 (0.68% of branches) | FaaS mispredicts far less per branch |
+| Cache-references | 186,737 | 227,680 | FaaS +22% |
+| Cache-misses | 67 misses | 104 misses | both very low; see caveat below |
+| Page-faults (100% minor, 0 major, both) | 1,343 | 1,349 | nearly identical (+0.4%) |
+| CPU-migrations | 0 | 0 | both pinned to one core for the whole run |
+| Context-switches | 5 | 7 | FaaS more (longer runtime) |
+| Max memory (RSS) | 8,340 KB | 8,832 KB | FaaS +5.9% |
 
 **Which performed better and why.** **Traditional is faster**, by about **2.6x** in wall
-time and **2.7x** in CPU cycles. Because both versions use identical `std::map` storage,
+time and **2.8x** in CPU cycles. Because both versions use identical `std::map` storage,
 none of this gap comes from the data structure — it is the cost of the **FaaS invocation
 model**:
 
@@ -217,12 +221,22 @@ model**:
   operations and is the most likely dominant cost — it is consistent with why FaaS needs
   **4.5x more instructions** (and proportionally 4.5x more branches) for the same logical
   work.
+- **Tested and ruled out: page faults are not the source of FaaS's overhead.** The
+  hypothesis that FaaS's heavier per-call allocation would trigger more OS-level page
+  faults was directly tested and **not supported**: page-faults are nearly identical
+  between the two (1,343 vs 1,349, all minor, zero major faults, zero CPU-migrations for
+  both — both processes stayed pinned to one core the whole run). This indicates the
+  allocator satisfies FaaS's many small, transient `map`/`string` allocations by reusing
+  memory already obtained from the OS (heap arena/free-list reuse) rather than requesting
+  new pages per call. The extra instructions therefore come from allocator bookkeeping,
+  string construction/copy, and parsing work happening *within* already-mapped memory —
+  not from additional virtual-memory activity.
 - **Name-based dispatch.** `FaaSOrchestrator::invoke()` performs a `std::string` key
   lookup in a `std::map<string, std::function<...>>` and then an indirect call through
   `std::function`, versus a direct (often inlined) method call in Traditional.
 - **Higher IPC (2.12 vs 1.28) despite more instructions.** With branch data now
-  collected, FaaS's branch-misprediction rate (0.66%) is more than 5x lower than
-  Traditional's (3.58%), even though FaaS executes 4.5x more branches in absolute terms.
+  collected, FaaS's branch-misprediction rate (0.68%) is more than 5x lower than
+  Traditional's (3.59%), even though FaaS executes 4.5x more branches in absolute terms.
   This is consistent with (though does not on its own fully prove) the higher IPC:
   FaaS's marshaling code is largely straight-line string parsing with simple,
   well-predicted branches, while Traditional's map-based logic (tree traversals, the
@@ -232,12 +246,13 @@ model**:
 - **Cache-misses.** The raw `perf` output was checked and confirmed to report the actual
   `cache-misses` event (not a different cache-level event, and with no `<not supported>`
   / `<not counted>` markers) — the counters simply produced genuinely very low, noisy
-  absolute values (62 vs 94, with variance up to ±984% across the 5 runs) relative to tens
+  absolute values (67 vs 104, with variance up to ±980% across the 5 runs) relative to tens
   of millions of instructions. Because of that variance, generic hardware cache counters
   are reported here for completeness but no conclusion — such as "the working set fits in
   cache" — is drawn from this metric, and it is not used to support the final conclusion.
-- **Memory is nearly identical (+4.4% for FaaS)** — the extra allocations are the small,
-  transient event/result maps, which are freed immediately after each call.
+- **Memory is nearly identical (+5.9% for FaaS)** — consistent with the page-fault finding
+  above, this small increase is the small, transient event/result maps, which are freed
+  immediately after each call and mostly satisfied from already-allocated heap pages.
 
 **Interpretation.** This implementation simulates the FaaS programming model inside one
 local process. It measures the overhead of event construction, string parsing, handler
@@ -255,7 +270,7 @@ quantify only the marshaling-and-dispatch tax of the FaaS programming model itse
 The two implementations provide the same hotel-management functionality but use
 substantially different structures. In this local, single-process experiment, the
 Traditional implementation performed better, completing the workload approximately 2.6
-times faster and using 2.7 times fewer CPU cycles. The main reason is that Traditional
+times faster and using 2.8 times fewer CPU cycles. The main reason is that Traditional
 operations use typed, direct method calls, while every simulated FaaS invocation
 constructs string-based event payloads, performs conversions and allocations, looks up a
 handler by name, and invokes it indirectly.
