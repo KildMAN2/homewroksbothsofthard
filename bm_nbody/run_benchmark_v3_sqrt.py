@@ -83,7 +83,9 @@ def advance(dt, n, bodies=SYSTEM, pairs=PAIRS):
         dx = r0[0] - r1[0]
         dy = r0[1] - r1[1]
         dz = r0[2] - r1[2]
-        d2 = dx * dx + dy * dy + dz * dz`n        inv_r3 = 1.0 / (d2 * math.sqrt(d2))`n        mag = dt * inv_r3
+        d2 = dx * dx + dy * dy + dz * dz
+        inv_r3 = 1.0 / (d2 * math.sqrt(d2))
+        mag = dt * inv_r3
         b0m = m0 * mag
         b1m = m1 * mag
         vx0 -= dx * b1m
@@ -101,7 +103,9 @@ def advance(dt, n, bodies=SYSTEM, pairs=PAIRS):
         dx = r0[0] - r2[0]
         dy = r0[1] - r2[1]
         dz = r0[2] - r2[2]
-        d2 = dx * dx + dy * dy + dz * dz`n        inv_r3 = 1.0 / (d2 * math.sqrt(d2))`n        mag = dt * inv_r3
+        d2 = dx * dx + dy * dy + dz * dz
+        inv_r3 = 1.0 / (d2 * math.sqrt(d2))
+        mag = dt * inv_r3
         b0m = m0 * mag
         b2m = m2 * mag
         vx0 -= dx * b2m
@@ -119,7 +123,9 @@ def advance(dt, n, bodies=SYSTEM, pairs=PAIRS):
         dx = r0[0] - r3[0]
         dy = r0[1] - r3[1]
         dz = r0[2] - r3[2]
-        d2 = dx * dx + dy * dy + dz * dz`n        inv_r3 = 1.0 / (d2 * math.sqrt(d2))`n        mag = dt * inv_r3
+        d2 = dx * dx + dy * dy + dz * dz
+        inv_r3 = 1.0 / (d2 * math.sqrt(d2))
+        mag = dt * inv_r3
         b0m = m0 * mag
         b3m = m3 * mag
         vx0 -= dx * b3m
@@ -137,7 +143,9 @@ def advance(dt, n, bodies=SYSTEM, pairs=PAIRS):
         dx = r0[0] - r4[0]
         dy = r0[1] - r4[1]
         dz = r0[2] - r4[2]
-        d2 = dx * dx + dy * dy + dz * dz`n        inv_r3 = 1.0 / (d2 * math.sqrt(d2))`n        mag = dt * inv_r3
+        d2 = dx * dx + dy * dy + dz * dz
+        inv_r3 = 1.0 / (d2 * math.sqrt(d2))
+        mag = dt * inv_r3
         b0m = m0 * mag
         b4m = m4 * mag
         vx0 -= dx * b4m
@@ -155,7 +163,9 @@ def advance(dt, n, bodies=SYSTEM, pairs=PAIRS):
         dx = r1[0] - r2[0]
         dy = r1[1] - r2[1]
         dz = r1[2] - r2[2]
-        d2 = dx * dx + dy * dy + dz * dz`n        inv_r3 = 1.0 / (d2 * math.sqrt(d2))`n        mag = dt * inv_r3
+        d2 = dx * dx + dy * dy + dz * dz
+        inv_r3 = 1.0 / (d2 * math.sqrt(d2))
+        mag = dt * inv_r3
         b1m = m1 * mag
         b2m = m2 * mag
         vx1 -= dx * b2m
@@ -173,7 +183,9 @@ def advance(dt, n, bodies=SYSTEM, pairs=PAIRS):
         dx = r1[0] - r3[0]
         dy = r1[1] - r3[1]
         dz = r1[2] - r3[2]
-        d2 = dx * dx + dy * dy + dz * dz`n        inv_r3 = 1.0 / (d2 * math.sqrt(d2))`n        mag = dt * inv_r3
+        d2 = dx * dx + dy * dy + dz * dz
+        inv_r3 = 1.0 / (d2 * math.sqrt(d2))
+        mag = dt * inv_r3
         b1m = m1 * mag
         b3m = m3 * mag
         vx1 -= dx * b3m
@@ -191,7 +203,9 @@ def advance(dt, n, bodies=SYSTEM, pairs=PAIRS):
         dx = r1[0] - r4[0]
         dy = r1[1] - r4[1]
         dz = r1[2] - r4[2]
-        d2 = dx * dx + dy * dy + dz * dz`n        inv_r3 = 1.0 / (d2 * math.sqrt(d2))`n        mag = dt * inv_r3
+        d2 = dx * dx + dy * dy + dz * dz
+        inv_r3 = 1.0 / (d2 * math.sqrt(d2))
+        mag = dt * inv_r3
         b1m = m1 * mag
         b4m = m4 * mag
         vx1 -= dx * b4m
@@ -209,7 +223,9 @@ def advance(dt, n, bodies=SYSTEM, pairs=PAIRS):
         dx = r2[0] - r3[0]
         dy = r2[1] - r3[1]
         dz = r2[2] - r3[2]
-        d2 = dx * dx + dy * dy + dz * dz`n        inv_r3 = 1.0 / (d2 * math.sqrt(d2))`n        mag = dt * inv_r3
+        d2 = dx * dx + dy * dy + dz * dz
+        inv_r3 = 1.0 / (d2 * math.sqrt(d2))
+        mag = dt * inv_r3
         b2m = m2 * mag
         b3m = m3 * mag
         vx2 -= dx * b3m
@@ -227,7 +243,9 @@ def advance(dt, n, bodies=SYSTEM, pairs=PAIRS):
         dx = r2[0] - r4[0]
         dy = r2[1] - r4[1]
         dz = r2[2] - r4[2]
-        d2 = dx * dx + dy * dy + dz * dz`n        inv_r3 = 1.0 / (d2 * math.sqrt(d2))`n        mag = dt * inv_r3
+        d2 = dx * dx + dy * dy + dz * dz
+        inv_r3 = 1.0 / (d2 * math.sqrt(d2))
+        mag = dt * inv_r3
         b2m = m2 * mag
         b4m = m4 * mag
         vx2 -= dx * b4m
@@ -245,7 +263,9 @@ def advance(dt, n, bodies=SYSTEM, pairs=PAIRS):
         dx = r3[0] - r4[0]
         dy = r3[1] - r4[1]
         dz = r3[2] - r4[2]
-        d2 = dx * dx + dy * dy + dz * dz`n        inv_r3 = 1.0 / (d2 * math.sqrt(d2))`n        mag = dt * inv_r3
+        d2 = dx * dx + dy * dy + dz * dz
+        inv_r3 = 1.0 / (d2 * math.sqrt(d2))
+        mag = dt * inv_r3
         b3m = m3 * mag
         b4m = m4 * mag
         vx3 -= dx * b4m
