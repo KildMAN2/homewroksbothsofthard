@@ -678,6 +678,73 @@ Problems encountered and fixes:
 Next step:
 - Run short timing checks for V2 vs V1 (still not full benchmark), then continue staged optimization flow.
 
+### Step 5 - Implement V3 Sqrt Formula and Run VM Correctness Test
+Date: 2026-09-10
+
+Command(s) run:
+- Local repo:
+  - create `bm_nbody/run_benchmark_v3_sqrt.py`
+  - create `bm_nbody/test_v3_correctness.py`
+  - `git add bm_nbody/run_benchmark_v3_sqrt.py bm_nbody/test_v3_correctness.py`
+  - `git commit -m "Add nbody V3 sqrt-form implementation and correctness test"`
+  - `git push origin master`
+  - fix import corruption in V3 file
+  - `git commit -m "Fix V3 import syntax regression"`
+  - `git push origin master`
+  - fix literal backtick-newline corruption across all V3 pair blocks
+  - `git commit -m "Fix V3 newline corruption in magnitude computation"`
+  - `git push origin master`
+- VM repo:
+  - `cd /root/homewroksbothsofthard`
+  - `git pull --rebase origin master`
+  - `python3 bm_nbody/test_v3_correctness.py`
+
+Why this was run:
+- To apply the V3 arithmetic rewrite from power-form inverse-distance to sqrt-based inverse-distance while keeping V2 interaction order.
+- To verify numerical equivalence in VM before any longer benchmark runs.
+
+File(s) changed:
+- bm_nbody/run_benchmark_v3_sqrt.py
+- bm_nbody/test_v3_correctness.py
+- docs/nbody_project.md
+
+What changed in code:
+- Added V3 benchmark variant derived from V2 unrolled form.
+- Replaced `d2 ** (-1.5)` with `1.0 / (d2 * math.sqrt(d2))` in all 10 pair blocks.
+- Added V3 short correctness harness against reference implementation.
+
+Measured results:
+- VM correctness test (100 steps):
+  - `abs_energy_before_diff = 0.000e+00`
+  - `abs_energy_after_diff = 0.000e+00`
+  - `max_state_abs_diff = 5.551e-17`
+  - tolerance `1e-12`
+  - verdict `CORRECTNESS_CHECK=PASS`
+
+Profiling findings:
+- No new profiling run in this step.
+
+Optimization reasoning:
+- V3 removes exponentiation in the hot loop and uses explicit sqrt-based inverse-cube computation.
+- This can reduce overhead from generic power handling while preserving equivalent math in floating-point.
+
+Correctness results:
+- PASS (`CORRECTNESS_CHECK=PASS`).
+
+Hardware architecture decisions:
+- No hardware changes in this step.
+
+SystemVerilog implementation decisions:
+- No RTL changes in this step.
+
+Problems encountered and fixes:
+- First VM run failed due to malformed text inserted during local replacement (`import pyperf` line corruption).
+- Second VM run failed due to literal backtick-newline text embedded in 10 V3 pair blocks.
+- Both syntax regressions were fixed and re-pushed before final VM correctness rerun.
+
+Next step:
+- Build V4 precompute variant from V3, run short VM correctness test, then proceed to final combined variant.
+
 ## Commands Used
 Important command history is appended here in chronological order.
 
@@ -764,6 +831,36 @@ Important command history is appended here in chronological order.
 
 28. python3 bm_nbody/test_v2_correctness.py
 - Purpose: execute short V2 correctness gate in VM.
+
+29. git add bm_nbody/run_benchmark_v3_sqrt.py bm_nbody/test_v3_correctness.py
+- Purpose: stage V3 implementation and test.
+
+30. git commit -m "Add nbody V3 sqrt-form implementation and correctness test"
+- Purpose: checkpoint initial V3 work for traceability.
+
+31. git push origin master
+- Purpose: publish V3 files so VM can execute the same code.
+
+32. git pull --rebase origin master (VM)
+- Purpose: sync VM with latest V3 files.
+
+33. python3 bm_nbody/test_v3_correctness.py (VM)
+- Purpose: run V3 correctness gate in VM.
+
+34. git commit -m "Fix V3 import syntax regression"
+- Purpose: fix malformed import text discovered by VM execution.
+
+35. git commit -m "Fix V3 newline corruption in magnitude computation"
+- Purpose: fix literal backtick-newline corruption in V3 force-magnitude lines.
+
+36. git push origin master
+- Purpose: publish V3 syntax fixes for final VM validation.
+
+37. git pull --rebase origin master (VM)
+- Purpose: sync VM with V3 syntax-fix commits.
+
+38. python3 bm_nbody/test_v3_correctness.py (VM)
+- Purpose: confirm final V3 correctness after fixes.
 
 ## Evidence Pointers
 - Nbody compare artifact: project_results/nbody/compare.txt
