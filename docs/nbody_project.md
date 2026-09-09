@@ -23,6 +23,8 @@ This log is intentionally explanatory rather than a raw terminal dump so it can 
 - Created V1 scalarized benchmark copy without modifying original source.
 - Created and executed a short VM correctness test for V1.
 - Created V2 unrolled benchmark copy from V1 and verified correctness in VM.
+- Created V3 sqrt-form benchmark copy from V2 and verified correctness in VM.
+- Created V4 invariant-precompute benchmark copy from V3 and verified correctness in VM.
 
 ### Remaining
 - Run and complete mdp benchmark artifacts (baseline, optimized placeholder run, compare, perf profile, flamegraph).
@@ -745,6 +747,89 @@ Problems encountered and fixes:
 Next step:
 - Build V4 precompute variant from V3, run short VM correctness test, then proceed to final combined variant.
 
+### Step 6 - Implement V4 Invariant Precompute and Run VM Correctness Test
+Date: 2026-09-10
+
+Command(s) run:
+- Local repo:
+  - create `bm_nbody/run_benchmark_v4_precompute.py` from V3
+  - create `bm_nbody/test_v4_correctness.py` from V3 test
+  - run local quick test: `python bm_nbody/test_v4_correctness.py`
+  - `git add bm_nbody/run_benchmark_v4_precompute.py bm_nbody/test_v4_correctness.py`
+  - `git commit -m "Add nbody V4 invariant precompute variant and correctness test"`
+  - `git push origin master`
+- VM repo:
+  - `cd /root/homewroksbothsofthard`
+  - `git pull --rebase origin master`
+  - `python3 bm_nbody/test_v4_correctness.py`
+
+Why this was run:
+- To add V4 using only truly loop-invariant precompute from V3.
+- To keep the dynamic state update logic unchanged and verify equivalence with a short VM correctness gate.
+
+File(s) changed:
+- bm_nbody/run_benchmark_v4_precompute.py
+- bm_nbody/test_v4_correctness.py
+- docs/nbody_project.md
+
+What was precomputed:
+- Outside the timestep loop, inside `advance(dt, n, ...)`, precomputed:
+  - `dm0 = dt * m0`
+  - `dm1 = dt * m1`
+  - `dm2 = dt * m2`
+  - `dm3 = dt * m3`
+  - `dm4 = dt * m4`
+- In each pair block, replaced:
+  - `mag = dt * inv_r3`
+  - `bXm = mX * mag`
+  - `bYm = mY * mag`
+  with:
+  - `bXm = dmX * inv_r3`
+  - `bYm = dmY * inv_r3`
+
+Why it is invariant:
+- For one `advance()` call, `dt` is constant and masses `m0..m4` are constant body properties.
+- Positions and velocities evolve each timestep, so they were not precomputed.
+- Distances (`dx, dy, dz, d2`) and `inv_r3` depend on dynamic positions, so they remain per-pair dynamic computations.
+
+Approximately how many repeated Python operations were removed:
+- There are 10 pair interactions per timestep.
+- V3 used 3 multiplications per pair for force scale terms (`dt*inv_r3`, then two mass multiplications).
+- V4 uses 2 multiplications per pair (`dmX*inv_r3`, `dmY*inv_r3`).
+- Net reduction is about 1 multiplication per pair, approximately 10 float multiplications removed per timestep.
+- For the default `iterations=20000`, that is roughly 200,000 float multiplications removed per `advance()` call (plus removed temporary `mag` assignments/lookups).
+
+Measured results:
+- Local quick test could not run because `python` executable alias was unavailable on host shell.
+- VM correctness test (100 steps):
+  - `abs_energy_before_diff = 0.000e+00`
+  - `abs_energy_after_diff = 0.000e+00`
+  - `max_state_abs_diff = 1.110e-16`
+  - tolerance `1e-12`
+  - verdict `CORRECTNESS_CHECK=PASS`
+
+Profiling findings:
+- No new profiling run in this step.
+
+Optimization reasoning:
+- V4 removes repeated invariant multiplications from the hot pair path while preserving dynamic force and state updates.
+
+Correctness results:
+- PASS (`CORRECTNESS_CHECK=PASS`).
+
+Hardware architecture decisions:
+- No hardware changes in this step.
+
+SystemVerilog implementation decisions:
+- No RTL changes in this step.
+
+Problems encountered and fixes:
+- Local Windows host lacked direct `python` command in this shell session.
+- Validation was completed in VM with `python3` to keep progress unblocked.
+
+Next step:
+- Create final combined pure-Python variant from V4 and run the same short VM correctness gate before any long benchmark run.
+
 ## Commands Used
 Important command history is appended here in chronological order.
 
@@ -861,6 +946,30 @@ Important command history is appended here in chronological order.
 
 38. python3 bm_nbody/test_v3_correctness.py (VM)
 - Purpose: confirm final V3 correctness after fixes.
+
+39. Copy-Item bm_nbody/run_benchmark_v3_sqrt.py bm_nbody/run_benchmark_v4_precompute.py
+- Purpose: initialize V4 from the validated V3 baseline.
+
+40. Copy-Item bm_nbody/test_v3_correctness.py bm_nbody/test_v4_correctness.py
+- Purpose: initialize dedicated V4 correctness harness.
+
+41. python bm_nbody/test_v4_correctness.py
+- Purpose: attempt local quick correctness check for V4.
+
+42. git add bm_nbody/run_benchmark_v4_precompute.py bm_nbody/test_v4_correctness.py
+- Purpose: stage V4 implementation and test.
+
+43. git commit -m "Add nbody V4 invariant precompute variant and correctness test"
+- Purpose: checkpoint V4 changes for traceability.
+
+44. git push origin master
+- Purpose: publish V4 files for VM execution.
+
+45. git pull --rebase origin master (VM)
+- Purpose: sync VM clone with latest V4 commit.
+
+46. python3 bm_nbody/test_v4_correctness.py (VM)
+- Purpose: execute authoritative V4 correctness gate in VM.
 
 ## Evidence Pointers
 - Nbody compare artifact: project_results/nbody/compare.txt
