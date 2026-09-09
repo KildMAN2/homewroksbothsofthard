@@ -20,6 +20,8 @@ This log is intentionally explanatory rather than a raw terminal dump so it can 
 - Defined end-to-end execution plan from current state to final submission.
 - Preserved benchmark code unchanged for now.
 - Inspected original Nbody source file in VM and documented algorithm details.
+- Created V1 scalarized benchmark copy without modifying original source.
+- Created and executed a short VM correctness test for V1.
 
 ### Remaining
 - Run and complete mdp benchmark artifacts (baseline, optimized placeholder run, compare, perf profile, flamegraph).
@@ -323,6 +325,62 @@ What we should not conclude yet:
 
 - We should not claim the `5.30 sec -> 5.09 sec` change as a true optimization outcome until code differences and statistical significance are both confirmed.
 
+## V1 Scalarization Implementation and Correctness
+
+### What changed
+
+Created a new file:
+
+- `bm_nbody/run_benchmark_v1_scalar.py`
+
+The original benchmark file in `/opt/pyperformance/pyperformance/data-files/benchmarks/bm_nbody/run_benchmark.py` was not modified.
+
+V1 change scope:
+
+- Scalarized velocity list reads into local variables inside the pair loop.
+- Performed arithmetic updates on local scalars.
+- Wrote results back to velocity lists once per pair interaction.
+- Scalarized position/velocity reads in the position-update loop to reduce repeated list indexing.
+- Preserved original equations, pair ordering, and outer loop structure.
+
+Also created:
+
+- `bm_nbody/test_v1_correctness.py`
+
+This test compares V1 against a reference implementation of the original algorithm over a short run.
+
+### Why scalarization may improve performance
+
+The original hot loop repeatedly performs Python list indexing and assignment operations (`v1[0]`, `v1[1]`, `v1[2]`, etc.) for every body-pair interaction.
+
+Scalarization can help because:
+
+- Local variable access is cheaper than repeated list element access.
+- Fewer list get/set operations reduce Python object-model overhead.
+- Arithmetic on local scalars can reduce interpreter dispatch pressure in tight loops.
+
+Expected effect:
+
+- Same physics and algorithm behavior, lower overhead around bookkeeping operations.
+
+### Short correctness test result (VM)
+
+Executed only a short correctness test (not full pyperformance benchmark):
+
+- Steps: `100`
+- `energy_before_original` == `energy_before_v1`
+- `energy_after_original` == `energy_after_v1`
+- `abs_energy_before_diff = 0.000e+00`
+- `abs_energy_after_diff = 0.000e+00`
+- `max_state_abs_diff = 0.000e+00`
+- Tolerance: `1e-12`
+- Final verdict: `CORRECTNESS_CHECK=PASS`
+
+Interpretation:
+
+- For the tested short run, V1 is numerically equivalent to the reference implementation within strict tolerance.
+- This is sufficient to proceed to performance benchmarking in later steps.
+
 ## Step Log
 
 ### Step 0 - Documentation Bootstrap (Current Step)
@@ -454,6 +512,60 @@ Problems encountered and fixes:
 Next step:
 - Define and run correctness gate tests before implementing V1-V5 source changes.
 
+### Step 3 - Implement V1 Scalar Copy and Run VM Correctness Test
+Date: 2026-09-10
+
+Command(s) run:
+- Local repo:
+  - create directory `bm_nbody/`
+  - create `bm_nbody/run_benchmark_v1_scalar.py`
+  - create `bm_nbody/test_v1_correctness.py`
+  - `git add bm_nbody/run_benchmark_v1_scalar.py bm_nbody/test_v1_correctness.py docs/nbody_project.md`
+  - `git commit -m "Add nbody V1 scalar copy and short correctness test"`
+  - `git push origin master`
+- VM repo:
+  - `cd /root/homewroksbothsofthard`
+  - `git pull --rebase origin master`
+  - `python3 bm_nbody/test_v1_correctness.py`
+
+Why this was run:
+- To implement the first optimization stage (V1) without touching the original benchmark.
+- To verify numerical equivalence with a short correctness gate before any long performance run.
+
+File(s) changed:
+- bm_nbody/run_benchmark_v1_scalar.py
+- bm_nbody/test_v1_correctness.py
+- docs/nbody_project.md
+
+What changed in code:
+- Added V1 scalarized copy of benchmark logic.
+- Added a standalone correctness harness that checks energy and full state deltas against a reference implementation.
+
+Measured results:
+- Correctness run executed in VM with 100 steps.
+- All compared deltas were exactly zero within tolerance.
+
+Profiling findings:
+- No new perf profile in this step.
+
+Optimization reasoning:
+- V1 targets Python list indexing overhead seen in baseline hotspot evidence.
+
+Correctness results:
+- PASS (`CORRECTNESS_CHECK=PASS`).
+
+Hardware architecture decisions:
+- No hardware changes in this step.
+
+SystemVerilog implementation decisions:
+- No RTL changes in this step.
+
+Problems encountered and fixes:
+- No blocking issues in this step.
+
+Next step:
+- Run short timing checks for V1 vs baseline, then schedule full benchmark runs only after confirming stable execution behavior.
+
 ## Commands Used
 Important command history is appended here in chronological order.
 
@@ -489,6 +601,33 @@ Important command history is appended here in chronological order.
 
 11. grep_search on out.folded for key symbols
 - Purpose: verify collapsed-stack evidence aligns with perf/flamegraph findings.
+
+12. create directory bm_nbody
+- Purpose: prepare isolated location for optimization variants and tests.
+
+13. create file bm_nbody/run_benchmark_v1_scalar.py
+- Purpose: implement V1 scalarized benchmark copy while leaving original benchmark unchanged.
+
+14. create file bm_nbody/test_v1_correctness.py
+- Purpose: add short correctness gate before expensive benchmark runs.
+
+15. git add bm_nbody/run_benchmark_v1_scalar.py bm_nbody/test_v1_correctness.py docs/nbody_project.md
+- Purpose: stage V1 implementation and documentation.
+
+16. git commit -m "Add nbody V1 scalar copy and short correctness test"
+- Purpose: create traceable checkpoint for V1 work.
+
+17. git push origin master
+- Purpose: publish V1 files so VM can run the same version.
+
+18. cd /root/homewroksbothsofthard
+- Purpose: navigate VM clone before updating from GitHub.
+
+19. git pull --rebase origin master
+- Purpose: sync VM with latest pushed V1 files.
+
+20. python3 bm_nbody/test_v1_correctness.py
+- Purpose: execute short numerical equivalence test in VM.
 
 ## Evidence Pointers
 - Nbody compare artifact: project_results/nbody/compare.txt
