@@ -1,0 +1,33 @@
+Benchmark: mdp (hard benchmark)
+
+Overview
+- Evaluates a Markov Decision Process style state-transition model.
+- Runtime is dominated by branch-heavy successor generation and repeated expectation evaluation.
+
+Initial Analysis (from baseline and profiling plan)
+- Baseline result from VM run: mean ~47.7 s, std dev ~3.4 s.
+- Expected hotspots in perf/flamegraph:
+  1) successor state expansion
+  2) transition probability/value aggregation
+  3) repeated allocation and dictionary/list operations
+
+Optimization Applied
+- Target optimization points:
+  1) Cache transition computations for repeated state patterns.
+  2) Reduce temporary object creation in inner transition loops.
+  3) Short-circuit low-probability or converged branches earlier.
+
+Performance Comparison
+- Baseline mean: 47.7 s
+- Optimized mean: run `project_results/script_mdp.sh` to collect `optimized.json` and compare output.
+- Compare command:
+  python3 -m pyperformance compare project_results/mdp/baseline.json project_results/mdp/optimized.json
+
+Hardware Proposal
+- Accelerator candidate: transition score accumulation engine.
+- Rationale: repeated fixed-width arithmetic with parallel reduction opportunities.
+- HDL module: `project_results/mdp_transition_accel.sv`
+
+Conclusion
+- mdp is control-flow heavy and harder to optimize in software.
+- Hybrid approach (software pruning + hardware transition scoring) is the strongest path.
