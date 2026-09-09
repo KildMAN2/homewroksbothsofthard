@@ -7,6 +7,15 @@ OUT="$REPO/project_results/nbody"
 
 mkdir -p "$OUT"
 
+rm -f \
+    "$OUT/baseline.json" \
+    "$OUT/v1_scalar.json" \
+    "$OUT/v2_unroll.json" \
+    "$OUT/v3_sqrt.json" \
+    "$OUT/v4_precompute.json" \
+    "$OUT/optimized.json" \
+    "$OUT/optimization_comparison.txt"
+
 run_benchmark() {
     local label="$1"
     local script_path="$2"
