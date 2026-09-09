@@ -22,6 +22,7 @@ This log is intentionally explanatory rather than a raw terminal dump so it can 
 - Inspected original Nbody source file in VM and documented algorithm details.
 - Created V1 scalarized benchmark copy without modifying original source.
 - Created and executed a short VM correctness test for V1.
+- Created V2 unrolled benchmark copy from V1 and verified correctness in VM.
 
 ### Remaining
 - Run and complete mdp benchmark artifacts (baseline, optimized placeholder run, compare, perf profile, flamegraph).
@@ -381,6 +382,63 @@ Interpretation:
 - For the tested short run, V1 is numerically equivalent to the reference implementation within strict tolerance.
 - This is sufficient to proceed to performance benchmarking in later steps.
 
+## V2 Unrolled Pair Loop Implementation and Correctness
+
+### What loop was removed
+
+In V1/original-style `advance()`, each timestep uses a generic inner loop:
+
+```python
+for (([x1, y1, z1], v1, m1), ([x2, y2, z2], v2, m2)) in pairs:
+  ...
+```
+
+In V2, this loop is removed and replaced by explicit code blocks for exactly 10 interactions in the original order:
+
+- 0-1, 0-2, 0-3, 0-4, 1-2, 1-3, 1-4, 2-3, 2-4, 3-4
+
+This preserves the original interaction sequence and physics update ordering.
+
+### Why loop unrolling can help in Python
+
+Loop unrolling can reduce interpreter overhead by removing repeated per-iteration costs inside the hottest loop:
+
+- iterator advancement
+- tuple unpacking for each pair
+- loop-control branch overhead
+
+By using explicit pair blocks, more execution time is spent in arithmetic work and less in Python loop mechanics.
+
+### Possible disadvantages
+
+Unrolling in Python has trade-offs:
+
+- Larger source code size and lower readability.
+- Higher maintenance burden (manual edits are error-prone).
+- Greater risk of copy/paste mistakes if equations diverge between blocks.
+- Potential instruction-cache pressure from larger function bodies.
+
+So V2 can improve speed, but it increases code complexity and review burden.
+
+### Correctness result (short VM test)
+
+Executed short correctness test only (not full benchmark):
+
+- Test script: `bm_nbody/test_v2_correctness.py`
+- Steps: `100`
+- `energy_before_original` == `energy_before_v2`
+- `energy_after_original` == `energy_after_v2`
+- `abs_energy_before_diff = 0.000e+00`
+- `abs_energy_after_diff = 0.000e+00`
+- `max_state_abs_diff = 0.000e+00`
+- Tolerance: `1e-12`
+- Final verdict: `CORRECTNESS_CHECK=PASS`
+
+Interpretation:
+
+- V2 preserved numerical behavior exactly in this short equivalence run.
+- This clears V2 for later timing measurements.
+
 ## Step Log
 
 ### Step 0 - Documentation Bootstrap (Current Step)
@@ -566,6 +624,60 @@ Problems encountered and fixes:
 Next step:
 - Run short timing checks for V1 vs baseline, then schedule full benchmark runs only after confirming stable execution behavior.
 
+### Step 4 - Implement V2 Unrolled Pairs and Run VM Correctness Test
+Date: 2026-09-10
+
+Command(s) run:
+- Local repo:
+  - create `bm_nbody/run_benchmark_v2_unroll.py`
+  - create `bm_nbody/test_v2_correctness.py`
+  - `git add bm_nbody/run_benchmark_v2_unroll.py bm_nbody/test_v2_correctness.py`
+  - `git commit -m "Add nbody V2 unrolled pair implementation and correctness test"`
+  - `git push origin master`
+- VM repo:
+  - `cd /root/homewroksbothsofthard`
+  - `git pull --rebase origin master`
+  - `python3 bm_nbody/test_v2_correctness.py`
+
+Why this was run:
+- To remove the generic pair loop while preserving original interaction order.
+- To verify unrolling did not change numerical behavior before any long performance run.
+
+File(s) changed:
+- bm_nbody/run_benchmark_v2_unroll.py
+- bm_nbody/test_v2_correctness.py
+- docs/nbody_project.md
+
+What changed in code:
+- Replaced dynamic pair iteration with explicit 10-pair update blocks.
+- Kept scalarized local variable style from V1.
+- Kept original formulas and pair update order.
+
+Measured results:
+- Short correctness test executed in VM, 100 steps.
+- Energy and state diffs were exactly zero at tolerance 1e-12.
+
+Profiling findings:
+- No new profiling run in this step.
+
+Optimization reasoning:
+- V2 targets Python loop/tuple-unpacking overhead in the hot interaction path.
+
+Correctness results:
+- PASS (`CORRECTNESS_CHECK=PASS`).
+
+Hardware architecture decisions:
+- No hardware changes in this step.
+
+SystemVerilog implementation decisions:
+- No RTL changes in this step.
+
+Problems encountered and fixes:
+- Local quick test was canceled by user, so verification was completed directly in VM.
+
+Next step:
+- Run short timing checks for V2 vs V1 (still not full benchmark), then continue staged optimization flow.
+
 ## Commands Used
 Important command history is appended here in chronological order.
 
@@ -628,6 +740,30 @@ Important command history is appended here in chronological order.
 
 20. python3 bm_nbody/test_v1_correctness.py
 - Purpose: execute short numerical equivalence test in VM.
+
+21. create file bm_nbody/run_benchmark_v2_unroll.py
+- Purpose: implement V2 loop-unrolled pair updates while preserving original interaction order.
+
+22. create file bm_nbody/test_v2_correctness.py
+- Purpose: validate V2 numerical equivalence using a short run.
+
+23. git add bm_nbody/run_benchmark_v2_unroll.py bm_nbody/test_v2_correctness.py
+- Purpose: stage V2 implementation and test.
+
+24. git commit -m "Add nbody V2 unrolled pair implementation and correctness test"
+- Purpose: checkpoint V2 work for traceability.
+
+25. git push origin master
+- Purpose: publish V2 files so VM can execute the same code.
+
+26. cd /root/homewroksbothsofthard
+- Purpose: navigate to VM clone before syncing.
+
+27. git pull --rebase origin master
+- Purpose: sync VM with latest V2 changes.
+
+28. python3 bm_nbody/test_v2_correctness.py
+- Purpose: execute short V2 correctness gate in VM.
 
 ## Evidence Pointers
 - Nbody compare artifact: project_results/nbody/compare.txt
