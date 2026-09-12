@@ -10,7 +10,18 @@
 # - Backs up MANIFEST before the first modification.
 set -euo pipefail
 
-BROOT=/opt/pyperformance/pyperformance/data-files/benchmarks
+PYPERF_BENCH_ROOT="${PYPERF_BENCH_ROOT:-}"
+if [[ -n "$PYPERF_BENCH_ROOT" ]]; then
+  BROOT="$PYPERF_BENCH_ROOT"
+elif [[ -d /opt/pyperformance/pyperformance/data-files/benchmarks ]]; then
+  BROOT=/opt/pyperformance/pyperformance/data-files/benchmarks
+elif [[ -d /usr/local/lib/python3.10/dist-packages/pyperformance/data-files/benchmarks ]]; then
+  BROOT=/usr/local/lib/python3.10/dist-packages/pyperformance/data-files/benchmarks
+else
+  echo "ERROR: could not locate pyperformance benchmark root under /opt or dist-packages" >&2
+  exit 1
+fi
+
 NBODY_DIR="$BROOT/bm_nbody"
 V1_DIR="$BROOT/bm_nbody_v1"
 MANIFEST="$BROOT/MANIFEST"
