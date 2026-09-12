@@ -79,8 +79,25 @@ else
 fi
 
 echo
+PYPERF_PKG_ROOT="${PYPERF_PKG_ROOT:-}"
+if [[ -z "$PYPERF_PKG_ROOT" ]]; then
+  for d in /opt/pyperformance /usr/local/lib/python3.10/dist-packages; do
+    if [[ -f "$d/pyperformance/__init__.py" ]]; then
+      PYPERF_PKG_ROOT="$d"
+      break
+    fi
+  done
+fi
+
+if [[ -n "$PYPERF_PKG_ROOT" ]]; then
+  export PYTHONPATH="$PYPERF_PKG_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+  echo "[env] using pyperformance package root: $PYPERF_PKG_ROOT"
+else
+  echo "[warn] could not detect pyperformance package root; using current PYTHONPATH" >&2
+fi
+
 echo "[verify] python3-dbg -m pyperformance run --bench nbody_v1"
-python3-dbg -m pyperformance run --bench nbody_v1
+PYTHONPATH="$PYPERF_PKG_ROOT${PYTHONPATH:+:$PYTHONPATH}" python3-dbg -m pyperformance run --bench nbody_v1
 
 echo
 echo "[done] nbody_v1 registered. Original nbody and V1 source were not modified."
