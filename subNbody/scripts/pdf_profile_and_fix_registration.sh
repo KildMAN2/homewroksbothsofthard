@@ -17,7 +17,7 @@ OUT="$REPO/project_results/nbody"
 FG=/opt/FlameGraph
 DOC="$REPO/subNbody/docs/nbody_project.md"
 
-BROOT=/opt/pyperformance/pyperformance/data-files/benchmarks
+BROOT=/usr/local/lib/python3.10/dist-packages/pyperformance/data-files/benchmarks
 NBODY_DIR="$BROOT/bm_nbody"
 V1_DIR="$BROOT/bm_nbody_v1"
 MANIFEST="$BROOT/MANIFEST"

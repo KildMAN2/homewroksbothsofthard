@@ -1713,3 +1713,14 @@ For each important action, append one new "Step N" entry with:
 - next step
 
 This guarantees that the final report and presentation can be built directly from this file.
+
+## PDF-style profiling run (nbody vs nbody_v1)
+
+- Registered the existing V1 implementation (`run_benchmark_v1_scalar.py`, unmodified) as a separate
+  pyperformance benchmark named `nbody_v1` via `bm_nbody_v1/pyproject.toml` + a MANIFEST entry.
+  Original `nbody` registration and V1 source were not modified.
+- Verified: `python3-dbg -m pyperformance run --bench nbody` and `--bench nbody_v1` both run.
+- Captured PDF-style profiles: `perf record -F 999 -g -- python3-dbg -m pyperformance run --bench nbody`
+  and the same for `nbody_v1`. Outputs saved under `project_results/nbody/*_pdf.*` without overwriting
+  any existing official 999 Hz results.
+- Timing result remains unchanged: Original=4.881335 s, V1=4.381726 s, Speedup=1.1140x, Improvement=10.24%.
