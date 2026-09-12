@@ -27,15 +27,13 @@ This log is intentionally explanatory rather than a raw terminal dump so it can 
 - Created V4 invariant-precompute benchmark copy from V3 and verified correctness in VM.
 - Created final pure-Python optimized benchmark (`run_benchmark_optimized.py`) combining V1-V4 safe optimizations.
 - Ran complete VM correctness comparison against original for final positions, velocities, and energy.
+- Benchmarked the original, V1, V2, V3, V4, and final combined implementations under the same `python3-dbg`/pyperformance environment.
+- Identified V1 scalarization as the best measured implementation: `4.381726 s`, `1.1140x`, and `10.24%` faster than the original.
+- Profiled only the original and best measured V1 implementation at 499 Hz and generated separate perf reports and flamegraphs.
 
 ### Remaining
 - Run and complete mdp benchmark artifacts (baseline, optimized placeholder run, compare, perf profile, flamegraph).
 - Review nbody and mdp result quality, especially variance and significance.
-- Implement staged Nbody optimization variants (V1-V5) in an isolated optimized benchmark copy.
-- Run correctness checks before long benchmark runs.
-- Re-run benchmark measurements for optimized variants.
-- Compare baseline vs optimized for each version step and final version.
-- Capture optimized profiling + before/after flamegraph interpretation.
 - Refine Nbody accelerator architecture notes and align SystemVerilog behavior with intended math and pipeline timing.
 - Produce final report consistency pass (numbers, claims, significance language).
 - Final commit and push.
@@ -329,6 +327,70 @@ What we can conclude safely:
 What we should not conclude yet:
 
 - We should not claim the `5.30 sec -> 5.09 sec` change as a true optimization outcome until code differences and statistical significance are both confirmed.
+
+## Staged Optimization Benchmark Results
+
+All six variants were measured with `python3-dbg`, the unchanged default Nbody workload, and the same pyperformance environment.
+
+| Version | Mean time | Speedup | Improvement |
+|---|---:|---:|---:|
+| Original | `4.881335 s` | `1.0000x` | `0.00%` |
+| V1 scalar | `4.381726 s` | `1.1140x` | `10.24%` |
+| V2 unroll | `4.837512 s` | `1.0091x` | `0.90%` |
+| V3 sqrt | `5.173975 s` | `0.9434x` | `-6.00%` |
+| V4 precompute | `4.981543 s` | `0.9799x` | `-2.05%` |
+| Final combined | `5.463925 s` | `0.8934x` | `-11.94%` |
+
+V1 scalarization produced the best measured result. It reduces repeated list element reads and writes while preserving the original pair loop and arithmetic expression, which lowers Python object-model overhead without greatly increasing bytecode size.
+
+The later changes were not additive in CPython. Explicitly unrolling ten pair interactions expands the interpreted instruction stream, and replacing the power expression or precomputing arithmetic did not compensate for that cost in this environment. The final combined implementation was `11.94%` slower than the original. For that reason, the original-versus-optimized profile comparison uses V1 as the optimized implementation.
+
+These timings were noisy: pyperformance flagged several runs as unstable, including high dispersion for V2, V4, and the final combined version. The ranking identifies the best result in this measurement set, but small differences should not be treated as statistically definitive without additional stabilized runs.
+
+## Original vs Best Optimized Profiling
+
+Only the original benchmark and V1 scalarization were profiled. V1 was selected because it was the fastest measured variant in the staged benchmark table. Both captures used `perf record -F 499 -g`, `python3-dbg`, and the unchanged benchmark entry points.
+
+Capture quality:
+
+- Original: approximately `215K` CPU-clock samples.
+- V1 scalar: approximately `206K` CPU-clock samples.
+- Lost samples: `0` for both captures.
+- Perf could not resolve kernel symbols in the QEMU guest, but the relevant Python user-space symbols were resolved.
+
+### Hotspot comparison
+
+The table uses self percentages from `report_original.txt` and `report_optimized.txt`. Percentage-point changes are composition changes within each profile, not direct measurements of absolute function time.
+
+| Hotspot | Original | V1 scalar | Change |
+|---|---:|---:|---:|
+| `_PyEval_EvalFrameDefault` | `30.34%` | `34.14%` | `+3.80 pp` |
+| `PyFloat_FromDouble` | `6.09%` | `6.26%` | `+0.17 pp` |
+| `binary_op1` | `5.80%` | `6.15%` | `+0.35 pp` |
+| `float_mul.lto_priv.0` | `2.16%` | `2.31%` | `+0.15 pp` |
+| `list_subscript.lto_priv.0` | `1.89%` | `0.01%` | `-1.88 pp` |
+| `PyObject_GetItem` | `1.85%` | `0.02%` | `-1.83 pp` |
+| `PyObject_SetItem` | `1.87%` | `1.85%` | `-0.02 pp` |
+| `__ieee754_pow_sse2` | `1.75%` | `1.92%` | `+0.17 pp` |
+
+### Hotspots that decreased
+
+The strongest changes match the purpose of V1:
+
+- `list_subscript.lto_priv.0` fell from `1.89%` to `0.01%`, a reduction of `1.88` percentage points and about `99.5%` relative to its original profile share.
+- `PyObject_GetItem` fell from `1.85%` to `0.02%`, a reduction of `1.83` percentage points and about `98.9%` relative to its original profile share.
+- `PyObject_SetItem` remained nearly unchanged (`1.87%` to `1.85%`). V1 still has to write updated velocity and position values back to the body lists, so scalarization primarily removes repeated reads rather than final state writes.
+
+The flamegraphs support the same conclusion: the optimized graph has nearly eliminated list-read call paths while retaining broad interpreter and numeric-operation regions.
+
+### Bottlenecks that remain
+
+- `_PyEval_EvalFrameDefault` remains the largest self hotspot at `34.14%`.
+- Float object creation and arithmetic dispatch remain substantial: `PyFloat_FromDouble` is `6.26%`, `binary_op1` is `6.15%`, and `float_mul.lto_priv.0` is `2.31%`.
+- `__ieee754_pow_sse2` remains at `1.92%` because V1 intentionally preserves the original `d2 ** (-1.5)` force calculation.
+- List assignment remains around `1.85%` because mutable body state must still be written after scalar calculations.
+
+The increased shares for interpreter, arithmetic, and power functions do not by themselves mean those operations became slower. V1 reduced list-read work and reduced total measured benchmark time, so costs that remain occupy a larger fraction of the shorter execution. The result shows that V1 succeeds specifically by removing Python list lookup overhead; further pure-Python improvement is constrained by interpreter dispatch, boxed float operations, the power calculation, and required state writes.
 
 ## V1 Scalarization Implementation and Correctness
 
@@ -906,6 +968,33 @@ Problems encountered and fixes:
 Next step:
 - Proceed to benchmark timing runs for original vs final optimized, and report performance with statistical-significance language.
 
+### Step 8 - Profile Original vs Best Measured V1
+Date: 2026-09-12
+
+Command(s) run in the VM:
+- `git pull --rebase origin master`
+- `cd project_results`
+- `bash profile_nbody_best.sh`
+
+What the script ran for each selected implementation:
+- `perf record -F 499 -g -o <perf-file> python3-dbg <benchmark-file>`
+- `perf report --stdio -i <perf-file> > <report-file>`
+- `perf script`, `stackcollapse-perf.pl`, and `flamegraph.pl` to produce each SVG.
+
+Files generated:
+- `project_results/nbody/perf_original.data`
+- `project_results/nbody/perf_optimized.data`
+- `project_results/nbody/report_original.txt`
+- `project_results/nbody/report_optimized.txt`
+- `project_results/nbody/flamegraph_original.svg`
+- `project_results/nbody/flamegraph_optimized.svg`
+
+Result:
+- Profiling completed successfully for both targets at 499 Hz.
+- The VM emitted kernel-symbol and BPF synthesis warnings; these affect kernel frame resolution, not the resolved Python user-space comparison used here.
+- The V1 profiling run reported `4.32 sec +- 0.23 sec` and a pyperf instability warning, so conclusions focus on large hotspot shifts rather than small percentage differences.
+- The six requested artifacts were committed in the VM as commit `9f4f02c` and pushed to `origin/master`.
+
 ## Commands Used
 Important command history is appended here in chronological order.
 
@@ -1074,10 +1163,23 @@ Important command history is appended here in chronological order.
 55. python3 t.py (VM)
 - Purpose: run complete correctness comparison over 20000 steps and capture final positions, velocities, and energy deltas.
 
+56. bash project_results/profile_nbody_best.sh (VM)
+- Purpose: profile only the original and best measured V1 implementation at 499 Hz and generate separate reports and flamegraphs.
+
+57. git add perf_*.data report_*.txt flamegraph_*.svg (VM)
+- Purpose: stage only the six requested profiling deliverables, excluding intermediate perf streams and folded stacks.
+
+58. git commit -m profiles && git push origin master (VM)
+- Purpose: publish the original-versus-V1 profiling evidence as commit `9f4f02c`.
+
 ## Evidence Pointers
 - Nbody compare artifact: project_results/nbody/compare.txt
 - Nbody perf text report: project_results/nbody/report.txt
 - Nbody flamegraph: project_results/nbody/flamegraph_nbody.svg
+- Original profile report: project_results/nbody/report_original.txt
+- V1 scalar profile report: project_results/nbody/report_optimized.txt
+- Original flamegraph: project_results/nbody/flamegraph_original.svg
+- V1 scalar flamegraph: project_results/nbody/flamegraph_optimized.svg
 - Existing benchmark scripts: project_results/script_nbody.sh and project_results/script_mdp.sh
 
 ## Update Protocol For Future Steps
