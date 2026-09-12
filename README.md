@@ -29,7 +29,7 @@ Generated outputs include:
 
 See:
 
-- `project_results/nbody_accel.sv`
+- `subNbody/hardware/nbody_accel_original.sv`
 - `project_results/mdp_transition_accel.sv`
 - `project_results/HW_ACCELERATOR_PROPOSAL.md`
 

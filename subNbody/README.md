@@ -48,11 +48,19 @@ Run all staged benchmarks in the configured Ubuntu/pyperformance environment:
 bash subNbody/scripts/test_nbody_optimizations.sh
 ```
 
-Profile the original and best measured V1 implementation:
+Profile the original and best measured V1 implementation at 499 Hz:
 
 ```bash
 bash subNbody/scripts/profile_nbody_best.sh
 ```
+
+Profile the same two implementations with the requested 999 Hz project-PDF-compatible and DWARF methods, while preserving all current profile artifacts:
+
+```bash
+bash subNbody/scripts/profile_nbody_999_compare.sh
+```
+
+The script creates the standard `-F 999 -g` files and the DWARF `--call-graph dwarf` files under `/root/homewroksbothsofthard/project_results/nbody` without overwriting any existing file.
 
 Compile and run the comprehensive RTL testbench from the repository root:
 

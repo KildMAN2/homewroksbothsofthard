@@ -761,6 +761,28 @@ The later changes were not additive in CPython. Explicitly unrolling ten pair in
 
 These timings were noisy: pyperformance flagged several runs as unstable, including high dispersion for V2, V4, and the final combined version. The ranking identifies the best result in this measurement set, but small differences should not be treated as statistically definitive without additional stabilized runs.
 
+## 999 Hz Standard vs DWARF Profiling
+
+The project-specific hotspot analysis was expanded with a second, explicit profiling pass using the exact requested configurations:
+
+- Standard PDF-compatible method: `perf record -F 999 -g -- ...`
+- DWARF method: `perf record -F 999 --call-graph dwarf -- ...`
+
+The same two implementations were profiled without rerunning V2, V3, V4, the combined optimizer, any correctness checks, or RTL simulation:
+
+- Original: `python3-dbg -m pyperformance run --bench nbody`
+- Selected V1 scalar: `/root/homewroksbothsofthard/subNbody/software/run_benchmark_v1_scalar.py`
+
+All artifacts are written to `/root/homewroksbothsofthard/project_results/nbody` and use separate filenames so the standard and DWARF traces remain distinct. The final timing result is not recalculated from these profiles: the authoritative numbers remain `4.881335 s` (original), `4.381726 s` (V1 scalar), `1.1140x` speedup, and `10.24%` improvement.
+
+The `-F 999 -g` capture is the project-PDF-compatible method. DWARF is supplementary and is used to check whether deeper call stacks are resolved more clearly, without changing the measured runtime result.
+
+## 999-Hz DWARF Resource Limitation
+
+The 999-Hz DWARF experiment was abandoned after it generated approximately `3.2 GB` of perf data and the kernel OOM killer terminated `perf report` when processing the capture. This was a profiling-tool resource limitation in the VM, not a benchmark correctness failure or a change to the measured timing result.
+
+The official project profiling remains the `-F 999 -g` capture for the original benchmark and the selected V1 scalar implementation. These are the authoritative hotspot artifacts for the project. A separate optional diagnostic check can be performed at a much lower sample rate using `perf record -F 99 --call-graph dwarf,2048` to check whether the stacks are visually cleaner without re-running the 999-Hz high-volume experiment.
+
 ## Original vs Best Optimized Profiling
 
 Only the original benchmark and V1 scalarization were profiled. V1 was selected because it was the fastest measured variant in the staged benchmark table. Both captures used `perf record -F 499 -g`, `python3-dbg`, and the unchanged benchmark entry points.

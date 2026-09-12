@@ -145,23 +145,23 @@ mkdir -p project_results/nbody project_results/mdp
 ### Step 4.1 - Record profiles
 
 ```bash
-/usr/bin/perf record -F 999 -g -o project_results/nbody/perf.data -- python3-dbg -m pyperformance run -b nbody
+/usr/bin/perf record -F 999 -g -o subNbody/results/perf.data -- python3-dbg -m pyperformance run -b nbody
 /usr/bin/perf record -F 999 -g -o project_results/mdp/perf.data -- python3-dbg -m pyperformance run -b mdp
 ```
 
 ### Step 4.2 - Generate text reports
 
 ```bash
-/usr/bin/perf report --stdio -i project_results/nbody/perf.data > project_results/nbody/report.txt
+/usr/bin/perf report --stdio -i subNbody/results/perf.data > subNbody/results/report.txt
 /usr/bin/perf report --stdio -i project_results/mdp/perf.data > project_results/mdp/report.txt
 ```
 
 ### Step 4.3 - Generate flame graphs
 
 ```bash
-/usr/bin/perf script -i project_results/nbody/perf.data > project_results/nbody/out.perf
-/opt/FlameGraph/stackcollapse-perf.pl project_results/nbody/out.perf > project_results/nbody/out.folded
-/opt/FlameGraph/flamegraph.pl project_results/nbody/out.folded > project_results/nbody/flamegraph_nbody.svg
+/usr/bin/perf script -i subNbody/results/perf.data > subNbody/results/out.perf
+/opt/FlameGraph/stackcollapse-perf.pl subNbody/results/out.perf > subNbody/results/out.folded
+/opt/FlameGraph/flamegraph.pl subNbody/results/out.folded > subNbody/results/flamegraph_nbody.svg
 
 /usr/bin/perf script -i project_results/mdp/perf.data > project_results/mdp/out.perf
 /opt/FlameGraph/stackcollapse-perf.pl project_results/mdp/out.perf > project_results/mdp/out.folded
@@ -175,7 +175,7 @@ mkdir -p project_results/nbody project_results/mdp
 For each benchmark, extract the top hotspots:
 
 ```bash
-head -n 80 project_results/nbody/report.txt
+head -n 80 subNbody/results/report.txt
 head -n 80 project_results/mdp/report.txt
 ```
 

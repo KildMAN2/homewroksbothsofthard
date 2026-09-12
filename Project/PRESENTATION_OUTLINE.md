@@ -21,12 +21,12 @@
 
 ## 4. Optimization Changes and Comparison
 - Show baseline vs optimized means with compare output:
-  - `project_results/nbody/compare.txt`
+  - `subNbody/results/compare.txt`
   - `project_results/mdp/compare.txt`
 - Highlight whether each benchmark exceeds 7% improvement target.
 
 ## 5. Hardware Accelerator Proposal
-- nbody arithmetic accelerator: `project_results/nbody_accel.sv`.
+- nbody arithmetic accelerator: `subNbody/hardware/nbody_accel_original.sv`.
 - mdp transition score accelerator: `project_results/mdp_transition_accel.sv`.
 - Full architecture, interface, and trade-offs:
   - `project_results/HW_ACCELERATOR_PROPOSAL.md`
