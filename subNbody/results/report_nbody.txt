@@ -1,0 +1,632 @@
+NBODY SOFTWARE/HARDWARE CO-DESIGN REPORT
+========================================
+
+1. OVERVIEW
+-----------
+
+This project studies the pyperformance Nbody benchmark as a software and
+hardware optimization target. The completed work includes:
+
+- inspection of the original five-body simulation,
+- reproducible pyperformance timing,
+- perf sampling and flame graphs,
+- four staged pure-Python optimization experiments,
+- numerical correctness tests,
+- selection and profiling of the fastest measured software variant,
+- a synthesizable fixed-point SystemVerilog pair-interaction accelerator,
+- and self-checking RTL simulation.
+
+Measured software results and simulated RTL results are reported separately.
+No FPGA/ASIC synthesis, hardware deployment, or end-to-end hardware timing was
+performed. Hardware speedups in this report are estimates, not measurements.
+
+2. BENCHMARK ALGORITHM
+----------------------
+
+The benchmark simulates five bodies: the sun, Jupiter, Saturn, Uranus, and
+Neptune. Every timestep evaluates the 10 unique unordered body pairs:
+
+  0-1  0-2  0-3  0-4
+       1-2  1-3  1-4
+            2-3  2-4
+                 3-4
+
+For each pair, the software computes:
+
+  dx = xi - xj
+  dy = yi - yj
+  dz = zi - zj
+  d2 = dx*dx + dy*dy + dz*dz
+  inv_r3 = 1 / (d2 * sqrt(d2))
+  scale_i = dt * mass_j * inv_r3
+  scale_j = dt * mass_i * inv_r3
+  dvi = -delta * scale_i
+  dvj = +delta * scale_j
+
+The pair contributions update both bodies' velocities. After all 10 pairs are
+processed, each body position is advanced by dt*velocity. The benchmark also
+computes total kinetic plus potential energy before and after the advance loop
+and offsets the sun's momentum so total initial momentum is zero.
+
+The default workload remains 20,000 advance iterations. It was not reduced for
+the performance measurements.
+
+3. LIBRARIES AND DATA STRUCTURES
+--------------------------------
+
+Runtime and measurement:
+
+- Python 3.10.12 debug build (python3-dbg) in Ubuntu 22.04/QEMU.
+- pyperf/pyperformance for benchmark execution and JSON measurements.
+- Linux perf for sampled profiling.
+- Brendan Gregg FlameGraph scripts for stack collapse and SVG generation.
+- ModelSim Intel FPGA Edition 10.5b for SystemVerilog compilation/simulation.
+
+The benchmark itself is pure Python. It does not use NumPy, Numba, Cython,
+multiprocessing, or a native extension.
+
+Body representation:
+
+  ([x, y, z], [vx, vy, vz], mass)
+
+Positions and velocities are mutable three-element Python lists, mass is a
+Python float, BODIES is a dictionary, SYSTEM is a five-element list, and PAIRS
+is a precomputed list of 10 tuples. The local combinations() function constructs
+the unique pair list without importing itertools.
+
+4. BASELINE PERFORMANCE
+-----------------------
+
+Two timing sets exist and must not be mixed.
+
+Earlier baseline/comparison artifact (subNbody/results/compare.txt):
+
+  baseline:        5.30 sec +- 1.37 sec
+  comparison run:  5.09 sec +- 0.32 sec
+  tool verdict:    1.04x faster, not significant
+
+This earlier comparison is retained as historical evidence, but its variance
+and not-significant verdict do not support an optimization claim.
+
+Controlled staged comparison (subNbody/results/optimization_comparison.txt):
+
+  original mean:   4.881335 sec
+  V1 scalar mean:  4.381726 sec
+  measured ratio:  1.1140x
+  improvement:     10.24%
+
+The staged comparison uses V1 as the best measured software implementation.
+Several pyperf runs were flagged as unstable, especially later variants, so the
+10.24% result is the measured result for this run set rather than a universal
+claim about all hosts.
+
+5. PROFILING AND FLAME GRAPH
+----------------------------
+
+Only the original and best measured V1 scalar implementation were profiled in
+the final comparison. Both used:
+
+  perf record -F 499 -g
+
+Capture quality:
+
+  original:  approximately 215K CPU-clock samples, 0 lost samples
+  V1 scalar: approximately 206K CPU-clock samples, 0 lost samples
+
+Kernel symbols were restricted in the QEMU guest, but the relevant Python
+user-space symbols were resolved. Separate artifacts are available:
+
+  perf_original.data
+  perf_optimized.data
+  report_original.txt
+  report_optimized.txt
+  flamegraph_original.svg
+  flamegraph_optimized.svg
+
+Self-time hotspot comparison:
+
+  Symbol                         Original   V1 scalar   Change
+  -----------------------------  --------   ---------   ---------
+  _PyEval_EvalFrameDefault        30.34%      34.14%     +3.80 pp
+  PyFloat_FromDouble               6.09%       6.26%     +0.17 pp
+  binary_op1                       5.80%       6.15%     +0.35 pp
+  float_mul.lto_priv.0             2.16%       2.31%     +0.15 pp
+  list_subscript.lto_priv.0        1.89%       0.01%     -1.88 pp
+  PyObject_GetItem                 1.85%       0.02%     -1.83 pp
+  PyObject_SetItem                 1.87%       1.85%     -0.02 pp
+  __ieee754_pow_sse2               1.75%       1.92%     +0.17 pp
+
+The flame graphs agree with the text reports: list-read paths nearly disappear
+in V1, while interpreter, boxed-float arithmetic, power, and state-write paths
+remain broad.
+
+6. BOTTLENECK ANALYSIS
+----------------------
+
+The original implementation is limited by a combination of useful arithmetic
+and CPython execution overhead:
+
+- interpreter dispatch in _PyEval_EvalFrameDefault,
+- generic binary-operation dispatch,
+- Python float creation/deallocation,
+- repeated list indexing and assignment,
+- float multiplication/addition/subtraction,
+- and the d2**(-1.5) power implementation.
+
+V1 specifically removes repeated velocity/position list reads by loading values
+into local scalar variables and writing results back in groups. This explains
+the measured reductions from 1.89% to 0.01% for list_subscript and from 1.85%
+to 0.02% for PyObject_GetItem.
+
+The increased percentage shares for interpreter and numeric routines do not
+prove those routines became slower. V1 removes list-read work and shortens total
+execution, so the costs that remain occupy a larger fraction of the profile.
+
+7. SOFTWARE OPTIMIZATIONS
+-------------------------
+
+  Version          Mean time    Speedup    Improvement
+  ---------------  -----------  ---------  -----------
+  Original         4.881335 s    1.0000x       0.00%
+  V1 scalar        4.381726 s    1.1140x      10.24%
+  V2 unroll        4.837512 s    1.0091x       0.90%
+  V3 sqrt          5.173975 s    0.9434x      -6.00%
+  V4 precompute    4.981543 s    0.9799x      -2.05%
+  Final combined   5.463925 s    0.8934x     -11.94%
+
+V1 scalar:
+
+- Moves repeated list element reads into local variables.
+- Preserves the original pair loop, equations, and pair order.
+- Produces the best measured runtime.
+
+V2 unroll:
+
+- Replaces the generic 10-pair loop with explicit pair blocks.
+- Reduces loop/unpacking work but expands interpreted bytecode.
+- Produces only a 0.90% measured improvement in this run set.
+
+V3 sqrt:
+
+- Replaces d2**(-1.5) with 1/(d2*sqrt(d2)).
+- Is mathematically equivalent within floating-point tolerance.
+- Regresses by 6.00% in this CPython environment.
+
+V4 precompute:
+
+- Precomputes dt*mass terms that are invariant during advance().
+- Regresses by 2.05% in the measured run.
+
+Final combined:
+
+- Combines scalarization, unrolling, sqrt form, and invariant products.
+- Regresses by 11.94%, demonstrating that CPython optimizations are not
+  automatically additive.
+
+The final original-versus-optimized profile therefore uses V1, not the combined
+variant.
+
+8. CORRECTNESS VERIFICATION
+---------------------------
+
+Short software checks used a 1e-12 tolerance:
+
+- V1, 100 steps: exact energy and state equality; PASS.
+- V2, 100 steps: exact energy and state equality; PASS.
+- V3, 100 steps: maximum state difference 5.551e-17; PASS.
+- V4, 100 steps: maximum state difference 1.110e-16; PASS.
+
+The combined implementation was also checked for the full 20,000 steps:
+
+  final original energy:   -1.690892627552717e-01
+  final combined energy:   -1.690892627552678e-01
+  absolute energy delta:    3.886e-15
+  maximum position delta:   7.775e-12
+  maximum velocity delta:   2.612e-12
+  configured tolerance:     1.000e-12
+  scripted verdict:         FAIL
+
+The full combined run exceeded the strict position/velocity threshold because
+its reordered floating-point operations accumulate small rounding differences.
+This is another reason not to select it as the final software result. V1 is the
+best measured variant and preserved exact behavior in its recorded short check.
+
+RTL correctness was tested independently with subNbody/hardware/tb_nbody_accel.sv. The suite
+checked reset, one request, gaps, four consecutive requests, positive/negative
+deltas, different masses/distances/dt values, valid/data order, backpressure,
+zero distance, numerical tolerance, and signed saturation.
+
+ModelSim result:
+
+  compile:    0 errors, 0 warnings
+  simulation: NBODY_ACCEL_TEST=PASS transfers=12 latency=5 throughput=1/cycle
+
+No DUT bug was found by the comprehensive test. Two testbench bugs were fixed:
+the first scoreboard consumed entries before the actual rising-edge handshake,
+and the initial final-count assertion expected 13 requests instead of 12.
+
+9. BEFORE/AFTER PERFORMANCE COMPARISON
+--------------------------------------
+
+Measured software result:
+
+  4.881335 sec original -> 4.381726 sec V1 scalar
+  1.1140x measured speedup
+  10.24% measured improvement
+
+This comparison is software-only. No measured hardware runtime or end-to-end
+hardware speedup exists.
+
+10. HARDWARE ACCELERATION TARGET
+--------------------------------
+
+The accelerator targets one body-pair interaction. This is attractive because:
+
+- the same arithmetic structure repeats 10 times per timestep,
+- there are 20,000 default timesteps,
+- pair positions are read-only during one force phase,
+- pair calculations expose multiplication, square-root, reciprocal, and vector
+  arithmetic that can be pipelined,
+- and the profile confirms persistent float arithmetic, power, and Python
+  dispatch costs after list-read scalarization.
+
+The hardware does not eliminate all benchmark time. Python loop control, energy
+reporting, descriptor preparation, velocity accumulation, and position updates
+remain in software unless separately redesigned.
+
+11. HARDWARE INPUTS AND OUTPUTS
+-------------------------------
+
+DUT: subNbody/hardware/nbody_accel_v2.sv
+
+All values use Q16.16 unless noted.
+
+Inputs:
+
+  clk, rst_n                clock and active-low reset
+  in_valid, in_ready        input stream handshake
+  dx, dy, dz                signed pair displacement
+  mass_i, mass_j            unsigned body masses
+  dt                        unsigned timestep
+
+Outputs:
+
+  out_valid, out_ready      output stream handshake
+  dvix, dviy, dviz          signed update for body i
+  dvjx, dvjy, dvjz          signed update for body j
+
+The body-i output uses mass_j and a negative sign. The body-j output uses mass_i
+and a positive sign.
+
+12. HARDWARE ARCHITECTURE
+-------------------------
+
+The corrected core is a globally stallable five-stage pipeline:
+
+  Stage 1: three signed 32x32 squares and unsigned 64-bit Q32.32 d2 sum
+  Stage 2: restoring integer sqrt and 96-bit Q48.48 d2*sqrt(d2)
+  Stage 3: Q16.16 inv_r3 = 2^64 / denominator_raw
+  Stage 4: separate 96-bit Q48 scale_i and scale_j products
+  Stage 5: six signed 129-bit delta-scale paths, rounding, and saturation
+
+There is one valid bit per stage. When the output is blocked, the global enable
+freezes every valid and payload register. Unstalled acceptance-to-transfer
+latency is five clocks, and sustained throughput after fill is one pair result
+per clock.
+
+13. FIXED-POINT DESIGN
+----------------------
+
+For Q16.16 deltas:
+
+  d2_raw          = d2 * 2^32                 (Q32.32)
+  r_raw           = floor(sqrt(d2_raw))       (Q16.16)
+  denominator_raw = d2_raw * r_raw            (Q48.48)
+  inv_r3_raw      = 2^64 / denominator_raw    (Q16.16)
+
+Three Q16.16 factors dt*mass*inv_r3 produce Q48 scale values. Multiplying a
+Q16.16 delta by Q48 scale produces Q64, so the final conversion shifts by 48
+fractional bits. Results use symmetric round-to-nearest with ties away from zero
+and saturate to signed 32-bit Q16.16 instead of wrapping.
+
+The integer square root rounds down, and inv_r3 is quantized to Q16.16. The RTL
+therefore approximates real-valued Nbody arithmetic. The testbench compares
+non-exact vectors with explicit 3- or 16-LSB tolerances. Zero distance saturates
+the internal reciprocal; because all deltas are zero, output updates are zero.
+
+14. HARDWARE/SOFTWARE INTERFACE
+-------------------------------
+
+The current repository implements the streaming arithmetic core, not a complete
+PCIe/AXI/DMA wrapper or Python driver. A realistic integration uses a native
+Python extension plus an MMIO-controlled DMA descriptor ring. Calling MMIO once
+per pair directly from Python would overwhelm the arithmetic savings, so all 10
+pairs should be submitted as one batch per timestep (or many timesteps should
+be batched when dependencies permit).
+
+Proposed control-register map:
+
+  Offset  Register          Purpose
+  ------  ----------------  ----------------------------------------------
+  0x00    CONTROL           bit 0 start, bit 1 soft reset, bit 2 IRQ enable
+  0x04    STATUS            busy, done, input/output error flags
+  0x08    PAIR_COUNT        10 for this five-body benchmark
+  0x0C    INPUT_STRIDE      24 bytes
+  0x10    INPUT_BASE_LO     low 32 bits of descriptor-buffer address
+  0x14    INPUT_BASE_HI     high 32 bits of descriptor-buffer address
+  0x18    OUTPUT_BASE_LO    low 32 bits of result-buffer address
+  0x1C    OUTPUT_BASE_HI    high 32 bits of result-buffer address
+  0x20    OUTPUT_STRIDE     24 bytes
+  0x24    COMPLETED_COUNT   number of output records written
+
+Each 24-byte input record contains six 32-bit words:
+
+  dx, dy, dz, mass_i, mass_j, dt
+
+Each 24-byte output record contains six 32-bit words:
+
+  dvix, dviy, dviz, dvjx, dvjy, dvjz
+
+Software flow for each timestep:
+
+1. Python retains positions, velocities, masses, energy reporting, and position
+   updates.
+2. A native extension converts current floating-point values to Q16.16 and
+   constructs 10 input records in fixed pair order.
+3. The extension writes input/output buffer addresses and PAIR_COUNT=10 through
+   MMIO, then writes CONTROL.start.
+4. A DMA reader streams records into nbody_accel_v2 using in_valid/in_ready.
+5. A DMA writer accepts out_valid/out_ready results into the output buffer.
+6. Software waits by interrupt or polls STATUS.done/COMPLETED_COUNT.
+7. The extension converts outputs back to software values and accumulates all
+   10 pair contributions into the five velocity vectors in the same fixed order.
+8. Python updates the five positions and proceeds to the next timestep.
+
+The fixed record slot implicitly identifies the pair, so no pair ID is required
+if hardware and software share this order:
+
+  0:(0,1), 1:(0,2), 2:(0,3), 3:(0,4), 4:(1,2),
+  5:(1,3), 6:(1,4), 7:(2,3), 8:(2,4), 9:(3,4)
+
+Preserving output order matters for deterministic accumulation. The RTL core's
+global backpressure maintains transaction order.
+
+15. BLOCK DIAGRAM
+-----------------
+
+  +------------------+
+  | Python Nbody     |
+  | positions/masses |
+  +--------+---------+
+           |
+           | 10 Q16.16 pair descriptors
+           v
+  +--------------------------+
+  | Native extension + MMIO  |
+  | control + DMA buffers    |
+  +------------+-------------+
+               |
+               v
+  +------------------+     in_valid/in_ready
+  | DMA input FIFO   |------------------------------+
+  +------------------+                              |
+                                                    v
+                                      +-------------------------+
+                                      | dx^2 + dy^2 + dz^2     |
+                                      | unsigned Q32.32         |
+                                      +------------+------------+
+                                                   |
+                                                   v
+                                      +-------------------------+
+                                      | integer sqrt            |
+                                      | d2 * sqrt(d2), Q48.48   |
+                                      +------------+------------+
+                                                   |
+                                                   v
+                                      +-------------------------+
+                                      | reciprocal              |
+                                      | inv_r3 = 1/(d2*sqrt(d2))|
+                                      +------------+------------+
+                                                   |
+                                                   v
+                                      +-------------------------+
+                                      | dt * mass_j * inv_r3   |
+                                      | dt * mass_i * inv_r3   |
+                                      +------------+------------+
+                                                   |
+                                                   v
+                                      +-------------------------+
+                                      | -delta*scale_i         |
+                                      | +delta*scale_j         |
+                                      | round + saturate       |
+                                      +------------+------------+
+                                                   |
+                                                   v
+  +------------------+    out_valid/out_ready      |
+  | DMA output FIFO  |<-----------------------------+
+  +--------+---------+
+           |
+           | 10 Q16.16 result records
+           v
+  +--------------------------+
+  | Native extension         |
+  | ordered velocity merge   |
+  +------------+-------------+
+               |
+               v
+  +--------------------------+
+  | Python position update   |
+  | and energy reporting     |
+  +--------------------------+
+
+16. ACCELERATION JUSTIFICATION AND EXPECTED PERFORMANCE
+-------------------------------------------------------
+
+Measured evidence:
+
+- V1 software is 10.24% faster than the original in the staged run.
+- List-read hotspots fall by about 99% in profile share.
+- Interpreter self time remains 34.14% in V1.
+- binary_op1 remains 6.15%, PyFloat_FromDouble 6.26%, float_mul 2.31%, and
+  __ieee754_pow_sse2 1.92%.
+
+These samples support accelerating arithmetic but do not isolate the exact
+fraction of end-to-end runtime spent only in the proposed hardware kernel.
+Therefore no measured hardware speedup is claimed.
+
+Illustrative Amdahl-law model:
+
+  estimated speedup = 1 / ((1-f) + f/a + o)
+
+where f is the original runtime fraction moved to hardware, a is the speedup of
+that kernel after data reaches the accelerator, and o is added interface overhead
+as a fraction of original runtime.
+
+  Scenario      Assumptions                         Estimated overall speedup
+  ------------  ----------------------------------  -------------------------
+  Conservative  f=0.20, a=10, o=0.05               1.15x
+  Moderate      f=0.35, a=20, o=0.03               1.43x
+  Illustrative  f=0.50, a=50, o=0.02               1.89x
+
+These are assumption-based estimates only. They are not synthesis results and
+not measured hardware performance. Actual speedup could be lower if conversion,
+DMA setup, synchronization, or ordered accumulation dominates. Batching all 10
+pairs is essential. Actual f and o must be measured with an implemented wrapper
+and hardware platform before making a performance claim.
+
+17. PERFORMANCE / AREA / POWER TRADE-OFFS
+-----------------------------------------
+
+Multiplier count and widths:
+
+The RTL expresses the following logical multiplication paths:
+
+- three signed 32x32 delta squarers,
+- one effective 64x32 denominator multiplier,
+- two 32x32 dt-by-mass multipliers,
+- two effective 64x32 mass-time-by-inverse multipliers,
+- six effective signed 32x96 delta-scale multipliers.
+
+This is 14 logical multiplication operations in the spatial pipeline. It is not
+an FPGA DSP count. Synthesis may split wide products across DSP blocks, map some
+logic into LUTs, optimize constants, or time-share units if the architecture is
+changed.
+
+Fixed-point precision:
+
+- Q16.16 keeps a simple 32-bit interface and deterministic behavior.
+- It limits inverse-cube resolution and dynamic range compared with floating
+  point.
+- Wide Q32.32, Q48.48, Q48, and Q64 intermediates prevent premature truncation.
+- Saturation avoids wraparound but clips extreme physical values.
+- More fractional bits would improve accuracy while increasing divider,
+  multiplier, register, routing, and conversion costs.
+
+Square root and reciprocal:
+
+- The restoring square root is a fixed 32-iteration combinational function.
+- The reciprocal uses a wide variable divider.
+- Both are synthesizable, but they are likely the longest and largest logic paths.
+- Iterative units reduce area/power but lower throughput or add scheduling.
+- Vendor pipelined IP or reciprocal approximation plus Newton-Raphson refinement
+  could improve frequency/throughput at the cost of IP dependence and verification
+  complexity.
+
+Pipeline depth, latency, and throughput:
+
+- Five stages give five-clock acceptance-to-transfer latency when unstalled.
+- The architecture can sustain one transaction per clock after fill.
+- Global stalling is simple and preserves alignment, but one blocked output stops
+  all stages and reduces utilization.
+- Per-stage elastic buffering could tolerate downstream stalls better but adds
+  registers and control complexity.
+
+Area and power:
+
+- Six wide final multipliers, the divider, and square-root logic are expected to
+  dominate area and dynamic power.
+- Pipeline registers increase area and clock-tree power but shorten combinational
+  paths and enable throughput.
+- Clock gating or valid-qualified operand isolation could reduce switching during
+  bubbles.
+- Sharing arithmetic units lowers area and possibly leakage but sacrifices the
+  one-pair-per-cycle target.
+
+No LUT, register, DSP, frequency, wattage, or energy figures are reported because
+no synthesis or power-analysis artifact exists.
+
+18. PROJECT COMPLETENESS CHECK
+------------------------------
+
+The assignment PDF itself is not present in this repository. The only PDFs are
+under hw2/ and belong to a separate FaaS assignment. This checklist is therefore
+verified against the Nbody requirements supplied in the request and actual files.
+An exact PDF cross-check remains open.
+
+[x] Original Nbody algorithm and data structures documented
+    Evidence: subNbody/docs/nbody_project.md and this report.
+[x] Reproducible baseline measurement artifacts
+    Evidence: baseline.json, compare.txt, optimization_comparison.txt.
+[x] Original perf report and flame graph
+    Evidence: perf_original.data, report_original.txt, flamegraph_original.svg.
+[x] Optimized perf report and flame graph
+    Evidence: perf_optimized.data, report_optimized.txt, flamegraph_optimized.svg.
+[x] Before/after hotspot comparison with measured percentages
+    Evidence: subNbody/docs/nbody_project.md and Sections 5-6 of this report.
+[x] Multiple software optimization variants
+    Evidence: subNbody/software/run_benchmark_v1_scalar.py through
+              run_benchmark_v4_precompute.py and run_benchmark_optimized.py.
+[x] Before/after software timing table
+    Evidence: optimization_comparison.txt and Section 7.
+[x] Software correctness tests and recorded outcomes
+    Evidence: subNbody/software/test_*.py and subNbody/docs/nbody_project.md.
+[x] Correct 1/r^3 hardware mathematics and fixed-point derivation
+    Evidence: subNbody/hardware/nbody_accel_v2.sv and Sections 12-13.
+[x] Synthesizable SystemVerilog accelerator with ready/valid pipeline
+    Evidence: subNbody/hardware/nbody_accel_v2.sv.
+[x] Self-checking RTL testbench
+    Evidence: subNbody/hardware/tb_nbody_accel.sv.
+[x] RTL simulation covering reset, traffic patterns, tolerance, and backpressure
+    Evidence: PASS output recorded in subNbody/docs/nbody_project.md and Section 8.
+[x] Hardware/software interface proposal
+    Evidence: Section 14 and subNbody/docs/nbody_project.md.
+[x] Ten-pair batching and ordered accumulation plan
+    Evidence: Section 14.
+[x] Hardware block diagram
+    Evidence: Section 15 and subNbody/docs/nbody_project.md.
+[x] Profiling-based acceleration justification
+    Evidence: Sections 6, 10, and 16.
+[x] Estimated speedup clearly separated from measured performance
+    Evidence: Section 16.
+[x] Performance/area/power trade-off discussion without invented synthesis data
+    Evidence: Section 17.
+[x] Final Nbody report
+    Evidence: subNbody/results/report_nbody.txt.
+[ ] Exact comparison against the assignment PDF
+    Missing: the Nbody assignment PDF is not in the workspace or Git history.
+[ ] Synthesized area, timing, and power results
+    Missing: no synthesis project or synthesis/power report exists.
+[ ] Implemented MMIO/DMA wrapper and Python native driver
+    Missing: Section 14 specifies the interface, but wrapper/driver source does
+             not exist.
+[ ] Measured end-to-end hardware performance
+    Missing: no deployed hardware integration exists; estimates are labeled.
+
+19. CONCLUSION
+--------------
+
+The strongest measured software result is V1 scalarization: 4.381726 seconds
+versus 4.881335 seconds for the original, a measured 1.1140x speedup and 10.24%
+improvement in the staged run. Profiling confirms that V1 nearly eliminates
+repeated list-read overhead, while interpreter and boxed-float arithmetic remain.
+
+The corrected hardware core implements the required inverse-cube pair update in
+a five-stage Q16.16 pipeline, produces both mass-crossed velocity updates, and
+passes a 12-transaction self-checking simulation with backpressure. A practical
+integration should batch the 10 pair descriptors through DMA and merge outputs
+in deterministic pair order.
+
+The project does not claim measured hardware speedup, area, frequency, or power.
+Those claims require the still-missing wrapper/driver, synthesis flow, target
+platform, and end-to-end measurements. The final exact assignment-completeness
+verdict also requires adding the actual Nbody assignment PDF to the workspace.

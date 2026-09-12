@@ -1,0 +1,8 @@
+Version | Mean Time | Speedup | Improvement %
+---|---:|---:|---:
+original | 4.881335 s | 1.0000x | 0.00%
+V1 scalar | 4.381726 s | 1.1140x | 10.24%
+V2 unroll | 4.837512 s | 1.0091x | 0.90%
+V3 sqrt | 5.173975 s | 0.9434x | -6.00%
+V4 precompute | 4.981543 s | 0.9799x | -2.05%
+final optimized | 5.463925 s | 0.8934x | -11.94%
