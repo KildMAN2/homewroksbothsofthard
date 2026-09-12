@@ -7,6 +7,22 @@ FG=/opt/FlameGraph
 
 mkdir -p "$OUT"
 
+require_cmd() {
+  local tool="$1"
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "ERROR: Required command not found in PATH: $tool" >&2
+    exit 1
+  fi
+}
+
+require_file() {
+  local path="$1"
+  if [[ ! -f "$path" ]]; then
+    echo "ERROR: Required file not found: $path" >&2
+    exit 1
+  fi
+}
+
 files=(
   "$OUT/perf_original_999.data"
   "$OUT/report_original_999.txt"
@@ -40,12 +56,10 @@ done
 
 echo "[preflight] Output directory: $OUT"
 echo "[preflight] Checking required tooling..."
-for tool in perf python3-dbg /opt/FlameGraph/stackcollapse-perf.pl /opt/FlameGraph/flamegraph.pl; do
-  if [[ ! -e "$tool" ]]; then
-    echo "ERROR: Required tool not found: $tool" >&2
-    exit 1
-  fi
-done
+require_cmd perf
+require_cmd python3-dbg
+require_file /opt/FlameGraph/stackcollapse-perf.pl
+require_file /opt/FlameGraph/flamegraph.pl
 
 echo "[preflight] Required files are absent: safe to proceed."
 echo "[preflight] Important: software timing remains authoritative and unchanged."
