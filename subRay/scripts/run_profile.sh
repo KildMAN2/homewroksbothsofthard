@@ -45,6 +45,7 @@ RAYTRACE_SCRIPT="$(discover_raytrace_script || true)"
 ATTEMPT1_SCRIPT="$ROOT_DIR/optimized/attempt1/run_benchmark.py"
 ATTEMPT2_SCRIPT="$ROOT_DIR/optimized/attempt2/run_benchmark.py"
 ATTEMPT3_SCRIPT="$ROOT_DIR/optimized/attempt3/run_benchmark.py"
+FINAL_SCRIPT="$ROOT_DIR/optimized/final/run_benchmark.py"
 
 case "$PROFILE_TARGET" in
   baseline)
@@ -68,8 +69,12 @@ case "$PROFILE_TARGET" in
     TARGET_NAME="attempt3"
     TARGET_SCRIPT="$ATTEMPT3_SCRIPT"
     ;;
+  final)
+    TARGET_NAME="final"
+    TARGET_SCRIPT="$FINAL_SCRIPT"
+    ;;
   *)
-    echo "[run_profile] invalid PROFILE_TARGET=$PROFILE_TARGET (use baseline, attempt1, attempt2, or attempt3)"
+    echo "[run_profile] invalid PROFILE_TARGET=$PROFILE_TARGET (use baseline, attempt1, attempt2, attempt3, or final)"
     exit 2
     ;;
 esac

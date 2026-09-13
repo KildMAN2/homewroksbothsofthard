@@ -1,0 +1,19 @@
+ORIGINAL OFFICIAL
+WARNING: no pyperf instability warning captured in the official perf_stat artifact
+STABILITY: perf stat reports +- 0.24% variation
+
+ Performance counter stats for 'python3-dbg /root/.local/lib/python3.10/site-packages/pyperformance/data-files/benchmarks/bm_raytrace/run_benchmark.py --width=64 --height=64' (3 runs):
+
+          80673.04 msec cpu-clock                 #    0.992 CPUs utilized            ( +-  0.24% )
+          80673.53 msec task-clock                #    0.992 CPUs utilized            ( +-  0.24% )
+                 0      cpu-cycles                #    0.000 GHz                    
+      387324411814      instructions                                                  ( +-  0.24% )
+         404917856      cache-references          #    4.997 M/sec                    ( +-  0.68% )
+           4285182      cache-misses              #    1.045 % of all cache refs      ( +-  2.02% )
+       94415979904      branches                  #    1.165 G/sec                    ( +-  0.32% )
+         865418173      branch-misses             #    0.91% of all branches          ( +-  0.10% )
+             89909      page-faults               #    1.110 K/sec                    ( +-  0.01% )
+              2459      context-switches          #   30.346 /sec                     ( +-  0.85% )
+                 0      cpu-migrations            #    0.000 /sec                    
+
+            81.285 +- 0.198 seconds time elapsed  ( +-  0.24% )
