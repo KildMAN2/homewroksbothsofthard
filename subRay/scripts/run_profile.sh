@@ -16,7 +16,32 @@ PYSPY_SUBPROCESSES="${PYSPY_SUBPROCESSES:-0}"
 PERF_EVENTS="${PERF_EVENTS:-cpu-clock,task-clock,cpu-cycles,instructions,cache-references,cache-misses,branches,branch-misses,page-faults,context-switches,cpu-migrations}"
 PROFILE_TARGET="${PROFILE_TARGET:-baseline}"
 
-RAYTRACE_SCRIPT="/usr/local/lib/python3.10/dist-packages/pyperformance/data-files/benchmarks/bm_raytrace/run_benchmark.py"
+discover_raytrace_script() {
+  python3 - <<'PY'
+import importlib.util
+from pathlib import Path
+
+spec = importlib.util.find_spec("pyperformance")
+if not spec or not spec.origin:
+  raise SystemExit(1)
+
+base = Path(spec.origin).resolve().parent
+candidates = [
+  base / "data-files" / "benchmarks" / "bm_raytrace" / "run_benchmark.py",
+  Path("/usr/local/lib/python3.10/dist-packages/pyperformance/data-files/benchmarks/bm_raytrace/run_benchmark.py"),
+  Path("/usr/lib/python3/dist-packages/pyperformance/data-files/benchmarks/bm_raytrace/run_benchmark.py"),
+]
+
+for candidate in candidates:
+  if candidate.exists():
+    print(candidate)
+    raise SystemExit(0)
+
+raise SystemExit(1)
+PY
+}
+
+RAYTRACE_SCRIPT="$(discover_raytrace_script || true)"
 ATTEMPT1_SCRIPT="$ROOT_DIR/optimized/attempt1/run_benchmark.py"
 ATTEMPT2_SCRIPT="$ROOT_DIR/optimized/attempt2/run_benchmark.py"
 ATTEMPT3_SCRIPT="$ROOT_DIR/optimized/attempt3/run_benchmark.py"
@@ -24,6 +49,11 @@ ATTEMPT3_SCRIPT="$ROOT_DIR/optimized/attempt3/run_benchmark.py"
 case "$PROFILE_TARGET" in
   baseline)
     TARGET_NAME="baseline"
+    if [ -z "$RAYTRACE_SCRIPT" ] || [ ! -f "$RAYTRACE_SCRIPT" ]; then
+      echo "[run_profile] could not locate pyperformance raytrace script"
+      echo "[run_profile] install pyperformance or make bm_raytrace available"
+      exit 4
+    fi
     TARGET_SCRIPT="$RAYTRACE_SCRIPT"
     ;;
   attempt1)
