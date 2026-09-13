@@ -1,0 +1,8 @@
+DATE=2026-09-13T05:10:24Z
+PWD=/root/homewroksbothsofthard
+COMMAND_1=/usr/bin/perf script -i /root/homewroksbothsofthard/subRay/profiling/perf.data > /root/homewroksbothsofthard/subRay/profiling/flamegraph_data/out.perf
+COMMAND_2=/opt/FlameGraph/stackcollapse-perf.pl /root/homewroksbothsofthard/subRay/profiling/flamegraph_data/out.perf > /root/homewroksbothsofthard/subRay/profiling/flamegraph_data/out.folded
+COMMAND_3=/opt/FlameGraph/flamegraph.pl /root/homewroksbothsofthard/subRay/profiling/flamegraph_data/out.folded > /root/homewroksbothsofthard/subRay/profiling/flamegraph.svg
+OUT_PERF_BYTES=263193814
+OUT_FOLDED_BYTES=526379
+FLAMEGRAPH_BYTES=128058
