@@ -1,0 +1,61 @@
+subRay perf profiling step log
+Date: 2026-09-13
+Benchmark: raytrace
+
+Verified existing successful profiling data from baseline step:
+- Profiling command used during baseline:
+  perf record -F 999 -g -o /root/homewroksbothsofthard/subRay/results/baseline/perf.data -- python3-dbg -m pyperformance run --bench raytrace
+- Baseline environment confirmed:
+  PYTHON3_VERSION=Python 3.10.12
+  PYTHON3_DBG_PATH=/usr/bin/python3-dbg
+  PYTHON3_DBG_VERSION=Python 3.10.12
+  PYFORMANCE_VERSION=pyperformance 1.14.0
+  PERF_PATH=/usr/bin/perf
+- Successful perf record messages preserved in subRay/results/baseline/perf_stderr.txt:
+  [ perf record: Woken up 438 times to write data ]
+  [ perf record: Captured and wrote 109.799 MB /root/homewroksbothsofthard/subRay/results/baseline/perf.data (1596484 samples) ]
+
+Reuse actions attempted in VM to avoid rerunning perf record:
+1. mkdir -p profiling logs
+2. cp perf.data ../../profiling/   (executed from subRay/results/baseline; succeeded)
+3. First perf report attempt from subRay root:
+   perf report --stdio -i profiling/perf.data > profiling/perf_report.txt 2> logs/04_perf_report_stderr.txt
+   Observed failure:
+   failed to open profiling/perf.dagls: No such file or directory
+   Probable reason: the QEMU serial console truncated and merged the command with following input, corrupting the filename/path.
+4. Second perf report attempt from subRay/profiling:
+   perf report --stdio -i perf.data > perf_report.txt
+   This was also affected by the serial console. After interruption, perf printed:
+   Warning:
+   Kernel address maps (/proc/{kallsyms,modules}) were restricted.
+   Check /proc/sys/kernel/kptr_restrict before running 'perf record'.
+   As no suitable kallsyms nor vmlinux was found, kernel samples can't be resolved.
+   Samples in kernel modules can't be resolved as well.
+   Probable reason: kernel-symbol restriction warning from the VM environment, combined with serial-console command corruption and interruption.
+
+Interpretation:
+- The original perf sampling run itself succeeded.
+- The failure was in post-processing with perf report inside the noisy VM serial console.
+- This is primarily a VM terminal / command-entry reliability issue, with an additional expected kernel symbol resolution limitation for kernel frames.
+- No hotspot percentages or function-ranking results are reported here because a trustworthy perf_report.txt was not captured in this step.
+
+5. Third perf report attempt from subRay/profiling using a short temporary filename:
+   perf report --stdio -i perf.data > r
+   mv r perf_report.txt
+   Observed outcome:
+   - succeeded
+   - `perf_report.txt` was created in the VM profiling directory
+   - `perf_port_stderr.txt` contained only:
+     # To display the perf.data header info, please use --header/--header-only option.
+     #
+   First visible saved report lines included:
+   - `# Total Lost Samples: 0`
+   - `# Samples: 1M of event 'cpu-clock:pppH'`
+   - `# Event count (approx.): 1598082080484`
+   - top visible rows began with `20.63% / 20.61% python python3.10d`, followed by several `[unknown]` rows and visible child symbols such as `_PyEval_EvalFrameDefault`, `binary_op1`, `PyFloat_FromDouble`, `PyObject_GenericSetAttr`, `_PyType_Lookup`, and `_PyFrame_New_NoTrack`.
+
+Updated interpretation:
+- The original perf sampling run succeeded.
+- The final perf report generation also succeeded once the output filename was shortened enough to avoid VM serial truncation.
+- Earlier failures remain important because they show the VM console can corrupt long commands.
+- Kernel symbol restrictions still apply to kernel frames, but they did not prevent user-space report generation.

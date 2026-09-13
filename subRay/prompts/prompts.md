@@ -160,3 +160,25 @@ Document the baseline step first, implement the runner script, execute the origi
 ### Actual outcome
 
 Completed. The final successful baseline command was `perf record -F 999 -g -- python3-dbg -m pyperformance run --bench raytrace`. The saved result was `26.8 sec +- 5.7 sec`, with explicit instability warnings and a reported maximum of `48.7 sec`. Raw outputs were preserved under `subRay/results/baseline/`, and large perf binary files were intentionally kept out of the GitHub push after an HTTP 408 failure on an oversized attempt.
+
+## Prompt 008 - Reuse Existing perf Data
+
+**Date:** 2026-09-13
+**Purpose:** Document original-benchmark profiling without rerunning `perf record`.
+
+### Important instructions received
+
+- Create `subRay/docs/04_perf_profiling.md`.
+- Explain what `perf`, sampling, `-F 999`, `-g`, call graphs, `python3-dbg`, `perf.data`, `perf report`, self time, and inclusive time mean.
+- Prefer `perf record -F 999 -g -- python3-dbg -m pyperformance run --bench <BENCHMARK>`, but first verify the benchmark and environment.
+- Save `subRay/profiling/perf.data` and generate `subRay/profiling/perf_report.txt` using `perf report --stdio`.
+- If perf fails, do not hide the problem; document the exact command, exact error, probable reason, and whether it is VM/perf/kernel permission/debug-symbol related.
+- No DOCX needed, and do not rerun profiling if it was already done.
+
+### Action planned before execution
+
+Verify whether the original benchmark had already been profiled successfully, reuse the existing `perf.data` if available, attempt `perf report --stdio` on that data, and document the actual outcome exactly.
+
+### Actual outcome
+
+Verified that the original `raytrace` benchmark had already been profiled successfully during the baseline step with `perf record -F 999 -g -- python3-dbg -m pyperformance run --bench raytrace`. The existing raw profile was reused instead of rerunning sampling. Two early `perf report` attempts in the VM were affected by QEMU serial-console truncation, but a final short-command workflow succeeded and produced `perf_report.txt` in the VM profiling directory. Only the report lines actually observed were summarized; no extra hotspot claims were invented.

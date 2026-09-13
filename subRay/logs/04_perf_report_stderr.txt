@@ -1,0 +1,44 @@
+Observed perf report diagnostics and errors from VM attempts on 2026-09-13
+
+Attempt 1:
+Command:
+perf report --stdio -i profiling/perf.data > profiling/perf_report.txt 2> logs/04_perf_report_stderr.txt
+
+Observed terminal error:
+failed to open profiling/perf.dagls: No such file or directory
+
+Interpretation:
+The QEMU serial console truncated/merged the command, corrupting the input path.
+
+Attempt 2:
+Command:
+perf report --stdio -i perf.data > perf_report.txt
+
+Observed warning after interruption:
+Warning:
+Kernel address maps (/proc/{kallsyms,modules}) were restricted.
+
+Check /proc/sys/kernel/kptr_restrict before running 'perf record'.
+
+As no suitable kallsyms nor vmlinux was found, kernel samples
+can't be resolved.
+
+Samples in kernel modules can't be resolved as well.
+
+Interpretation:
+This warning is VM/kernel-symbol related for kernel-frame resolution. It does not prove a bad perf.data file, but the interrupted/garbled serial-console workflow prevented capture of a trustworthy perf_report.txt in this step.
+
+Attempt 3:
+Commands:
+perf report --stdio -i perf.data > r
+mv r perf_report.txt
+
+Observed side output file:
+perf_port_stderr.txt
+
+Observed contents:
+# To display the perf.data header info, please use --header/--header-only option.
+#
+
+Interpretation:
+The shortened command successfully generated the saved report file. The remaining side output was informational only and did not indicate failure.
