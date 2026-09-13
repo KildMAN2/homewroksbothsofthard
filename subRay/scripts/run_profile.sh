@@ -13,16 +13,34 @@ HEIGHT="${HEIGHT:-64}"
 PYSPY_NATIVE="${PYSPY_NATIVE:-1}"
 PYSPY_SUBPROCESSES="${PYSPY_SUBPROCESSES:-0}"
 PERF_EVENTS="${PERF_EVENTS:-cpu-clock,task-clock,cpu-cycles,instructions,cache-references,cache-misses,branches,branch-misses,page-faults,context-switches,cpu-migrations}"
+PROFILE_TARGET="${PROFILE_TARGET:-baseline}"
 
 RAYTRACE_SCRIPT="/usr/local/lib/python3.10/dist-packages/pyperformance/data-files/benchmarks/bm_raytrace/run_benchmark.py"
-PERF_DATA_FILE="$PROFILE_DIR/perf_supplemental.data"
-PERF_REPORT_FILE="$PROFILE_DIR/perf_report_supplemental.txt"
-PERF_REPORT_ERR_FILE="$PROFILE_DIR/perf_report_supplemental_stderr.txt"
-PERF_STDOUT_FILE="$PROFILE_DIR/perf_supplemental_stdout.txt"
-PERF_STDERR_FILE="$PROFILE_DIR/perf_supplemental_stderr.txt"
-PERF_STAT_FILE="$PROFILE_DIR/perf_stat.txt"
-PERF_STAT_STDOUT_FILE="$PROFILE_DIR/perf_stat_stdout.txt"
-PYSPY_OUT_FILE="$PROFILE_DIR/flamegraph_pyspy.svg"
+ATTEMPT1_SCRIPT="$ROOT_DIR/optimized/attempt1/run_benchmark.py"
+
+case "$PROFILE_TARGET" in
+  baseline)
+    TARGET_NAME="baseline"
+    TARGET_SCRIPT="$RAYTRACE_SCRIPT"
+    ;;
+  attempt1)
+    TARGET_NAME="attempt1"
+    TARGET_SCRIPT="$ATTEMPT1_SCRIPT"
+    ;;
+  *)
+    echo "[run_profile] invalid PROFILE_TARGET=$PROFILE_TARGET (use baseline or attempt1)"
+    exit 2
+    ;;
+esac
+
+PERF_DATA_FILE="$PROFILE_DIR/perf_${TARGET_NAME}.data"
+PERF_REPORT_FILE="$PROFILE_DIR/perf_report_${TARGET_NAME}.txt"
+PERF_REPORT_ERR_FILE="$PROFILE_DIR/perf_report_${TARGET_NAME}_stderr.txt"
+PERF_STDOUT_FILE="$PROFILE_DIR/perf_${TARGET_NAME}_stdout.txt"
+PERF_STDERR_FILE="$PROFILE_DIR/perf_${TARGET_NAME}_stderr.txt"
+PERF_STAT_FILE="$PROFILE_DIR/perf_stat_${TARGET_NAME}.txt"
+PERF_STAT_STDOUT_FILE="$PROFILE_DIR/perf_stat_${TARGET_NAME}_stdout.txt"
+PYSPY_OUT_FILE="$PROFILE_DIR/flamegraph_pyspy_${TARGET_NAME}.svg"
 
 mkdir -p "$PROFILE_DIR" "$LOG_DIR"
 cd "$ROOT_DIR"
@@ -31,7 +49,9 @@ if [ -f "$PROFILE_DIR/flamegraph.svg" ] && [ ! -f "$PROFILE_DIR/flamegraph_origi
   cp -f "$PROFILE_DIR/flamegraph.svg" "$PROFILE_DIR/flamegraph_original.svg"
 fi
 
-CMD=(python3-dbg "$RAYTRACE_SCRIPT" --fast --width="$WIDTH" --height="$HEIGHT")
+CMD=(python3-dbg "$TARGET_SCRIPT" --fast --width="$WIDTH" --height="$HEIGHT")
+
+echo "[run_profile] target=$TARGET_NAME script=$TARGET_SCRIPT"
 
 echo "[run_profile] perf record -> $PERF_DATA_FILE"
 set +e
