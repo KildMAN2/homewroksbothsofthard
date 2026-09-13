@@ -50,6 +50,24 @@ Self time is the fraction of samples attributed directly to a function itself, e
 
 Children or inclusive time includes samples from a function and the work done underneath it in functions it called. This is useful for identifying hot call paths rather than only leaf functions.
 
+## Flame Graph
+
+A flame graph is a visualization built from sampled stack traces. It shows which call stacks consumed the most samples during the profiled run.
+
+- **What a flame graph represents:** aggregated sampled call stacks from the original benchmark run.
+- **What width represents:** wider boxes correspond to a larger share of sampled time, so wider regions are hotter.
+- **What vertical stacking represents:** each box sits above its caller, so the vertical stack shows one path through the call chain.
+- **What an expensive function looks like:** a function or stack region that occupies a visibly wide horizontal span.
+- **How we will use it to detect hotspots:** we will look for the widest interpreter or benchmark-related regions and only describe what is visibly present in the generated SVG.
+
+Planned flame-graph workflow:
+
+1. Verify the existing `perf.data` file and the available `perf` and FlameGraph tools.
+2. Reuse the already captured original-benchmark `perf.data`; do not rerun `perf record`.
+3. Generate intermediate stack data under `subRay/profiling/flamegraph_data/`.
+4. Render the final SVG to `subRay/profiling/flamegraph.svg`.
+5. Preserve command outputs and errors under `subRay/logs/`.
+
 ## Verification Before Reuse
 
 Before generating the text report, this step verifies that:
@@ -74,8 +92,11 @@ The earlier baseline step already ran the equivalent command with an explicit ou
 
 - `subRay/profiling/perf.data`
 - `subRay/profiling/perf_report.txt`
+- `subRay/profiling/flamegraph.svg`
+- `subRay/profiling/flamegraph_data/`
 - `subRay/logs/04_perf_report_stderr.txt`
 - `subRay/logs/04_perf_step.txt`
+- `subRay/logs/04_flamegraph_step.txt`
 
 ## Verification Results
 
