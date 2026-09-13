@@ -7,7 +7,7 @@ Run 'python3-dbg -m pyperf system tune' command to reduce the system jitter.
 Use pyperf stats, pyperf dump and pyperf hist to analyze results.
 Use --quiet option to hide these warnings.
 
-raytrace: Mean +- std dev: 444 ms +- 9 ms
+raytrace_attempt1: Mean +- std dev: 98.8 ms +- 4.5 ms
 ...........
 WARNING: the benchmark result may be unstable
 * Not enough samples to get a stable result (95% certainly of less than 1% variation)
@@ -17,14 +17,14 @@ Run 'python3-dbg -m pyperf system tune' command to reduce the system jitter.
 Use pyperf stats, pyperf dump and pyperf hist to analyze results.
 Use --quiet option to hide these warnings.
 
-raytrace: Mean +- std dev: 448 ms +- 23 ms
+raytrace_attempt1: Mean +- std dev: 91.5 ms +- 5.0 ms
 ...........
 WARNING: the benchmark result may be unstable
-* the standard deviation (51.9 ms) is 11% of the mean (461 ms)
+* Not enough samples to get a stable result (95% certainly of less than 1% variation)
 
 Try to rerun the benchmark with more runs, values and/or loops.
 Run 'python3-dbg -m pyperf system tune' command to reduce the system jitter.
 Use pyperf stats, pyperf dump and pyperf hist to analyze results.
 Use --quiet option to hide these warnings.
 
-raytrace: Mean +- std dev: 461 ms +- 52 ms
+raytrace_attempt1: Mean +- std dev: 88.3 ms +- 1.6 ms

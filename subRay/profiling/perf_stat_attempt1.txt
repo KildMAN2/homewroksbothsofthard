@@ -1,0 +1,17 @@
+
+ Performance counter stats for 'python3-dbg /root/homewroksbothsofthard/subRay/optimized/attempt1/run_benchmark.py --fast --width=64 --height=64' (3 runs):
+
+           8174.23 msec cpu-clock                 #    0.947 CPUs utilized            ( +-  2.33% )
+           8174.43 msec task-clock                #    0.947 CPUs utilized            ( +-  2.33% )
+   <not supported>      cpu-cycles                                                  
+   <not supported>      instructions                                                
+   <not supported>      cache-references                                            
+   <not supported>      cache-misses                                                
+   <not supported>      branches                                                    
+   <not supported>      branch-misses                                               
+             47870      page-faults               #    5.635 K/sec                    ( +-  0.03% )
+               323      context-switches          #   38.025 /sec                     ( +- 17.70% )
+                 0      cpu-migrations            #    0.000 /sec                   
+
+             8.630 +- 0.184 seconds time elapsed  ( +-  2.13% )
+
