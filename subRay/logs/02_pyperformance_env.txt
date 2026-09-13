@@ -1,0 +1,49 @@
+subRay pyperformance environment evidence (Step 02)
+Date: 2026-09-13
+Source policy: Per user decision, this step reuses only VM command output already
+captured earlier today in subRay/logs/01_vm_discovery.txt. No new VM commands were
+executed for this step, so facts not present in that capture are marked NOT VERIFIED
+THIS SESSION rather than guessed.
+
+--- Reused raw outputs captured earlier today in the VM ---
+
+$ which pyperformance
+/usr/local/bin/pyperformance
+
+$ head -5 /usr/local/bin/pyperformance
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+import re
+import sys
+from pyperformance.cli import main
+
+$ pyperformance --version
+pyperformance 1.14.0
+
+$ pyperformance list | grep -i ray
+- raytrace
+
+Installed benchmark source tree (implies interpreter minor version 3.10):
+/usr/local/lib/python3.10/dist-packages/pyperformance/data-files/benchmarks/bm_raytrace
+
+$ grep -n raytrace MANIFEST
+77:raytrace     <local>
+
+$ cat bm_raytrace/pyproject.toml
+[tool.pyperformance]
+name = "raytrace"
+
+--- Facts NOT captured this session (to verify before profiling) ---
+
+python3 exact patch version (e.g. 3.10.x): NOT VERIFIED THIS SESSION
+  (interpreter minor version 3.10 is implied by the dist-packages path;
+   the exact patch level was not captured)
+
+python3-dbg availability: NOT VERIFIED THIS SESSION
+  (recommended verification commands, to run later in the VM:
+     python3 --version
+     which python3-dbg
+     python3-dbg --version)
+
+No benchmark timing run was executed. No optimization was performed.
+No benchmark source was modified.

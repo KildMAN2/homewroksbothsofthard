@@ -1,0 +1,3 @@
+﻿PANDOC_AVAILABLE=false
+PANDOC_DOCX_GENERATED=false
+REASON=pandoc command not found

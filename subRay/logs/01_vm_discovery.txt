@@ -1,0 +1,76 @@
+subRay benchmark discovery raw evidence
+Date: 2026-09-13
+Environment: Ubuntu 22.04.5 VM, pyperformance 1.14.0
+
+$ which pyperformance
+/usr/local/bin/pyperformance
+
+$ head -5 /usr/local/bin/pyperformance
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+import re
+import sys
+from pyperformance.cli import main
+
+$ pip show pyperformance
+[command hung and was cancelled]
+ERROR: Operation cancelled by user
+
+$ pyperformance list | grep -i ray
+- raytrace
+
+$ cd /usr/local/lib/python3.10/dist-packages/pyperformance
+
+$ find . -iname '*ray*'
+./data-files/benchmarks/bm_raytrace
+
+$ cd data-files/benchmarks/bm_raytrace
+
+$ ls -la
+total 28
+drwxr-xr-x  3 root root  4096 Aug 20 08:23 .
+drwxr-xr-x 76 root root  4096 Sep 12 23:09 ..
+drwxr-xr-x  2 root root  4096 Aug 20 08:23 __pycache__
+-rw-r--r--  1 root root   223 Aug 20 08:23 pyproject.toml
+-rw-r--r--  1 root root 12042 Aug 20 08:23 run_benchmark.py
+
+$ cat pyproject.toml
+[project]
+name = "pyperformance_bm_raytrace"
+requires-python = ">=3.8"
+dependencies = ["pyperf"]
+urls = {repository = "https://github.com/python/pyperformance"}
+dynamic = ["version"]
+
+[tool.pyperformance]
+name = "raytrace"
+
+$ cd ..
+
+$ grep -n raytrace MANIFEST
+77:raytrace     <local>
+
+$ cd bm_raytrace
+
+$ sha256sum run_benchmark.py
+88ef4d9060d8e8f6ce40f376477aaf89cc808fa44813225a3071a05a1467f017  run_benchmark.py
+
+$ sha256sum pyproject.toml
+b003d38fa3d472ac4a67a0e692160ba3e87c0b2dc60b94737767a79da45f159c  pyproject.toml
+
+$ pyperformance --version
+pyperformance 1.14.0
+
+Host-side byte identity verification against tag 1.14.0:
+88EF4D9060D8E8F6CE40F376477AAF89CC808FA44813225A3071A05A1467F017  run_benchmark.py
+B003D38FA3D472AC4A67A0E692160BA3E87C0B2DC60B94737767A79DA45F159C  pyproject.toml
+
+Initial editor-created copy check (failed due to CRLF normalization):
+00B75771D6D7D2AC26E97AAF22DB987E2B814D83C1627AA1BA4853090F2A8B5B  run_benchmark.py
+CD43E8736F74D2400D9C9A3F9E1594F4B92D2E8CD14B8D062B6B248603559E17  pyproject.toml
+
+Corrected byte-for-byte copy check:
+88EF4D9060D8E8F6CE40F376477AAF89CC808FA44813225A3071A05A1467F017  subRay/original/bm_raytrace/run_benchmark.py
+B003D38FA3D472AC4A67A0E692160BA3E87C0B2DC60B94737767A79DA45F159C  subRay/original/bm_raytrace/pyproject.toml
+
+No benchmark workload was executed. No benchmark source was modified.

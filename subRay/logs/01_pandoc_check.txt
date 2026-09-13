@@ -1,0 +1,15 @@
+subRay benchmark-understanding DOCX generation attempt
+Date: 2026-09-13
+
+Command:
+pandoc 'subRay/docs/01_benchmark_understanding.md' -o 'subRay/docs/01_benchmark_understanding.docx'
+
+Result:
+pandoc : The term 'pandoc' is not recognized as the name of a cmdlet, function,
+script file, or operable program. Check the spelling of the name, or if a path
+was included, verify that the path is correct and try again.
+CategoryInfo: ObjectNotFound: (pandoc:String) [], CommandNotFoundException
+FullyQualifiedErrorId: CommandNotFoundException
+
+DOCX_GENERATED=false
+MARKDOWN_SOURCE_OF_TRUTH=subRay/docs/01_benchmark_understanding.md
