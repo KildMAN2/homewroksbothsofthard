@@ -1,0 +1,6 @@
+[includes]
+<default>
+
+[benchmarks]
+name	metafile
+raytrace_attempt2	optimized/attempt2/pyproject.toml

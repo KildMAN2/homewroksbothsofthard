@@ -101,6 +101,19 @@ fi
 PYSPY_CMD+=(--output "$PYSPY_OUT_FILE" -- "${CMD[@]}")
 
 echo "[run_profile] py-spy -> $PYSPY_OUT_FILE"
+set +e
 "${PYSPY_CMD[@]}"
+PYSPY_STATUS=$?
+set -e
+
+if [ "$PYSPY_STATUS" -ne 0 ]; then
+  if [ -f "$PYSPY_OUT_FILE" ]; then
+    echo "[run_profile] py-spy exited with status $PYSPY_STATUS, but output exists; continuing"
+  else
+    echo "[run_profile] py-spy failed with status $PYSPY_STATUS and no output file"
+    echo "[run_profile] statuses: perf=$PERF_STATUS perf_report=$PERF_REPORT_STATUS perf_stat=$PERF_STAT_STATUS pyspy=failed"
+    exit "$PYSPY_STATUS"
+  fi
+fi
 
 echo "[run_profile] statuses: perf=$PERF_STATUS perf_report=$PERF_REPORT_STATUS perf_stat=$PERF_STAT_STATUS pyspy=ok"
