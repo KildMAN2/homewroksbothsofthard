@@ -1,0 +1,9 @@
+DATE=2026-09-13T03:24:02Z
+HOSTNAME=ubuntu
+PWD=/root/homewroksbothsofthard
+UNAME=Linux ubuntu 5.15.0-1106-kvm #111-Ubuntu SMP Tue Aug 11 15:19:54 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+PYTHON3_VERSION=Python 3.10.12
+PYTHON3_DBG_PATH=/usr/bin/python3-dbg
+PYTHON3_DBG_VERSION=Python 3.10.12
+PYFORMANCE_VERSION=pyperformance 1.14.0
+PERF_PATH=/usr/bin/perf

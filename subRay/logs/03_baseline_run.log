@@ -1,0 +1,10 @@
+COMMAND=perf record -F 999 -g -- python3-dbg -m pyperformance run --bench raytrace
+ENVIRONMENT_FILE=/root/homewroksbothsofthard/subRay/results/baseline/environment.txt
+Original source: /root/homewroksbothsofthard/subRay/original/bm_raytrace/run_benchmark.py
+Original metadata: /root/homewroksbothsofthard/subRay/original/bm_raytrace/pyproject.toml
+Running original benchmark only; no source modifications are performed.
+EXIT_STATUS=0
+STDOUT_FILE=/root/homewroksbothsofthard/subRay/results/baseline/perf_stdout.txt
+STDERR_FILE=/root/homewroksbothsofthard/subRay/results/baseline/perf_stderr.txt
+RESULT_FILE=/root/homewroksbothsofthard/subRay/results/baseline/perf.data
+ENV_FILE=/root/homewroksbothsofthard/subRay/results/baseline/environment.txt

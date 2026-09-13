@@ -1,0 +1,23 @@
+Couldn't record kernel reference relocation symbol
+Symbol resolution may be skewed if relocation was used (e.g. kexec).
+Check /proc/kallsyms permission or run as root.
+perf_event__synthesize_bpf_events: failed to synthesize bpf images: No such file or directory
+Couldn't synthesize bpf events.
+/root/homewroksbothsofthard/venv/cpython3.10-73966b47cd1a-compat-31b33d68c68a/lib/python3.10/site-packages/pip/_internal/locations/_distutils.py:9: DeprecationWarning: The distutils package is deprecated and slated for removal in Python 3.12. Use setuptools or check PEP 632 for potential alternatives
+  from distutils.cmd import Command as DistutilsCommand
+/usr/lib/python3.10/distutils/command/install.py:13: DeprecationWarning: The distutils.sysconfig module is deprecated, use sysconfig instead
+  from distutils.sysconfig import get_config_vars, is_virtual_environment
+/root/homewroksbothsofthard/venv/cpython3.10-73966b47cd1a-compat-31b33d68c68a/lib/python3.10/site-packages/pip/_internal/locations/_distutils.py:9: DeprecationWarning: The distutils package is deprecated and slated for removal in Python 3.12. Use setuptools or check PEP 632 for potential alternatives
+  from distutils.cmd import Command as DistutilsCommand
+/usr/lib/python3.10/distutils/command/install.py:13: DeprecationWarning: The distutils.sysconfig module is deprecated, use sysconfig instead
+  from distutils.sysconfig import get_config_vars, is_virtual_environment
+/root/homewroksbothsofthard/venv/cpython3.10-73966b47cd1a-compat-31b33d68c68a/lib/python3.10/site-packages/pip/_internal/locations/_distutils.py:9: DeprecationWarning: The distutils package is deprecated and slated for removal in Python 3.12. Use setuptools or check PEP 632 for potential alternatives
+  from distutils.cmd import Command as DistutilsCommand
+/usr/lib/python3.10/distutils/command/install.py:13: DeprecationWarning: The distutils.sysconfig module is deprecated, use sysconfig instead
+  from distutils.sysconfig import get_config_vars, is_virtual_environment
+/root/homewroksbothsofthard/venv/cpython3.10-73966b47cd1a-compat-31b33d68c68a/lib/python3.10/site-packages/pip/_internal/locations/_distutils.py:9: DeprecationWarning: The distutils package is deprecated and slated for removal in Python 3.12. Use setuptools or check PEP 632 for potential alternatives
+  from distutils.cmd import Command as DistutilsCommand
+/usr/lib/python3.10/distutils/command/install.py:13: DeprecationWarning: The distutils.sysconfig module is deprecated, use sysconfig instead
+  from distutils.sysconfig import get_config_vars, is_virtual_environment
+[ perf record: Woken up 438 times to write data ]
+[ perf record: Captured and wrote 109.799 MB /root/homewroksbothsofthard/subRay/results/baseline/perf.data (1596484 samples) ]
