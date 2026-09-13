@@ -1,11 +1,17 @@
 
- Performance counter stats for 'python3-dbg /root/homewroksbothsofthard/subRay/optimized/attempt1/run_benchmark.py --width=100 --height=100' (2 runs):
+ Performance counter stats for 'python3-dbg /root/homewroksbothsofthard/subRay/optimized/attempt1/run_benchmark.py --width=64 --height=64' (3 runs):
 
-          24181.03 msec cpu-clock                 #    0.987 CPUs utilized            ( +-  0.22% )
-          24181.54 msec task-clock                #    0.987 CPUs utilized            ( +-  0.22% )
-             88489      page-faults               #    3.651 K/sec                    ( +-  0.01% )
-               716      context-switches          #   29.544 /sec                     ( +-  2.16% )
-                 7      cpu-migrations            #    0.289 /sec                     ( +- 50.00% )
+          19439.18 msec cpu-clock                 #    0.986 CPUs utilized            ( +-  0.06% )
+          19439.55 msec task-clock                #    0.986 CPUs utilized            ( +-  0.06% )
+                 0      cpu-cycles                #    0.000 GHz                    
+       99535722137      instructions                                                  ( +-  0.05% )
+         203828014      cache-references          #   10.472 M/sec                    ( +-  0.11% )
+           2431999      cache-misses              #    1.190 % of all cache refs      ( +-  0.54% )
+       23677665266      branches                  #    1.217 G/sec                    ( +-  0.07% )
+         166106627      branch-misses             #    0.70% of all branches          ( +-  0.13% )
+             87893      page-faults               #    4.516 K/sec                    ( +-  0.01% )
+              2079      context-switches          #  106.815 /sec                     ( +-  0.15% )
+                 0      cpu-migrations            #    0.000 /sec                   
 
-           24.4892 +- 0.0454 seconds time elapsed  ( +-  0.19% )
+           19.7062 +- 0.0133 seconds time elapsed  ( +-  0.07% )
 
