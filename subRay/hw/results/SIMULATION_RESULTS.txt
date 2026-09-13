@@ -1,0 +1,47 @@
+Raytrace Intersection Accelerator - Simulation Results
+======================================================
+
+Simulator: ModelSim - Intel FPGA Edition, vlog/vsim 10.5b (2016.10)
+Host: Windows (local), ModelSim ASE at C:\intelFPGA_lite\17.0\modelsim_ase
+Date of run: 2026-09-13
+
+Exact commands (run from subRay/hw):
+  vlib work
+  vlog -sv rtl/fxp_sqrt.sv rtl/sphere_intersect.sv rtl/intersect_accel.sv \
+           tb/tb_fxp_sqrt.sv tb/tb_intersect_accel.sv
+  vsim -c -do "run -all; quit -f" work.tb_fxp_sqrt
+  vsim -c -do "run -all; quit -f" work.tb_intersect_accel
+
+Compilation:
+  Errors: 0, Warnings: 0
+
+Testbench 1: tb_fxp_sqrt (integer square root)
+  checks=11 errors=0
+  SQRT RESULT: ALL PASS
+  (covers 0, 1, non-square (2,15,17), perfect squares (4,16,100),
+   large 65535^2, and a Q32.32 -> Q16.16 scaling case)
+
+Testbench 2: tb_intersect_accel (top accelerator)
+  checks=7 errors=0
+  ACCEL RESULT: ALL PASS
+  Cases:
+    A_direct_sphere  -> kind=sphere id=1 t=8.000000 (exp 8.000000)
+    B_plane_only     -> kind=plane  id=9 t=1.000000 (exp 1.000000)
+    C_escape_no_hit  -> no-hit
+    D_offaxis_small  -> kind=sphere id=1 t=9.414810 (exp 9.413574, within tol)
+    E_side_sphere    -> kind=sphere id=2 t=9.000000 (exp 9.000000)
+    F_vis_blocked    -> vis_clear=0 (visibility mode, blocker present)
+    G_vis_clear      -> vis_clear=1 (visibility mode, no blocker)
+
+Notes:
+  - Reference values are computed in the testbench with real (double) math that
+    replicates the DUT's fixed-point formulas, including the original raytracer's
+    plane quirk t = 1 / (-dot(D,N)).
+  - hit_valid / hit_kind / hit_id are checked exactly; hit_t is checked within a
+    0.05 fixed-point tolerance.
+  - No synthesis was run. No area/frequency/power numbers are claimed.
+
+Raw transcripts:
+  results/compile.log
+  results/sim_fxp_sqrt.log
+  results/sim_intersect_accel.log
