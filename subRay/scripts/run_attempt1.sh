@@ -10,6 +10,7 @@ PYPERF_FILE="$RESULT_DIR/attempt1.json"
 PERF_DATA_FILE="$RESULT_DIR/perf.data"
 PERF_STDOUT_FILE="$RESULT_DIR/perf_stdout.txt"
 PERF_STDERR_FILE="$RESULT_DIR/perf_stderr.txt"
+MANIFEST_FILE="$ROOT_DIR/optimized/attempt1/MANIFEST"
 
 mkdir -p "$RESULT_DIR" "$ROOT_DIR/reports" "$ROOT_DIR/logs"
 
@@ -25,23 +26,25 @@ mkdir -p "$RESULT_DIR" "$ROOT_DIR/reports" "$ROOT_DIR/logs"
   else
     echo "PYTHON3_DBG_VERSION=NOT_AVAILABLE"
   fi
-  echo "PYPERF_VERSION=$(python3-dbg -c 'import pyperf; print(pyperf.__version__)' 2>&1 || true)"
+  echo "PYPERFORMANCE_VERSION=$(pyperformance --version 2>&1 || true)"
   echo "PERF_PATH=$(command -v perf || true)"
 } > "$ENV_FILE"
 
 {
-  echo "COMMAND=perf record -F 999 -g -o $PERF_DATA_FILE -- python3-dbg $ROOT_DIR/optimized/attempt1/run_benchmark.py --output $PYPERF_FILE"
+  echo "COMMAND=perf record -F 999 -g -o $PERF_DATA_FILE -- python3-dbg -m pyperformance run --manifest $MANIFEST_FILE --bench raytrace_attempt1"
   echo "ENVIRONMENT_FILE=$ENV_FILE"
-  echo "ORIGINAL_SOURCE=$ROOT_DIR/original/bm_raytrace/run_benchmark.py"
-  echo "OPTIMIZED_SOURCE=$ROOT_DIR/optimized/attempt1/run_benchmark.py"
+  echo "Original source: $ROOT_DIR/original/bm_raytrace/run_benchmark.py"
+  echo "Attempt1 source: $ROOT_DIR/optimized/attempt1/run_benchmark.py"
+  echo "Attempt1 manifest: $MANIFEST_FILE"
+  echo "Running optimized attempt1 benchmark only; original source is untouched."
 } > "$LOG_FILE"
 
 echo "Running attempt1 command:"
-echo "perf record -F 999 -g -o $PERF_DATA_FILE -- python3-dbg $ROOT_DIR/optimized/attempt1/run_benchmark.py --output $PYPERF_FILE"
+echo "perf record -F 999 -g -o $PERF_DATA_FILE -- python3-dbg -m pyperformance run --manifest $MANIFEST_FILE --bench raytrace_attempt1"
 echo
 
 set +e
-perf record -F 999 -g -o "$PERF_DATA_FILE" -- python3-dbg "$ROOT_DIR/optimized/attempt1/run_benchmark.py" --output "$PYPERF_FILE" \
+perf record -F 999 -g -o "$PERF_DATA_FILE" -- python3-dbg -m pyperformance run --manifest "$MANIFEST_FILE" --bench raytrace_attempt1 \
   > >(tee "$PERF_STDOUT_FILE") \
   2> >(tee "$PERF_STDERR_FILE" >&2)
 STATUS=$?
