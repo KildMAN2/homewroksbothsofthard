@@ -13,6 +13,7 @@ PERF_STDERR_FILE="$RESULT_DIR/perf_stderr.txt"
 MANIFEST_FILE="$ROOT_DIR/optimized/attempt1/MANIFEST"
 
 mkdir -p "$RESULT_DIR" "$ROOT_DIR/reports" "$ROOT_DIR/logs"
+cd "$ROOT_DIR"
 
 {
   echo "DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
