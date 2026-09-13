@@ -1,9 +1,9 @@
 [project]
 name = "subray_attempt1_raytrace"
+version = "0.1.0"
 requires-python = ">=3.8"
 dependencies = ["pyperf"]
 urls = {repository = "https://github.com/python/pyperformance"}
-dynamic = ["version"]
 
 [tool.pyperformance]
 name = "raytrace_attempt1"
