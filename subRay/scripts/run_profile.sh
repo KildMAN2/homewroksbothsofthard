@@ -10,6 +10,7 @@ RUNS="${RUNS:-3}"
 PYSPY_RATE="${PYSPY_RATE:-100}"
 WIDTH="${WIDTH:-64}"
 HEIGHT="${HEIGHT:-64}"
+PROFILE_USE_FAST="${PROFILE_USE_FAST:-1}"
 PYSPY_NATIVE="${PYSPY_NATIVE:-1}"
 PYSPY_SUBPROCESSES="${PYSPY_SUBPROCESSES:-0}"
 PERF_EVENTS="${PERF_EVENTS:-cpu-clock,task-clock,cpu-cycles,instructions,cache-references,cache-misses,branches,branch-misses,page-faults,context-switches,cpu-migrations}"
@@ -17,6 +18,8 @@ PROFILE_TARGET="${PROFILE_TARGET:-baseline}"
 
 RAYTRACE_SCRIPT="/usr/local/lib/python3.10/dist-packages/pyperformance/data-files/benchmarks/bm_raytrace/run_benchmark.py"
 ATTEMPT1_SCRIPT="$ROOT_DIR/optimized/attempt1/run_benchmark.py"
+ATTEMPT2_SCRIPT="$ROOT_DIR/optimized/attempt2/run_benchmark.py"
+ATTEMPT3_SCRIPT="$ROOT_DIR/optimized/attempt3/run_benchmark.py"
 
 case "$PROFILE_TARGET" in
   baseline)
@@ -27,19 +30,23 @@ case "$PROFILE_TARGET" in
     TARGET_NAME="attempt1"
     TARGET_SCRIPT="$ATTEMPT1_SCRIPT"
     ;;
+  attempt2)
+    TARGET_NAME="attempt2"
+    TARGET_SCRIPT="$ATTEMPT2_SCRIPT"
+    ;;
+  attempt3)
+    TARGET_NAME="attempt3"
+    TARGET_SCRIPT="$ATTEMPT3_SCRIPT"
+    ;;
   *)
-    echo "[run_profile] invalid PROFILE_TARGET=$PROFILE_TARGET (use baseline or attempt1)"
+    echo "[run_profile] invalid PROFILE_TARGET=$PROFILE_TARGET (use baseline, attempt1, attempt2, or attempt3)"
     exit 2
     ;;
 esac
 
 PERF_DATA_FILE="$PROFILE_DIR/perf_${TARGET_NAME}.data"
 PERF_REPORT_FILE="$PROFILE_DIR/perf_report_${TARGET_NAME}.txt"
-PERF_REPORT_ERR_FILE="$PROFILE_DIR/perf_report_${TARGET_NAME}_stderr.txt"
-PERF_STDOUT_FILE="$PROFILE_DIR/perf_${TARGET_NAME}_stdout.txt"
-PERF_STDERR_FILE="$PROFILE_DIR/perf_${TARGET_NAME}_stderr.txt"
 PERF_STAT_FILE="$PROFILE_DIR/perf_stat_${TARGET_NAME}.txt"
-PERF_STAT_STDOUT_FILE="$PROFILE_DIR/perf_stat_${TARGET_NAME}_stdout.txt"
 PYSPY_OUT_FILE="$PROFILE_DIR/flamegraph_pyspy_${TARGET_NAME}.svg"
 
 mkdir -p "$PROFILE_DIR" "$LOG_DIR"
@@ -49,20 +56,23 @@ if [ -f "$PROFILE_DIR/flamegraph.svg" ] && [ ! -f "$PROFILE_DIR/flamegraph_origi
   cp -f "$PROFILE_DIR/flamegraph.svg" "$PROFILE_DIR/flamegraph_original.svg"
 fi
 
-CMD=(python3-dbg "$TARGET_SCRIPT" --fast --width="$WIDTH" --height="$HEIGHT")
+CMD=(python3-dbg "$TARGET_SCRIPT" --width="$WIDTH" --height="$HEIGHT")
+if [ "$PROFILE_USE_FAST" = "1" ]; then
+  CMD+=(--fast)
+fi
 
-echo "[run_profile] target=$TARGET_NAME script=$TARGET_SCRIPT"
+echo "[run_profile] target=$TARGET_NAME script=$TARGET_SCRIPT fast=$PROFILE_USE_FAST"
 
 echo "[run_profile] perf record -> $PERF_DATA_FILE"
 set +e
 /usr/bin/perf record -F 999 -g -o "$PERF_DATA_FILE" -- "${CMD[@]}" \
-  > "$PERF_STDOUT_FILE" 2> "$PERF_STDERR_FILE"
+  > /dev/null 2>&1
 PERF_STATUS=$?
 set -e
 
 echo "[run_profile] perf report -> $PERF_REPORT_FILE"
 set +e
-/usr/bin/perf report --stdio -i "$PERF_DATA_FILE" > "$PERF_REPORT_FILE" 2> "$PERF_REPORT_ERR_FILE"
+/usr/bin/perf report --stdio -i "$PERF_DATA_FILE" > "$PERF_REPORT_FILE" 2>/dev/null
 PERF_REPORT_STATUS=$?
 set -e
 
@@ -71,7 +81,7 @@ set +e
 /usr/bin/perf stat -r "$RUNS" \
   -e "$PERF_EVENTS" \
   -- "${CMD[@]}" \
-  > "$PERF_STAT_STDOUT_FILE" 2> "$PERF_STAT_FILE"
+  > /dev/null 2> "$PERF_STAT_FILE"
 PERF_STAT_STATUS=$?
 set -e
 
