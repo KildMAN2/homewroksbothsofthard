@@ -72,3 +72,30 @@ The supplemental perf stat run confirms that the reduced direct workload is inex
 Because py-spy is unavailable, no new Python-level flame graph evidence was produced in this step.
 
 Previous bottleneck conclusions remain unchanged for now. A re-check should be done after py-spy is installed and [subRay/profiling/flamegraph_pyspy.svg](subRay/profiling/flamegraph_pyspy.svg) is generated.
+
+# Later py-spy Profiling Update
+
+The historical record above remains correct for that earlier step: py-spy was initially unavailable in that VM stage.
+
+Later in the project, py-spy profiling was run successfully and the following artifacts now exist:
+
+- [subRay/profiling/flamegraph_pyspy_baseline.svg](subRay/profiling/flamegraph_pyspy_baseline.svg)
+- [subRay/profiling/final_flamegraph_pyspy.svg](subRay/profiling/final_flamegraph_pyspy.svg)
+
+Embedded command metadata read directly from SVG titles:
+
+- `flamegraph_pyspy_baseline.svg`
+	- `py-spy record --rate 100 --native`
+	- `--output /root/homewroksbothsofthard/subRay/profiling/flamegraph_pyspy_baseline.svg`
+	- `-- python3-dbg /root/.local/lib/python3.10/site-packages/pyperformance/data-files/benchmarks/bm_raytrace/run_benchmark.py --width=64 --height=64`
+
+- `final_flamegraph_pyspy.svg`
+	- `py-spy record --rate 100 --native`
+	- `--output /root/homewroksbothsofthard/subRay/profiling/flamegraph_pyspy_attempt1.svg`
+	- `-- python3-dbg /root/homewroksbothsofthard/subRay/optimized/attempt1/run_benchmark.py --width=64 --height=64`
+
+What this later py-spy evidence adds on top of perf:
+
+- It provides readable Python call-path names that complement perf's lower-level symbol-heavy view.
+- It confirms the profiling command path details used for baseline and final software traces (interpreter, script path, width, height, py-spy rate, and `--native`).
+- It supports qualitative before/after call-stack discussion while preserving perf as the primary measured hotspot source.

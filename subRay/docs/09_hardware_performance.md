@@ -206,3 +206,23 @@ overhead unrelated to the offloaded kernel) that stays on the CPU.
 - Realistic ESTIMATE speedup over the current FINAL software version: **~1.78x**
 - These are theoretical/planning figures only; no hardware-in-the-loop
   measurement has been performed.
+
+## Evidence Boundary Labels
+
+- MEASURED SOFTWARE:
+  - `subRay/results/original_official.txt`
+  - `subRay/results/final_official.txt`
+  - saved perf sample percentages in `subRay/profiling/perf_report.txt` and `subRay/profiling/perf_report_supplemental.txt`
+- IMPLEMENTED RTL:
+  - `subRay/hw/rtl/fxp_sqrt.sv`
+  - `subRay/hw/rtl/sphere_intersect.sv`
+  - `subRay/hw/rtl/intersect_accel.sv`
+- SIMULATED RTL:
+  - `subRay/hw/results/compile.log`
+  - `subRay/hw/results/sim_fxp_sqrt.log`
+  - `subRay/hw/results/sim_intersect_accel.log`
+  - `subRay/hw/results/SIMULATION_RESULTS.txt`
+- ESTIMATED HARDWARE:
+  - all Amdahl speedups, throughput, cycle, bandwidth, clock, area, and power values in this document
+- PROPOSED SYSTEM INTEGRATION:
+  - register map, buffering, DMA, and Python driver/wrapper flow in `subRay/docs/08_hw_sw_interface.md`

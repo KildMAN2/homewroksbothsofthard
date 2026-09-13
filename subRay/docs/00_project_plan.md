@@ -67,20 +67,20 @@ The working directories will be created when execution begins. This planning ste
 | `[x]` | 2 | Understand pyperformance | Completed in `docs/02_pyperformance.md` and the baseline artifacts: pyperformance `1.14.0`, Python `3.10.12`, and `python3-dbg` availability are now verified. |
 | `[x]` | 3 | Obtain baseline performance | Completed in `docs/03_baseline.md`, `logs/03_baseline_run.log`, and `results/baseline/` with preserved raw output and baseline summary. |
 | `[x]` | 4 | Generate profiling data | Completed via the successful baseline `perf record` run; reuse and report-generation attempts are documented in `docs/04_perf_profiling.md`. |
-| `[ ]` | 5 | Generate flame graph | Save collapse/render commands, warnings, intermediate data as needed, and baseline flame graph. |
-| `[ ]` | 6 | Detect bottlenecks | Analyze measured profiles and record evidence-backed bottlenecks separately from hypotheses. |
-| `[ ]` | 7 | Suggest improvements | Propose ranked software changes tied to measured bottlenecks, with correctness risks and expected mechanisms. |
-| `[ ]` | 8 | Implement optimizations | Create versioned candidates under `optimized/`; never edit the original benchmark. |
-| `[ ]` | 9 | Measure performance improvement | Correctness-check each candidate, benchmark accepted candidates, and preserve regressions and failures. |
-| `[ ]` | 10 | Compare original vs optimized | Produce direct original-versus-candidate comparisons with raw data and statistical context. |
-| `[ ]` | 11 | Propose hardware acceleration | Select an evidence-backed kernel and document the proposed accelerator boundary and assumptions. |
-| `[ ]` | 12 | Implement a logically complete hardware design | Add synthesizable RTL and a self-checking testbench under `hw/rtl/` and `hw/tb/`. |
-| `[ ]` | 13 | Explain HW/SW interface | Define data representation, registers or streams, batching, control, synchronization, and error handling. |
-| `[ ]` | 14 | Discuss performance/area/power tradeoffs | Separate measured implementation results from explicitly labeled estimates and qualitative tradeoffs. |
-| `[ ]` | 15 | Create scripts | Add reproducible setup, correctness, benchmark, profiling, flame graph, RTL, and report-generation scripts. |
-| `[ ]` | 16 | Create final benchmark report | Consolidate method, environment, raw evidence, results, limitations, failures, and conclusions. |
+| `[x]` | 5 | Generate flame graph | Completed with saved perf/py-spy flame graph artifacts under `profiling/` and related documentation updates. |
+| `[x]` | 6 | Detect bottlenecks | Completed in `docs/05_bottleneck_analysis.md` and evidence-backed hotspot summaries. |
+| `[x]` | 7 | Suggest improvements | Completed in `docs/06_optimization_plan.md` with ranked, measured-evidence-linked candidates. |
+| `[x]` | 8 | Implement optimizations | Completed with Attempt 1/2/3 under `optimized/` while keeping `original/` unchanged. |
+| `[x]` | 9 | Measure performance improvement | Completed with correctness reports, preliminary measurements, and official files in `results/`. |
+| `[x]` | 10 | Compare original vs optimized | Completed in `docs/04_final_software_result.md` and `reports/final_performance_comparison.txt`. |
+| `[x]` | 11 | Propose hardware acceleration | Completed in `docs/06_hardware_candidate.md`. |
+| `[x]` | 12 | Implement a logically complete hardware design | Completed with RTL and self-checking testbenches under `hw/rtl/` and `hw/tb/`, plus simulation logs. |
+| `[x]` | 13 | Explain HW/SW interface | Completed in `docs/08_hw_sw_interface.md`. |
+| `[x]` | 14 | Discuss performance/area/power tradeoffs | Completed in `docs/07_hardware_architecture.md` and `docs/09_hardware_performance.md` with estimates labeled. |
+| `[x]` | 15 | Create scripts | Completed with reproducible scripts in `scripts/` for baseline, profiling, correctness, and workflow steps. |
+| `[x]` | 16 | Create final benchmark report | Completed in `reports/report_raytrace.md` and `reports/report_raytrace.txt`. |
 | `[ ]` | 17 | Create README | Provide a file map, prerequisites, reproduction commands, selected result, and evidence boundaries. |
-| `[ ]` | 18 | Save AI prompts | Maintain `prompts/prompts.md` with important project instructions and prompts. |
+| `[x]` | 18 | Save AI prompts | Completed with `prompts/prompts.md` present and maintained. |
 | `[ ]` | 19 | Prepare presentation material | Create concise slides or notes covering benchmark, evidence, optimization, RTL, interface, and limitations. |
 
 ## Planned Phases

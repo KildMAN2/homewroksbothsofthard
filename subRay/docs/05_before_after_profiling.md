@@ -13,15 +13,32 @@ Requested artifacts generated:
 ## Workload and Comparability Notes
 
 Original flame graph used for comparison:
-- `subRay/profiling/flamegraph_pyspy.svg`
-- Embedded command shows baseline raytrace with `--fast --width=64 --height=64`
+- `subRay/profiling/flamegraph_pyspy_baseline.svg`
+- Embedded command metadata shows:
+	- `py-spy record --rate 100 --native`
+	- `python3-dbg /root/.local/lib/python3.10/site-packages/pyperformance/data-files/benchmarks/bm_raytrace/run_benchmark.py`
+	- `--width=64 --height=64`
+	- no `--fast`
 
 Final flame graph generated here:
 - `subRay/profiling/final_flamegraph_pyspy.svg`
 - Produced by reusing the existing Attempt 1 capture (`flamegraph_pyspy_attempt1.svg`) because `subRay/optimized/final/` is the same implementation as Attempt 1.
-- Embedded command in this reused capture is `--width=64 --height=64` (no `--fast`).
+- Embedded command metadata shows:
+	- `py-spy record --rate 100 --native`
+	- `python3-dbg /root/homewroksbothsofthard/subRay/optimized/attempt1/run_benchmark.py`
+	- `--width=64 --height=64`
+	- no `--fast`
 
-Because these two flame graphs come from different workload modes (`--fast` vs non-fast), direct width-to-width quantitative comparison is not valid. The observations below are qualitative only.
+Comparability check from SVG metadata:
+
+- Interpreter: both use `python3-dbg`
+- Benchmark source path: baseline uses pyperformance `bm_raytrace/run_benchmark.py`; final uses optimized Attempt 1 `run_benchmark.py`
+- Width/height: both use `--width=64 --height=64`
+- `--fast`: absent in both
+- py-spy rate: `--rate 100` in both
+- `--native`: present in both
+
+Therefore these two files are workload-compatible for direct qualitative flame-graph comparison. Observations below remain qualitative (not precise percentage claims).
 
 ## Observations from Flame Graphs
 
@@ -31,21 +48,21 @@ Interpretation reminder:
 
 ### 1) Did the original hotspot become narrower?
 
-Not conclusively measurable from these two specific files because workload modes differ.
+Not claimed as a precise percentage change.
 
 What is visible:
-- In `flamegraph_pyspy.svg` (original, fast), prominent sampled width appears around pyperf runner/manager and module startup paths.
-- In `final_flamegraph_pyspy.svg` (final via attempt1, non-fast), wide regions are still dominated by pyperf orchestration/worker communication paths.
+- In `flamegraph_pyspy_baseline.svg`, prominent sampled width appears around pyperf runner/manager and worker orchestration paths.
+- In `final_flamegraph_pyspy.svg`, wide regions are still dominated by pyperf orchestration/worker communication paths.
 
-Conclusion: no reliable claim of a specific hotspot narrowing from this pair alone.
+Conclusion: the dominant stack families remain mostly in orchestration/control paths in both graphs; direct qualitative comparison is valid, but no exact narrowing percentage is claimed.
 
 ### 2) Did work shift elsewhere?
 
 Yes, qualitatively in sampled stacks:
-- Original (fast) prominently shows pyperf main/manager and GC/import-related paths.
-- Final reused profile (non-fast) shows stronger concentration in pyperf worker/IPC paths such as `spawn_worker` -> `read_text` -> `read`.
+- Baseline graph prominently shows pyperf main/manager and worker flow.
+- Final graph also shows strong worker/IPC-oriented paths such as `spawn_worker` -> `read_text` -> `read`.
 
-This is a stack-shape shift, but because workloads differ it should be treated as contextual rather than causal.
+This is treated as a qualitative stack-shape observation only.
 
 ### 3) Important function differences
 
@@ -66,8 +83,8 @@ Official timing results are still valid and strong:
 - Final official mean: 19.7062 s
 - Improvement: 75.76%
 
-So the optimization clearly improved runtime, even though this specific original-vs-final flamegraph pair is not workload-matched for strict visual width comparison.
+So the optimization clearly improved runtime. The flame-graph pair is suitable for qualitative comparison, while exact speedup attribution remains based on measured benchmark outputs.
 
 ## Recommendation for a Strict Apples-to-Apples Flamegraph Comparison
 
-For strict visual comparison, regenerate final py-spy using the same mode as original reference (`--fast`, same width/height, same host), then compare that regenerated final graph against `flamegraph_pyspy.svg`.
+No re-run is required for qualitative comparison between `flamegraph_pyspy_baseline.svg` and `final_flamegraph_pyspy.svg`, because their command metadata already matches key workload settings.
