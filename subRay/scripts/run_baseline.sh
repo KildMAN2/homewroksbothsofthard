@@ -39,8 +39,14 @@ mkdir -p "$RESULT_DIR" "$ROOT_DIR/reports" "$ROOT_DIR/logs"
   echo "Running original benchmark only; no source modifications are performed."
 } > "$LOG_FILE"
 
+echo "Running baseline command:"
+echo "perf record -F 999 -g -o $PERF_DATA_FILE -- python3-dbg -m pyperformance run --bench raytrace"
+echo
+
 set +e
-perf record -F 999 -g -o "$PERF_DATA_FILE" -- python3-dbg -m pyperformance run --bench raytrace > "$PERF_STDOUT_FILE" 2> "$PERF_STDERR_FILE"
+perf record -F 999 -g -o "$PERF_DATA_FILE" -- python3-dbg -m pyperformance run --bench raytrace \
+  > >(tee "$PERF_STDOUT_FILE") \
+  2> >(tee "$PERF_STDERR_FILE" >&2)
 STATUS=$?
 set -e
 
