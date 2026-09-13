@@ -1,0 +1,35 @@
+subRay baseline result summary
+Date: 2026-09-13
+Benchmark: raytrace
+Method: perf record -F 999 -g -- python3-dbg -m pyperformance run --bench raytrace
+Environment: Ubuntu 22.04.5 VM on QEMU, 4 logical CPUs, Python 3.10.12, pyperformance 1.14.0
+
+Primary result:
+- Mean: 26.8 sec
+- Standard deviation: 5.7 sec
+- Maximum: 48.7 sec
+- Minimum: not reported in saved output
+
+Observed execution details:
+- Benchmark cases reported: (1/1) raytrace
+- Observed progress dots in successful stdout: 21
+- Worker-process count: not explicitly reported in saved output
+- Number of values: not explicitly reported in saved output
+- Start date: 2026-09-13 03:27:16.851154
+- End date: 2026-09-13 04:05:13.373690
+- Approximate wall-clock duration: 37 min 56.5 sec
+
+Warnings preserved:
+- WARNING: the benchmark result may be unstable
+- the standard deviation (5.67 sec) is 21% of the mean (26.8 sec)
+- the maximum (48.7 sec) is 81% greater than the mean (26.8 sec)
+- perf kernel relocation and BPF synthesis warnings were emitted in this VM
+- distutils deprecation warnings were emitted during virtual-environment package operations
+
+Artifact pointers:
+- subRay/logs/03_baseline_run.log
+- subRay/results/baseline/environment.txt
+- subRay/results/baseline/perf_stdout.txt
+- subRay/results/baseline/perf_stderr.txt
+- subRay/results/baseline/stdout.txt (earlier interrupted pre-final attempt)
+- subRay/results/baseline/stderr.txt

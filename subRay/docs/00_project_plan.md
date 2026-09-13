@@ -64,8 +64,8 @@ The working directories will be created when execution begins. This planning ste
 | Status | ID | Requirement | Planned evidence |
 |---|---:|---|---|
 | `[x]` | 1 | Understand benchmark | Completed in `docs/01_benchmark_understanding.md` with exact VM source identification and checksums. |
-| `[~]` | 2 | Understand pyperformance | Documented in `docs/02_pyperformance.md`: version `1.14.0`, benchmark id `raytrace`, list/run commands, and the loops/values/processes/warmups/mean/stddev/stability concepts. Two environment facts (python3 exact patch, python3-dbg availability) remain to verify before profiling. |
-| `[ ]` | 3 | Obtain baseline performance | Save original benchmark commands, environment metadata, raw pyperformance output, and baseline summary. |
+| `[x]` | 2 | Understand pyperformance | Completed in `docs/02_pyperformance.md` and the baseline artifacts: pyperformance `1.14.0`, Python `3.10.12`, and `python3-dbg` availability are now verified. |
+| `[x]` | 3 | Obtain baseline performance | Completed in `docs/03_baseline.md`, `logs/03_baseline_run.log`, and `results/baseline/` with preserved raw output and baseline summary. |
 | `[ ]` | 4 | Generate profiling data | Save documented profiler commands and raw profile captures for the original baseline. |
 | `[ ]` | 5 | Generate flame graph | Save collapse/render commands, warnings, intermediate data as needed, and baseline flame graph. |
 | `[ ]` | 6 | Detect bottlenecks | Analyze measured profiles and record evidence-backed bottlenecks separately from hypotheses. |

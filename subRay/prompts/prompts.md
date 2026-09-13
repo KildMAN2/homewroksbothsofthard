@@ -138,3 +138,25 @@ Create the Markdown source first with the plan and stable concept definitions; g
 ### Actual outcome
 
 The interactive QEMU serial handle was unavailable this turn. On the user's instruction, the step was completed using only VM output already captured earlier today (`subRay/logs/02_pyperformance_env.txt`). Verified: pyperformance `1.14.0`, benchmark id `raytrace`, interpreter minor `3.10`, `/usr/bin/python3` launcher, and the list/run commands. Recorded as unverified rather than guessed: python3 exact patch version and python3-dbg availability. All measurement concepts were documented. No benchmark run, no optimization, no source change, no DOCX.
+
+## Prompt 007 - Establish Original Baseline
+
+**Date:** 2026-09-13
+**Purpose:** Measure the untouched original `raytrace` benchmark and preserve raw output.
+
+### Important instructions received
+
+- Create `subRay/docs/03_baseline.md` before benchmarking.
+- Create `subRay/scripts/run_baseline.sh`.
+- Run the original benchmark, record environment information, save stdout/stderr/timing results, preserve warnings, and never modify source code.
+- Save raw output under `subRay/results/baseline/` and save a summarized result under `subRay/reports/baseline_results.txt`.
+- Update the Markdown with command, mean, standard deviation, min/max if available, number of values, number of runs/processes, warnings, stability warnings, and anything unusual.
+- No DOCX needed.
+
+### Action planned before execution
+
+Document the baseline step first, implement the runner script, execute the original benchmark in the VM, preserve the raw artifacts, keep instability warnings visible, and then update the baseline report and summary.
+
+### Actual outcome
+
+Completed. The final successful baseline command was `perf record -F 999 -g -- python3-dbg -m pyperformance run --bench raytrace`. The saved result was `26.8 sec +- 5.7 sec`, with explicit instability warnings and a reported maximum of `48.7 sec`. Raw outputs were preserved under `subRay/results/baseline/`, and large perf binary files were intentionally kept out of the GitHub push after an HTTP 408 failure on an oversized attempt.
