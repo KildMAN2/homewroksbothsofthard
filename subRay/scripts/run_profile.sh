@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROFILE_DIR="$ROOT_DIR/profiling"
+LOG_DIR="$ROOT_DIR/logs"
+
+# Keep supplemental run cheap but representative.
+RUNS="${RUNS:-3}"
+PYSPY_RATE="${PYSPY_RATE:-100}"
+WIDTH="${WIDTH:-64}"
+HEIGHT="${HEIGHT:-64}"
+PYSPY_NATIVE="${PYSPY_NATIVE:-1}"
+PYSPY_SUBPROCESSES="${PYSPY_SUBPROCESSES:-0}"
+PERF_EVENTS="${PERF_EVENTS:-cpu-clock,task-clock,cpu-cycles,instructions,cache-references,cache-misses,branches,branch-misses,page-faults,context-switches,cpu-migrations}"
+
+RAYTRACE_SCRIPT="/usr/local/lib/python3.10/dist-packages/pyperformance/data-files/benchmarks/bm_raytrace/run_benchmark.py"
+PERF_DATA_FILE="$PROFILE_DIR/perf_supplemental.data"
+PERF_REPORT_FILE="$PROFILE_DIR/perf_report_supplemental.txt"
+PERF_REPORT_ERR_FILE="$PROFILE_DIR/perf_report_supplemental_stderr.txt"
+PERF_STDOUT_FILE="$PROFILE_DIR/perf_supplemental_stdout.txt"
+PERF_STDERR_FILE="$PROFILE_DIR/perf_supplemental_stderr.txt"
+PERF_STAT_FILE="$PROFILE_DIR/perf_stat.txt"
+PERF_STAT_STDOUT_FILE="$PROFILE_DIR/perf_stat_stdout.txt"
+PYSPY_OUT_FILE="$PROFILE_DIR/flamegraph_pyspy.svg"
+
+mkdir -p "$PROFILE_DIR" "$LOG_DIR"
+cd "$ROOT_DIR"
+
+if [ -f "$PROFILE_DIR/flamegraph.svg" ] && [ ! -f "$PROFILE_DIR/flamegraph_original.svg" ]; then
+  cp -f "$PROFILE_DIR/flamegraph.svg" "$PROFILE_DIR/flamegraph_original.svg"
+fi
+
+CMD=(python3-dbg "$RAYTRACE_SCRIPT" --fast --width="$WIDTH" --height="$HEIGHT")
+
+echo "[run_profile] perf record -> $PERF_DATA_FILE"
+set +e
+/usr/bin/perf record -F 999 -g -o "$PERF_DATA_FILE" -- "${CMD[@]}" \
+  > "$PERF_STDOUT_FILE" 2> "$PERF_STDERR_FILE"
+PERF_STATUS=$?
+set -e
+
+echo "[run_profile] perf report -> $PERF_REPORT_FILE"
+set +e
+/usr/bin/perf report --stdio -i "$PERF_DATA_FILE" > "$PERF_REPORT_FILE" 2> "$PERF_REPORT_ERR_FILE"
+PERF_REPORT_STATUS=$?
+set -e
+
+echo "[run_profile] perf stat -> $PERF_STAT_FILE"
+set +e
+/usr/bin/perf stat -r "$RUNS" \
+  -e "$PERF_EVENTS" \
+  -- "${CMD[@]}" \
+  > "$PERF_STAT_STDOUT_FILE" 2> "$PERF_STAT_FILE"
+PERF_STAT_STATUS=$?
+set -e
+
+if ! command -v py-spy >/dev/null 2>&1; then
+  echo "[run_profile] py-spy is not installed; skipped $PYSPY_OUT_FILE"
+  echo "[run_profile] statuses: perf=$PERF_STATUS perf_report=$PERF_REPORT_STATUS perf_stat=$PERF_STAT_STATUS pyspy=missing"
+  exit 0
+fi
+
+PYSPY_CMD=(py-spy record --rate "$PYSPY_RATE")
+if [ "$PYSPY_NATIVE" = "1" ]; then
+  PYSPY_CMD+=(--native)
+fi
+if [ "$PYSPY_SUBPROCESSES" = "1" ]; then
+  PYSPY_CMD+=(--subprocesses)
+fi
+PYSPY_CMD+=(--output "$PYSPY_OUT_FILE" -- "${CMD[@]}")
+
+echo "[run_profile] py-spy -> $PYSPY_OUT_FILE"
+"${PYSPY_CMD[@]}"
+
+echo "[run_profile] statuses: perf=$PERF_STATUS perf_report=$PERF_REPORT_STATUS perf_stat=$PERF_STAT_STATUS pyspy=ok"

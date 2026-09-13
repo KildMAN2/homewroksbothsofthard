@@ -1,0 +1,12 @@
+
+ Performance counter stats for 'python3-dbg /usr/local/lib/python3.10/dist-packages/pyperformance/data-files/benchmarks/bm_raytrace/run_benchmark.py --fast --width=64 --height=64' (3 runs):
+
+          19289.52 msec cpu-clock                 #    1.010 CPUs utilized            ( +-  1.67% )
+          19289.91 msec task-clock                #    1.010 CPUs utilized            ( +-  1.66% )
+   <not supported>      cycles                                                      
+   <not supported>      instructions                                                
+   <not supported>      branch-instructions                                         
+   <not supported>      branch-misses                                               
+
+            19.103 +- 0.328 seconds time elapsed  ( +-  1.72% )
+
