@@ -206,7 +206,7 @@ def bench_raytrace(loops, width, height, filename):
         pixel_height = full_height / (canvas.height - 1)
 
         eye_dx, eye_dy, eye_dz = normalize(look_x - position_x, look_y - position_y, look_z - position_z)
-        right_x, right_y, right_z = normalize(eye_dz, 0.0, -eye_dx)
+        right_x, right_y, right_z = normalize(-eye_dz, 0.0, eye_dx)
         up_x, up_y, up_z = normalize(
             right_y * eye_dz - right_z * eye_dy,
             right_z * eye_dx - right_x * eye_dz,
