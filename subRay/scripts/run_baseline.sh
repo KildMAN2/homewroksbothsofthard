@@ -9,6 +9,9 @@ ENV_FILE="$RESULT_DIR/environment.txt"
 STDOUT_FILE="$RESULT_DIR/stdout.txt"
 STDERR_FILE="$RESULT_DIR/stderr.txt"
 PYPERF_FILE="$RESULT_DIR/raytrace.json"
+PERF_DATA_FILE="$RESULT_DIR/perf.data"
+PERF_STDOUT_FILE="$RESULT_DIR/perf_stdout.txt"
+PERF_STDERR_FILE="$RESULT_DIR/perf_stderr.txt"
 
 mkdir -p "$RESULT_DIR" "$ROOT_DIR/reports" "$ROOT_DIR/logs"
 
@@ -25,10 +28,11 @@ mkdir -p "$RESULT_DIR" "$ROOT_DIR/reports" "$ROOT_DIR/logs"
     echo "PYTHON3_DBG_VERSION=NOT_AVAILABLE"
   fi
   echo "PYFORMANCE_VERSION=$(pyperformance --version 2>&1 || true)"
+    echo "PERF_PATH=$(command -v perf || true)"
 } > "$ENV_FILE"
 
 {
-  echo "COMMAND=pyperformance run --benchmarks raytrace -o $PYPERF_FILE"
+  echo "COMMAND=perf record -F 999 -g -- python3-dbg -m pyperformance run --bench raytrace"
   echo "ENVIRONMENT_FILE=$ENV_FILE"
   echo "Original source: $ROOT_DIR/original/bm_raytrace/run_benchmark.py"
   echo "Original metadata: $ROOT_DIR/original/bm_raytrace/pyproject.toml"
@@ -36,20 +40,20 @@ mkdir -p "$RESULT_DIR" "$ROOT_DIR/reports" "$ROOT_DIR/logs"
 } > "$LOG_FILE"
 
 set +e
-pyperformance run --benchmarks raytrace -o "$PYPERF_FILE" > "$STDOUT_FILE" 2> "$STDERR_FILE"
+perf record -F 999 -g -o "$PERF_DATA_FILE" -- python3-dbg -m pyperformance run --bench raytrace > "$PERF_STDOUT_FILE" 2> "$PERF_STDERR_FILE"
 STATUS=$?
 set -e
 
 {
   echo "EXIT_STATUS=$STATUS"
-  echo "STDOUT_FILE=$STDOUT_FILE"
-  echo "STDERR_FILE=$STDERR_FILE"
-  echo "RESULT_FILE=$PYPERF_FILE"
+  echo "STDOUT_FILE=$PERF_STDOUT_FILE"
+  echo "STDERR_FILE=$PERF_STDERR_FILE"
+  echo "RESULT_FILE=$PERF_DATA_FILE"
   echo "ENV_FILE=$ENV_FILE"
 } >> "$LOG_FILE"
 
-if [ -f "$PYPERF_FILE" ]; then
-  cp -f "$PYPERF_FILE" "$RESULT_DIR/raytrace_result.json"
+if [ -f "$PERF_DATA_FILE" ]; then
+  cp -f "$PERF_DATA_FILE" "$RESULT_DIR/raytrace_perf.data"
 fi
 
 exit $STATUS

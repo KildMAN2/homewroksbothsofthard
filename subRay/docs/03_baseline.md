@@ -20,7 +20,13 @@ Baseline measurement is also required to preserve scientific validity:
 
 ## Exact Benchmark Command
 
-The baseline command will run the original `raytrace` benchmark through pyperformance without modifying any source code. The exact command will be recorded after execution.
+The baseline command runs the untouched original benchmark under `perf` and the debug Python interpreter:
+
+```bash
+perf record -F 999 -g -- python3-dbg -m pyperformance run --bench raytrace
+```
+
+This matches the style shown in the reference screenshot and keeps the benchmark itself unchanged.
 
 ## Environment
 
@@ -55,9 +61,9 @@ These files were verified byte-for-byte against the VM-installed pyperformance f
 
 ## Measurement Methodology
 
-The benchmark will be run with pyperformance/pyperf so that multiple values are collected rather than a single timing. The methodology is:
+The benchmark is run with pyperformance/pyperf under `perf` so that multiple values are collected rather than a single timing. The methodology is:
 
-1. Run the untouched original benchmark only.
+1. Run the untouched original benchmark only via `python3-dbg -m pyperformance run --bench raytrace`.
 2. Capture environment data before execution.
 3. Save stdout and stderr separately.
 4. Preserve all warnings, including instability warnings.
@@ -89,4 +95,4 @@ Planned raw and summary outputs:
 
 **Before action:** Create the baseline documentation and the helper script, then run the untouched original benchmark and preserve its outputs.
 
-**Actual outcome:** Pending execution.
+**Actual outcome:** Pending execution of the perf/python3-dbg command.
