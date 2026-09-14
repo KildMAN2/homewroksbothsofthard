@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUBRAY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$SUBRAY_DIR/.." && pwd)"
 
-MODE="${1:-compare}"
+MODE="${1:-all}"
 
 print_step() {
   echo
@@ -110,6 +110,18 @@ run_optimize_mode() {
   echo "Official locked final result artifact is: $SUBRAY_DIR/results/final_official.txt"
 }
 
+run_attempt1_mode() {
+  print_step "Mode: attempt1"
+  check_common_runtime_deps
+  check_pyperformance_deps
+
+  local script="$SCRIPT_DIR/run_attempt1.sh"
+  [ -x "$script" ] || [ -f "$script" ] || die "Missing script: $script"
+
+  print_step "Running existing attempt1 workflow: subRay/scripts/run_attempt1.sh"
+  bash "$script"
+}
+
 run_profile_mode() {
   print_step "Mode: profile"
   check_common_runtime_deps
@@ -190,12 +202,13 @@ print_outputs() {
 
 run_all_mode() {
   print_step "Mode: all"
-  echo "Sequence: baseline -> optimize -> compare"
-  echo "Profile mode is intentionally skipped by default to avoid extra expensive profiling runs."
-  echo "Run profile explicitly when needed: bash subRay/scripts/script_raytrace.sh profile"
+  echo "Sequence: baseline -> attempt1 -> optimize(final) -> profile(final, non-fast) -> compare"
+  echo "This mode runs the complete software benchmark workflow and preserves existing artifacts."
 
   run_baseline_mode
+  run_attempt1_mode
   run_optimize_mode
+  run_profile_mode
   run_compare_mode
 }
 
@@ -203,7 +216,7 @@ print_step "Repository root: $REPO_ROOT"
 print_step "subRay root: $SUBRAY_DIR"
 
 if [ "$#" -eq 0 ]; then
-  print_step "No mode provided; defaulting to 'compare'"
+  print_step "No mode provided; defaulting to 'all'"
   echo "Tip: use '--help' to see all modes."
 fi
 
