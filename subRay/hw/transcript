@@ -1,0 +1,22 @@
+# vsim -c -do "run -all; quit -f" work.tb_intersect_accel 
+# Start time: 23:35:13 on Sep 13,2026
+# Loading sv_std.std
+# Loading work.tb_intersect_accel
+# Loading work.intersect_accel
+# Loading work.sphere_intersect
+# Loading work.fxp_sqrt
+# run -all
+# PASS [A_direct_sphere] kind=1 id=1 t=8.000000 (exp 8.000000)
+# PASS [B_plane_only] kind=2 id=9 t=1.000000 (exp 1.000000)
+# PASS [C_escape_no_hit] no-hit
+# PASS [D_offaxis_small] kind=1 id=1 t=9.414810 (exp 9.413574)
+# PASS [E_side_sphere] kind=1 id=2 t=9.000000 (exp 9.000000)
+# PASS [F_vis_blocked] vis_clear=0
+# PASS [G_vis_clear] vis_clear=1
+# --------------------------------------------------
+# ACCEL TESTS: checks=7 errors=0
+# ACCEL RESULT: ALL PASS
+# ** Note: $finish    : tb/tb_intersect_accel.sv(220)
+#    Time: 3150 ns  Iteration: 1  Instance: /tb_intersect_accel
+# End time: 23:35:13 on Sep 13,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0

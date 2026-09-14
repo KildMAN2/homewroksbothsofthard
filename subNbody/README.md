@@ -16,6 +16,9 @@ Start with:
 - `docs/nbody_presentation_notes.md` for the final slide plan, speaker notes, and technical Q&A.
 - `results/report_nbody.txt` for the final report.
 - `results/optimization_comparison.txt` for the measured software timing table.
+- `../project_results/nbody/report_original_pdf.txt` and `report_v1_pdf.txt` for the final perf reports.
+- `../project_results/nbody/flamegraph_original_pdf.svg` and `flamegraph_v1_pdf.svg` for the final flamegraphs.
+- `../project_results/prompt.txt` for the required record of AI prompts used during the workflow.
 
 ## Verification Boundary
 
@@ -48,19 +51,23 @@ Run all staged benchmarks in the configured Ubuntu/pyperformance environment:
 bash subNbody/scripts/test_nbody_optimizations.sh
 ```
 
-Profile the original and best measured V1 implementation at 499 Hz:
+The final profiling method is PDF-style call-graph sampling at 999 Hz:
 
 ```bash
-bash subNbody/scripts/profile_nbody_best.sh
+perf record -F 999 -g -- python3-dbg -m pyperformance run --bench nbody
+perf record -F 999 -g -- python3-dbg -m pyperformance run --bench nbody_v1
 ```
 
-Profile the same two implementations with the requested 999 Hz project-PDF-compatible and DWARF methods, while preserving all current profile artifacts:
+The authoritative submission artifacts are:
 
-```bash
-bash subNbody/scripts/profile_nbody_999_compare.sh
-```
+- `project_results/nbody/report_original_pdf.txt`
+- `project_results/nbody/report_v1_pdf.txt`
+- `project_results/nbody/flamegraph_original_pdf.svg`
+- `project_results/nbody/flamegraph_v1_pdf.svg`
 
-The script creates the standard `-F 999 -g` files and the DWARF `--call-graph dwarf` files under `/root/homewroksbothsofthard/project_results/nbody` without overwriting any existing file.
+The older 499 Hz and earlier 999 Hz files remain historical/development artifacts only. They are not the final profiling evidence. DWARF profiling is also not part of the final method; a prior 999 Hz DWARF experiment exceeded the VM's practical memory limit.
+
+The final PDF-style reports show `list_subscript` decreasing from about `1.62%` to `0.01%` and `PyObject_GetItem` from about `1.53%` to `0.04%`. This supports the conclusion that V1 scalarization reduced repeated Python list-access overhead.
 
 Compile and run the comprehensive RTL testbench from the repository root:
 
@@ -75,3 +82,5 @@ Expected simulation verdict:
 ```text
 NBODY_ACCEL_TEST=PASS transfers=12 latency=5 throughput=1/cycle
 ```
+
+This is functional RTL simulation evidence only. There is no implemented HW/SW integration and no measured hardware speedup.

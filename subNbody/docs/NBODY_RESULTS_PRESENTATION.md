@@ -30,17 +30,13 @@ The separate `compare.txt` result is an early preliminary run. It is retained on
 
 ## 4) Profiling evidence from perf
 
-Source files: `subNbody/results/report_original.txt` and `subNbody/results/report_optimized.txt`.
+Final source files: `project_results/nbody/report_original_pdf.txt` and `project_results/nbody/report_v1_pdf.txt`, captured with `perf record -F 999 -g`.
 
 Key observations:
 
-- Original capture: approximately 215K CPU-clock samples, with 0 lost samples.
-- V1 capture: approximately 206K CPU-clock samples, with 0 lost samples.
-- `_PyEval_EvalFrameDefault`: `30.34%` original and `34.14%` V1 self share.
-- `list_subscript.lto_priv.0`: `1.89%` original and `0.01%` V1.
-- `PyObject_GetItem`: `1.85%` original and `0.02%` V1.
-- `PyObject_SetItem`: `1.87%` original and `1.85%` V1.
-- `__ieee754_pow_sse2`: `1.75%` original and `1.92%` V1.
+- `list_subscript.lto_priv.0`: about `1.62%` original and `0.01%` V1.
+- `PyObject_GetItem`: about `1.53%` original and `0.04%` V1.
+- V1 scalarization reduced the repeated Python list-access overhead it targeted.
 
 Meaning:
 
@@ -63,7 +59,7 @@ V1 directly reduces repeated list reads. Higher percentage shares for remaining 
 
 ### 5.2 Before flamegraph (baseline)
 
-Source file: `subNbody/results/flamegraph_original.svg`.
+Final source file: `project_results/nbody/flamegraph_original_pdf.svg`.
 
 What to highlight:
 
@@ -73,7 +69,7 @@ What to highlight:
 
 ### 5.3 After flamegraph (optimized)
 
-Source file: `subNbody/results/flamegraph_optimized.svg`.
+Final source file: `project_results/nbody/flamegraph_v1_pdf.svg`.
 
 The V1 flamegraph shows the list-read paths becoming nearly absent while interpreter, arithmetic, power, and state-write paths remain. This agrees with the measured hotspot percentages and with the source-level scalarization change.
 

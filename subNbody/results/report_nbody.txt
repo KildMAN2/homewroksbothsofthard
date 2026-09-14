@@ -106,35 +106,22 @@ claim about all hosts.
 Only the original and best measured V1 scalar implementation were profiled in
 the final comparison. Both used:
 
-  perf record -F 499 -g
-
-Capture quality:
-
-  original:  approximately 215K CPU-clock samples, 0 lost samples
-  V1 scalar: approximately 206K CPU-clock samples, 0 lost samples
+  perf record -F 999 -g
 
 Kernel symbols were restricted in the QEMU guest, but the relevant Python
 user-space symbols were resolved. Separate artifacts are available:
 
-  perf_original.data
-  perf_optimized.data
-  report_original.txt
-  report_optimized.txt
-  flamegraph_original.svg
-  flamegraph_optimized.svg
+  project_results/nbody/report_original_pdf.txt
+  project_results/nbody/report_v1_pdf.txt
+  project_results/nbody/flamegraph_original_pdf.svg
+  project_results/nbody/flamegraph_v1_pdf.svg
 
 Self-time hotspot comparison:
 
-  Symbol                         Original   V1 scalar   Change
-  -----------------------------  --------   ---------   ---------
-  _PyEval_EvalFrameDefault        30.34%      34.14%     +3.80 pp
-  PyFloat_FromDouble               6.09%       6.26%     +0.17 pp
-  binary_op1                       5.80%       6.15%     +0.35 pp
-  float_mul.lto_priv.0             2.16%       2.31%     +0.15 pp
-  list_subscript.lto_priv.0        1.89%       0.01%     -1.88 pp
-  PyObject_GetItem                 1.85%       0.02%     -1.83 pp
-  PyObject_SetItem                 1.87%       1.85%     -0.02 pp
-  __ieee754_pow_sse2               1.75%       1.92%     +0.17 pp
+  Symbol                         Original   V1 scalar
+  -----------------------------  --------   ---------
+  list_subscript.lto_priv.0        1.62%       0.01%
+  PyObject_GetItem                 1.53%       0.04%
 
 The flame graphs agree with the text reports: list-read paths nearly disappear
 in V1, while interpreter, boxed-float arithmetic, power, and state-write paths
@@ -155,8 +142,8 @@ and CPython execution overhead:
 
 V1 specifically removes repeated velocity/position list reads by loading values
 into local scalar variables and writing results back in groups. This explains
-the measured reductions from 1.89% to 0.01% for list_subscript and from 1.85%
-to 0.02% for PyObject_GetItem.
+the final PDF-style profile reductions from about 1.62% to 0.01% for
+list_subscript and from about 1.53% to 0.04% for PyObject_GetItem.
 
 The increased percentage shares for interpreter and numeric routines do not
 prove those routines became slower. V1 removes list-read work and shortens total
@@ -567,10 +554,12 @@ An exact PDF cross-check remains open.
     Evidence: subNbody/docs/nbody_project.md and this report.
 [x] Reproducible baseline measurement artifacts
     Evidence: baseline.json, compare.txt, optimization_comparison.txt.
-[x] Original perf report and flame graph
-    Evidence: perf_original.data, report_original.txt, flamegraph_original.svg.
-[x] Optimized perf report and flame graph
-    Evidence: perf_optimized.data, report_optimized.txt, flamegraph_optimized.svg.
+[x] Final original perf report and flame graph
+  Evidence: project_results/nbody/report_original_pdf.txt and
+        flamegraph_original_pdf.svg.
+[x] Final V1 perf report and flame graph
+  Evidence: project_results/nbody/report_v1_pdf.txt and
+        flamegraph_v1_pdf.svg.
 [x] Before/after hotspot comparison with measured percentages
     Evidence: subNbody/docs/nbody_project.md and Sections 5-6 of this report.
 [x] Multiple software optimization variants
@@ -578,6 +567,10 @@ An exact PDF cross-check remains open.
               run_benchmark_v4_precompute.py and run_benchmark_optimized.py.
 [x] Before/after software timing table
     Evidence: optimization_comparison.txt and Section 7.
+[x] Required project files and run instructions documented
+  Evidence: subNbody/README.md and subNbody/docs/nbody_profiling_commands.md.
+[x] AI prompts documented
+  Evidence: project_results/prompt.txt.
 [x] Software correctness tests and recorded outcomes
     Evidence: subNbody/software/test_*.py and subNbody/docs/nbody_project.md.
 [x] Correct 1/r^3 hardware mathematics and fixed-point derivation

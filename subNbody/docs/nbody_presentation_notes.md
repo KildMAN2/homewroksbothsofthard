@@ -86,28 +86,22 @@ No. Several pyperformance runs were flagged as unstable. V1 had the strongest me
 ### What the slide should show
 
 - Side-by-side images:
-  - `subNbody/results/flamegraph_original.svg`
-  - `subNbody/results/flamegraph_optimized.svg`
+  - `project_results/nbody/flamegraph_original_pdf.svg`
+  - `project_results/nbody/flamegraph_v1_pdf.svg`
 - Capture facts:
-  - Original: approximately 215K CPU-clock samples.
-  - V1: approximately 206K CPU-clock samples.
-  - Sampling frequency: 499 Hz.
-  - Lost samples: 0 for both.
+  - Final method: `perf record -F 999 -g`.
+  - Reports: `report_original_pdf.txt` and `report_v1_pdf.txt`.
+  - Older 499 Hz captures are historical/development artifacts.
 - A small hotspot table:
 
 | Self hotspot | Original | V1 scalar |
 |---|---:|---:|
-| `_PyEval_EvalFrameDefault` | 30.34% | 34.14% |
-| `PyFloat_FromDouble` | 6.09% | 6.26% |
-| `binary_op1` | 5.80% | 6.15% |
-| `list_subscript.lto_priv.0` | 1.89% | 0.01% |
-| `PyObject_GetItem` | 1.85% | 0.02% |
-| `PyObject_SetItem` | 1.87% | 1.85% |
-| `__ieee754_pow_sse2` | 1.75% | 1.92% |
+| `list_subscript.lto_priv.0` | about 1.62% | about 0.01% |
+| `PyObject_GetItem` | about 1.53% | about 0.04% |
 
 ### What I should say
 
-"Perf and the flame graphs show that the benchmark is not only doing physical arithmetic. A large share is CPython interpreter dispatch, boxed-float handling, and list access. After V1 scalarization, the list-read paths nearly disappear: `list_subscript` falls from 1.89 percent to 0.01 percent, and `PyObject_GetItem` falls from 1.85 percent to 0.02 percent. The arithmetic, power, and final list-write paths remain."
+"Perf and the flame graphs show that the benchmark is not only doing physical arithmetic. A large share is CPython interpreter dispatch, boxed-float handling, and list access. In the final PDF-style profiles, V1 scalarization reduces `list_subscript` from about 1.62 percent to 0.01 percent and `PyObject_GetItem` from about 1.53 percent to 0.04 percent. This is direct evidence that repeated Python list-access overhead was reduced."
 
 ### Result to emphasize
 
@@ -115,9 +109,9 @@ V1 affected exactly the profile paths it targeted. The strongest evidence is the
 
 ### Likely instructor questions
 
-**Why did `_PyEval_EvalFrameDefault` rise from 30.34% to 34.14% if V1 is faster?**
+**Why can a remaining function occupy a larger percentage even when V1 is faster?**
 
-These are shares of different total runtimes, not absolute function times. Removing list-read work makes unchanged costs occupy a larger percentage of the shorter execution.
+Profile percentages are shares of different total runtimes, not absolute function times. Removing list-read work can make unchanged costs occupy a larger percentage of the shorter execution.
 
 **Did the QEMU kernel-symbol warning invalidate the profile?**
 
@@ -503,7 +497,7 @@ The staged comparison measured `4.881335 s` for the original and `4.381726 s` fo
 
 ### 4. Which profile evidence most directly validates V1?
 
-`list_subscript.lto_priv.0` fell from `1.89%` to `0.01%`, and `PyObject_GetItem` fell from `1.85%` to `0.02%`. Those are the read paths scalarization was intended to remove.
+In the final PDF-style profiles, `list_subscript.lto_priv.0` fell from about `1.62%` to `0.01%`, and `PyObject_GetItem` fell from about `1.53%` to `0.04%`. Those are the read paths scalarization was intended to reduce.
 
 ### 5. Why do some optimized profile percentages increase?
 
