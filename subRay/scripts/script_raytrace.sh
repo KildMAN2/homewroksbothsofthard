@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUBRAY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$SUBRAY_DIR/.." && pwd)"
 
-MODE="${1:-help}"
+MODE="${1:-compare}"
 
 print_step() {
   echo
@@ -202,6 +202,11 @@ run_all_mode() {
 print_step "Repository root: $REPO_ROOT"
 print_step "subRay root: $SUBRAY_DIR"
 
+if [ "$#" -eq 0 ]; then
+  print_step "No mode provided; defaulting to 'compare'"
+  echo "Tip: use '--help' to see all modes."
+fi
+
 case "$MODE" in
   baseline)
     run_baseline_mode
@@ -218,7 +223,7 @@ case "$MODE" in
   all)
     run_all_mode
     ;;
-  help|-h|--help|"")
+  help|-h|--help)
     usage
     ;;
   *)
