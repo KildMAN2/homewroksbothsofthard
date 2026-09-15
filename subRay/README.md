@@ -107,6 +107,23 @@ No claim is made here of synthesis, FPGA deployment, real HW/SW integration runt
 ## 7. How To Reproduce (Existing Scripts)
 Run from repository root on a Linux environment with bash, perf, and python3-dbg available.
 
+Main entry point (wrapper/orchestrator):
+- bash subRay/scripts/script_raytrace.sh            # defaults to 'all'
+- bash subRay/scripts/script_raytrace.sh baseline
+- bash subRay/scripts/script_raytrace.sh optimize
+- bash subRay/scripts/script_raytrace.sh profile
+- bash subRay/scripts/script_raytrace.sh compare
+- bash subRay/scripts/script_raytrace.sh all
+
+What script_raytrace.sh compare prints:
+- Official original vs final elapsed, computed speedup (~4.1x) and improvement (75.76%).
+- Attempt perf_stat elapsed values and the final perf_stat elapsed (profiling/perf_stat_final.txt).
+- Baseline vs final perf report hotspots (profiling/perf_report.txt vs profiling/perf_report_final.txt).
+- A generated summary file: reports/compare_generated.txt (the curated reports/final_performance_comparison.txt is never overwritten).
+
+Note on perf report percentages:
+- perf report shares are relative to each run's samples, not absolute time. `_PyEval_EvalFrameDefault` rises from 20.63% (baseline) to 31.56% (final) because removed overhead shrinks the total, not because it got slower; the speedup is proven by wall-clock time.
+
 Baseline run:
 - bash subRay/scripts/run_baseline.sh
 

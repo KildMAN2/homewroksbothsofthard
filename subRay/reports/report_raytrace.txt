@@ -222,6 +222,43 @@ Official results:
 Threshold check:
 - Target `>= 7%` improvement: **achieved**.
 
+## 15A. Perf Stat Comparison (Baseline vs Final)
+
+Artifacts:
+- Baseline (non-fast): `subRay/profiling/perf_stat_baseline.txt`
+- Final (non-fast): `subRay/profiling/perf_stat_final.txt`
+
+| Metric | Baseline | Final |
+|---|---:|---:|
+| Elapsed time | 81.285 s (± 0.198, 3 runs) | 19.4335 s (single run) |
+| cpu-clock | 80673 msec | 19204 msec |
+| page-faults | 89,909 | 88,129 |
+| context-switches | 2,459 | 704 |
+
+Notes:
+- The baseline capture recorded instruction/branch/cache counters; the final capture shows `<not supported>` for those PMU counters in that run, so only cpu-clock/task-clock/page-faults/context-switches are directly comparable.
+- Elapsed time dropped ~4.1x, consistent with the official 81.285 s -> 19.7062 s result.
+- Context-switches dropped substantially (2,459 -> 704), consistent with less work and a shorter run.
+
+## 15B. Perf Report Comparison (Baseline vs Final)
+
+Artifacts:
+- Baseline: `subRay/profiling/perf_report.txt`
+- Final: `subRay/profiling/perf_report_final.txt`
+
+Top self-time symbol share:
+
+| Symbol | Baseline | Final |
+|---|---:|---:|
+| `_PyEval_EvalFrameDefault` | 20.63% | 31.56% |
+
+Interpretation:
+- perf report percentages are RELATIVE shares of each run's samples, not absolute time.
+- The interpreter dispatch loop `_PyEval_EvalFrameDefault` grew in relative share (20.63% -> 31.56%) even though total runtime fell ~4.1x.
+- This is expected: the optimization removed large amounts of object/attribute/dict overhead (baseline families such as `_PyType_Lookup`, `dict_dealloc`, `lookdict_unicode_nodummy`), so the remaining core interpreter loop is a bigger fraction of a much smaller total.
+- In the final report the next costs are arithmetic/boxing and frame handling (`binary_op1`, `float_*`, `PyFloat_FromDouble`, `frame_dealloc`, `call_function`), consistent with a tighter scalar compute path.
+- Conclusion: a rising relative percentage does NOT mean regression; wall-clock time and perf_stat elapsed both confirm the speedup.
+
 ## 16. Before/After Flame Graph Comparison
 
 Compared artifacts:
