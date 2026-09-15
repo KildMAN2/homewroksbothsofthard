@@ -161,6 +161,11 @@ extract_elapsed_line() {
   fi
 }
 
+extract_mean_seconds() {
+  local file="$1"
+  awk '/seconds time elapsed/ { print $1; exit }' "$file"
+}
+
 run_compare_mode() {
   print_step "Mode: compare"
 
@@ -177,6 +182,24 @@ run_compare_mode() {
   extract_elapsed_line "$orig"
   echo "FINAL    -> $fin"
   extract_elapsed_line "$fin"
+
+  local original_seconds
+  local final_seconds
+  original_seconds="$(extract_mean_seconds "$orig")"
+  final_seconds="$(extract_mean_seconds "$fin")"
+  if [ -n "$original_seconds" ] && [ -n "$final_seconds" ]; then
+    print_step "Original vs final comparison"
+    awk -v original="$original_seconds" -v final="$final_seconds" 'BEGIN {
+      speedup = original / final
+      improvement = (original - final) / original * 100
+      printf "Original mean: %.6f s\n", original
+      printf "Final mean:    %.6f s\n", final
+      printf "Speedup:       %.2fx\n", speedup
+      printf "Improvement:   %.2f%%\n", improvement
+    }'
+  else
+    warn "Could not extract elapsed times from official result files; showing artifacts only."
+  fi
 
   print_step "Profiling attempt perf_stat artifacts (if present)"
   for f in "$p1" "$p2" "$p3"; do
