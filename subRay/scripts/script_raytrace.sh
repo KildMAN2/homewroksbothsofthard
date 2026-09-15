@@ -166,6 +166,21 @@ extract_mean_seconds() {
   awk '/seconds time elapsed/ { print $1; exit }' "$file"
 }
 
+show_report_hotspots() {
+  local label="$1"
+  local file="$2"
+  if [ -f "$file" ]; then
+    echo "$label -> $file"
+    awk '/^[[:space:]]+[0-9.]+%[[:space:]]+[0-9.]+%/ && $NF != "" {
+      printf "  %s %s\n", $1, $NF
+      count++
+      if (count == 5) exit
+    }' "$file"
+  else
+    warn "Missing perf report: $file"
+  fi
+}
+
 run_compare_mode() {
   print_step "Mode: compare"
 
@@ -174,6 +189,9 @@ run_compare_mode() {
   local p1="$SUBRAY_DIR/profiling/perf_stat_attempt1.txt"
   local p2="$SUBRAY_DIR/profiling/perf_stat_attempt2.txt"
   local p3="$SUBRAY_DIR/profiling/perf_stat_attempt3.txt"
+  local pf="$SUBRAY_DIR/profiling/perf_stat_final.txt"
+  local rb="$SUBRAY_DIR/profiling/perf_report.txt"
+  local rf="$SUBRAY_DIR/profiling/perf_report_final.txt"
 
   print_step "Official before/after artifacts"
   [ -f "$orig" ] || die "Missing file: $orig"
@@ -210,6 +228,23 @@ run_compare_mode() {
       warn "Missing file: $f"
     fi
   done
+
+  print_step "Final profiling artifacts"
+  if [ -f "$pf" ]; then
+    echo "perf_stat_final.txt"
+    extract_elapsed_line "$pf"
+  else
+    warn "Missing file: $pf"
+  fi
+  if [ -f "$rf" ]; then
+    echo "perf_report_final.txt -> $rf"
+  else
+    warn "Missing file: $rf"
+  fi
+
+  print_step "Perf report baseline vs final hotspots"
+  show_report_hotspots "BASELINE" "$rb"
+  show_report_hotspots "FINAL" "$rf"
 
   print_step "Comparison references"
   echo "$SUBRAY_DIR/reports/final_performance_comparison.txt"
