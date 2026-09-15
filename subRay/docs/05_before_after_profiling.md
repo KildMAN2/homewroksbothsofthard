@@ -76,6 +76,49 @@ Application-kernel-level function ranking is not reliably isolated in these two 
 
 Likely bottleneck in this profiling view is still pyperf control-plane overhead (worker spawn/read coordination) rather than a newly introduced raytrace algorithm bottleneck.
 
+## Perf Stat Comparison (Baseline vs Final)
+
+Artifacts:
+- Baseline (non-fast): `subRay/profiling/perf_stat_baseline.txt`
+- Final (non-fast): `subRay/profiling/perf_stat_final.txt`
+
+| Metric | Baseline | Final |
+|---|---:|---:|
+| Elapsed time | 81.285 s | 19.667 s |
+| cpu-clock | 80,673 msec | 19,415 msec |
+| instructions | 387,324,411,814 | 99,522,163,151 |
+| cache-references | 404,917,856 | 198,261,770 |
+| cache-misses | 4,285,182 (1.045%) | 2,925,764 (1.476%) |
+| branches | 94,415,979,904 | 23,673,592,504 |
+| branch-misses | 865,418,173 (0.91%) | 166,181,093 (0.70%) |
+| page-faults | 89,909 | 87,875 |
+| context-switches | 2,459 | 2,101 |
+
+Notes:
+- Instructions retired dropped ~3.9x (387.3B -> 99.5B); this is the primary driver of the ~4.1x runtime reduction.
+- Branches dropped ~4.0x (94.4B -> 23.7B) and branch-misses fell ~5.2x, reflecting far less interpreter/object dispatch work.
+- Cache-references roughly halved (405M -> 198M); the cache-miss rate rose slightly (1.045% -> 1.476%) but absolute misses still fell.
+- Elapsed time dropped from 81.285 s to 19.667 s (~4.1x), consistent with the official 81.285 s -> 19.7062 s result.
+
+## Perf Report Comparison (Baseline vs Final)
+
+Artifacts:
+- Baseline: `subRay/profiling/perf_report.txt`
+- Final: `subRay/profiling/perf_report_final.txt`
+
+Top self-time symbol share:
+
+| Symbol | Baseline | Final |
+|---|---:|---:|
+| `_PyEval_EvalFrameDefault` | 20.63% | 31.56% |
+
+Interpretation:
+- perf report percentages are RELATIVE shares of each run's samples, not absolute time.
+- `_PyEval_EvalFrameDefault` grew in relative share (20.63% -> 31.56%) even though total runtime fell ~4.1x.
+- The optimization removed large amounts of object/attribute/dict overhead (baseline families such as `_PyType_Lookup`, `dict_dealloc`, `lookdict_unicode_nodummy`), so the remaining core interpreter loop is a larger fraction of a much smaller total.
+- The final report's next costs are arithmetic/boxing and frame handling (`binary_op1`, `float_*`, `PyFloat_FromDouble`, `frame_dealloc`, `call_function`), consistent with a tighter scalar compute path.
+- A rising relative percentage is not a regression; wall-clock time and perf_stat elapsed both confirm the speedup.
+
 ## Relationship to Measured Speedup
 
 Official timing results are still valid and strong:
