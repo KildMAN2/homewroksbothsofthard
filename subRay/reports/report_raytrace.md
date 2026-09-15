@@ -230,15 +230,21 @@ Artifacts:
 
 | Metric | Baseline | Final |
 |---|---:|---:|
-| Elapsed time | 81.285 s (± 0.198, 3 runs) | 19.4335 s (single run) |
-| cpu-clock | 80673 msec | 19204 msec |
-| page-faults | 89,909 | 88,129 |
-| context-switches | 2,459 | 704 |
+| Elapsed time | 81.285 s | 19.667 s |
+| cpu-clock | 80,673 msec | 19,415 msec |
+| instructions | 387,324,411,814 | 99,522,163,151 |
+| cache-references | 404,917,856 | 198,261,770 |
+| cache-misses | 4,285,182 (1.045%) | 2,925,764 (1.476%) |
+| branches | 94,415,979,904 | 23,673,592,504 |
+| branch-misses | 865,418,173 (0.91%) | 166,181,093 (0.70%) |
+| page-faults | 89,909 | 87,875 |
+| context-switches | 2,459 | 2,101 |
 
 Notes:
-- The baseline capture recorded instruction/branch/cache counters; the final capture shows `<not supported>` for those PMU counters in that run, so only cpu-clock/task-clock/page-faults/context-switches are directly comparable.
-- Elapsed time dropped ~4.1x, consistent with the official 81.285 s -> 19.7062 s result.
-- Context-switches dropped substantially (2,459 -> 704), consistent with less work and a shorter run.
+- Instructions retired dropped ~3.9x (387.3B -> 99.5B); this is the primary driver of the ~4.1x runtime reduction.
+- Branches dropped ~4.0x (94.4B -> 23.7B) and branch-misses fell ~5.2x, reflecting far less interpreter/object dispatch work.
+- Cache-references roughly halved (405M -> 198M); the cache-miss rate rose slightly (1.045% -> 1.476%) but absolute misses still fell.
+- Elapsed time dropped from 81.285 s to 19.667 s (~4.1x), consistent with the official 81.285 s -> 19.7062 s result.
 
 ## 15B. Perf Report Comparison (Baseline vs Final)
 
