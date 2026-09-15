@@ -228,7 +228,7 @@ Artifacts:
 - Baseline (non-fast): `subRay/profiling/perf_stat_baseline.txt`
 - Final (non-fast): `subRay/profiling/perf_stat_final.txt`
 
-| Metric | Baseline | Final |
+| Metric | Baseline (mean of 3 runs) | Final (single run) |
 |---|---:|---:|
 | Elapsed time | 81.285 s | 19.667 s |
 | cpu-clock | 80,673 msec | 19,415 msec |
