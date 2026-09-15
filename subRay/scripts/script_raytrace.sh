@@ -245,6 +245,29 @@ run_compare_mode() {
   print_step "Perf report baseline vs final hotspots"
   show_report_hotspots "BASELINE" "$rb"
   show_report_hotspots "FINAL" "$rf"
+  echo "Note: perf percentages are relative shares of each run, not absolute time; speedup is proven by wall-clock time above."
+
+  # Write a fresh generated comparison file; the curated file is never overwritten.
+  local generated="$SUBRAY_DIR/reports/compare_generated.txt"
+  {
+    echo "Raytrace generated comparison"
+    echo "Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo
+    echo "Official original: $(extract_elapsed_line "$orig")"
+    echo "Official final:    $(extract_elapsed_line "$fin")"
+    if [ -n "$original_seconds" ] && [ -n "$final_seconds" ]; then
+      awk -v original="$original_seconds" -v final="$final_seconds" 'BEGIN {
+        printf "Speedup:     %.2fx\n", original / final
+        printf "Improvement: %.2f%%\n", (original - final) / original * 100
+      }'
+    fi
+    echo
+    echo "Final perf_stat: $(extract_elapsed_line "$pf")"
+    echo "Baseline perf report: $rb"
+    echo "Final perf report:    $rf"
+  } > "$generated"
+  print_step "Generated comparison file written"
+  echo "$generated"
 
   print_step "Comparison references"
   echo "$SUBRAY_DIR/reports/final_performance_comparison.txt"
