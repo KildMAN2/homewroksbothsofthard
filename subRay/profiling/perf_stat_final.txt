@@ -1,21 +1,17 @@
 
- Performance counter stats for 'python3-dbg /root/homewroksbothsofthard/subRay/optimized/final/run_benchmark.py --width=64 --height=64':
+ Performance counter stats for 'python3-dbg /root/homewroksbothsofthard/subRay/optimized/final/run_benchmark.py --width=64 --height=64' (3 runs):
 
-          19204.17 msec cpu-clock                 #    0.988 CPUs utilized          
-          19204.68 msec task-clock                #    0.988 CPUs utilized          
-   <not supported>      cpu-cycles                                                  
-   <not supported>      instructions                                                
-   <not supported>      cache-references                                            
-   <not supported>      cache-misses                                                
-   <not supported>      branches                                                    
-   <not supported>      branch-misses                                               
-             88129      page-faults               #    4.589 K/sec                  
-               704      context-switches          #   36.658 /sec                   
-                16      cpu-migrations            #    0.833 /sec                   
+          19425.34 msec cpu-clock                 #    0.988 CPUs utilized            ( +-  0.04% )
+          19425.74 msec task-clock                #    0.988 CPUs utilized            ( +-  0.04% )
+                 0      cpu-cycles                #    0.000 GHz                    
+       99721273070      instructions                                                  ( +-  0.04% )
+         197448720      cache-references          #   10.165 M/sec                    ( +-  0.02% )
+           2558772      cache-misses              #    1.296 % of all cache refs      ( +-  1.13% )
+       23737266897      branches                  #    1.222 G/sec                    ( +-  0.05% )
+         166221794      branch-misses             #    0.70% of all branches          ( +-  0.03% )
+             87900      page-faults               #    4.525 K/sec                    ( +-  0.01% )
+              2047      context-switches          #  105.380 /sec                     ( +-  0.21% )
+                 0      cpu-migrations            #    0.000 /sec                   
 
-      19.433511645 seconds time elapsed
-
-      18.922844000 seconds user
-       0.307257000 seconds sys
-
+           19.6686 +- 0.0106 seconds time elapsed  ( +-  0.05% )
 
