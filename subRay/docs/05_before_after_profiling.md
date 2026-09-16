@@ -103,18 +103,20 @@ Notes:
 ## Perf Report Comparison (Baseline vs Final)
 
 Artifacts:
-- Baseline: `subRay/profiling/perf_report.txt`
+- Baseline: `subRay/profiling/perf_report_baseline.txt`
 - Final: `subRay/profiling/perf_report_final.txt`
 
 Top self-time symbol share:
 
-| Symbol | Baseline | Final |
+| Metric | Baseline | Final |
 |---|---:|---:|
-| `_PyEval_EvalFrameDefault` | 20.63% | 31.56% |
+| Samples (cpu-clock) | 41K | 18K |
+| `_PyEval_EvalFrameDefault` | 23.31% | 32.05% |
 
 Interpretation:
 - perf report percentages are RELATIVE shares of each run's samples, not absolute time.
-- `_PyEval_EvalFrameDefault` grew in relative share (20.63% -> 31.56%) even though total runtime fell ~4.1x.
+- Sample counts differ (41K vs 18K) because perf samples at a fixed rate and the baseline runs much longer than the final; both are large enough for a stable top-symbol ranking.
+- `_PyEval_EvalFrameDefault` grew in relative share (23.31% -> 32.05%) even though total runtime fell ~4.1x.
 - The optimization removed large amounts of object/attribute/dict overhead (baseline families such as `_PyType_Lookup`, `dict_dealloc`, `lookdict_unicode_nodummy`), so the remaining core interpreter loop is a larger fraction of a much smaller total.
 - The final report's next costs are arithmetic/boxing and frame handling (`binary_op1`, `float_*`, `PyFloat_FromDouble`, `frame_dealloc`, `call_function`), consistent with a tighter scalar compute path.
 - A rising relative percentage is not a regression; wall-clock time and perf_stat elapsed both confirm the speedup.

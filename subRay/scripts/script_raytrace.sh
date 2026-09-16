@@ -33,6 +33,7 @@ Usage:
   bash subRay/scripts/script_raytrace.sh baseline
   bash subRay/scripts/script_raytrace.sh optimize
   bash subRay/scripts/script_raytrace.sh profile
+  bash subRay/scripts/script_raytrace.sh profile-suite
   bash subRay/scripts/script_raytrace.sh compare
   bash subRay/scripts/script_raytrace.sh all
 
@@ -177,6 +178,61 @@ extract_mean_seconds() {
   awk '/seconds time elapsed/ { print $1; exit }' "$file"
 }
 
+# Full pyperformance-methodology profiling (many processes/values), like run_baseline.sh.
+run_profile_suite_mode() {
+  print_step "Mode: profile-suite"
+  check_common_runtime_deps
+  check_pyperformance_deps
+
+  local target="${PROFILE_TARGET:-baseline}"
+  local manifest=""
+  local bench=""
+  case "$target" in
+    baseline) bench="raytrace" ;;
+    attempt1) manifest="$SUBRAY_DIR/optimized/attempt1/MANIFEST"; bench="raytrace_attempt1" ;;
+    attempt2) manifest="$SUBRAY_DIR/optimized/attempt2/MANIFEST"; bench="raytrace_attempt2" ;;
+    attempt3) manifest="$SUBRAY_DIR/optimized/attempt3/MANIFEST"; bench="raytrace_attempt3" ;;
+    final)    manifest="$SUBRAY_DIR/optimized/final/MANIFEST"; bench="raytrace_attempt1" ;;
+    *) die "invalid PROFILE_TARGET=$target (use baseline, attempt1, attempt2, attempt3, or final)" ;;
+  esac
+
+  require_cmd perf "perf"
+  local data_file="$SUBRAY_DIR/profiling/perf_suite_${target}.data"
+  local report_file="$SUBRAY_DIR/profiling/perf_report_suite_${target}.txt"
+
+  local run_cmd=(python3-dbg -m pyperformance run --bench "$bench")
+  if [ -n "$manifest" ]; then
+    [ -f "$manifest" ] || die "Missing manifest: $manifest"
+    run_cmd=(python3-dbg -m pyperformance run --manifest "$manifest" --bench "$bench")
+  fi
+
+  cd "$SUBRAY_DIR"
+  print_step "perf record (full pyperformance run) -> $data_file"
+  echo "perf record -F 999 -g -o $data_file -- ${run_cmd[*]}"
+  perf record -F 999 -g -o "$data_file" -- "${run_cmd[@]}"
+
+  print_step "perf report --stdio -> $report_file"
+  perf report --stdio -i "$data_file" > "$report_file" 2>/dev/null
+  echo "Suite perf report: $report_file"
+
+  # Perf flamegraph via existing generator, which reads exactly profiling/perf.data.
+  local perf_data="$SUBRAY_DIR/profiling/perf.data"
+  local flamegraph_script="$SCRIPT_DIR/generate_flamegraph.sh"
+  if [ -f "$flamegraph_script" ]; then
+    print_step "Generating suite flamegraph.svg from perf_suite_${target}.data"
+    cp -f "$data_file" "$perf_data"
+    bash "$flamegraph_script"
+    local suite_flamegraph="$SUBRAY_DIR/profiling/flamegraph_suite_${target}.svg"
+    if [ -f "$SUBRAY_DIR/profiling/flamegraph.svg" ]; then
+      cp -f "$SUBRAY_DIR/profiling/flamegraph.svg" "$suite_flamegraph"
+      echo "Suite flamegraph: $suite_flamegraph"
+    fi
+  else
+    warn "generate_flamegraph.sh not found; skipped suite flamegraph."
+  fi
+}
+
+
 show_report_hotspots() {
   local label="$1"
   local file="$2"
@@ -201,7 +257,7 @@ run_compare_mode() {
   local p2="$SUBRAY_DIR/profiling/perf_stat_attempt2.txt"
   local p3="$SUBRAY_DIR/profiling/perf_stat_attempt3.txt"
   local pf="$SUBRAY_DIR/profiling/perf_stat_final.txt"
-  local rb="$SUBRAY_DIR/profiling/perf_report.txt"
+  local rb="$SUBRAY_DIR/profiling/perf_report_baseline.txt"
   local rf="$SUBRAY_DIR/profiling/perf_report_final.txt"
 
   print_step "Official before/after artifacts"
@@ -321,6 +377,9 @@ case "$MODE" in
     ;;
   profile)
     run_profile_mode
+    ;;
+  profile-suite)
+    run_profile_suite_mode
     ;;
   compare)
     run_compare_mode
