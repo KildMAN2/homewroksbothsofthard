@@ -8,6 +8,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUBRAY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$SUBRAY_DIR/.." && pwd)"
 
+# Ensure user-local install dirs are searched so tools like py-spy are found.
+export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
+
 MODE="${1:-all}"
 
 print_step() {
