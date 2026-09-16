@@ -1,21 +1,21 @@
 
  Performance counter stats for 'python3-dbg /root/homewroksbothsofthard/subRay/optimized/final/run_benchmark.py --width=64 --height=64':
 
-          19522.08 msec cpu-clock                 #    0.988 CPUs utilized          
-          19522.43 msec task-clock                #    0.988 CPUs utilized          
+          19415.18 msec cpu-clock                 #    0.987 CPUs utilized          
+          19415.53 msec task-clock                #    0.987 CPUs utilized          
                  0      cpu-cycles                #    0.000 GHz                    
-       99609716029      instructions                                                
-         214216045      cache-references          #   10.973 M/sec                  
-           2819329      cache-misses              #    1.316 % of all cache refs    
-       23701354139      branches                  #    1.214 G/sec                  
-         166342833      branch-misses             #    0.70% of all branches        
-             87912      page-faults               #    4.503 K/sec                  
-              2139      context-switches          #  109.567 /sec                   
+       99522163151      instructions                                                
+         198261770      cache-references          #   10.212 M/sec                  
+           2925764      cache-misses              #    1.476 % of all cache refs    
+       23673592504      branches                  #    1.219 G/sec                  
+         166181093      branch-misses             #    0.70% of all branches        
+             87875      page-faults               #    4.526 K/sec                  
+              2101      context-switches          #  108.213 /sec                   
                  0      cpu-migrations            #    0.000 /sec                   
 
-      19.763944249 seconds time elapsed
+      19.667052090 seconds time elapsed
 
-      19.175448000 seconds user
-       0.419875000 seconds sys
+      19.035345000 seconds user
+       0.447634000 seconds sys
 
 

@@ -1,21 +1,17 @@
 
- Performance counter stats for 'python3-dbg /root/.local/lib/python3.10/site-packages/pyperformance/data-files/benchmarks/bm_raytrace/run_benchmark.py --width=64 --height=64':
+ Performance counter stats for 'python3-dbg /root/.local/lib/python3.10/site-packages/pyperformance/data-files/benchmarks/bm_raytrace/run_benchmark.py --width=64 --height=64' (3 runs):
 
-          81441.44 msec cpu-clock                 #    0.979 CPUs utilized          
-          81442.07 msec task-clock                #    0.979 CPUs utilized          
+          80673.04 msec cpu-clock                 #    0.992 CPUs utilized            ( +-  0.24% )
+          80673.53 msec task-clock                #    0.992 CPUs utilized            ( +-  0.24% )
                  0      cpu-cycles                #    0.000 GHz                    
-      390724810665      instructions                                                
-         443436816      cache-references          #    5.445 M/sec                  
-           5411938      cache-misses              #    1.220 % of all cache refs    
-       95505521450      branches                  #    1.173 G/sec                  
-         868087503      branch-misses             #    0.91% of all branches        
-             89882      page-faults               #    1.104 K/sec                  
-              3430      context-switches          #   42.116 /sec                   
+      387324411814      instructions                                                  ( +-  0.24% )
+         404917856      cache-references          #    4.997 M/sec                    ( +-  0.68% )
+           4285182      cache-misses              #    1.045 % of all cache refs      ( +-  2.02% )
+       94415979904      branches                  #    1.165 G/sec                    ( +-  0.32% )
+         865418173      branch-misses             #    0.91% of all branches          ( +-  0.10% )
+             89909      page-faults               #    1.110 K/sec                    ( +-  0.01% )
+              2459      context-switches          #   30.346 /sec                     ( +-  0.85% )
                  0      cpu-migrations            #    0.000 /sec                   
 
-      83.219232918 seconds time elapsed
-
-      81.099303000 seconds user
-       0.447211000 seconds sys
-
+            81.285 +- 0.198 seconds time elapsed  ( +-  0.24% )
 
