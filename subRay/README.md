@@ -74,7 +74,7 @@ Examples in profiling/:
 - perf_report_baseline.txt, perf_report_attempt1.txt, perf_report_attempt2.txt, perf_report_attempt3.txt
 - perf_stat_baseline.txt, perf_stat_attempt1.txt, perf_stat_attempt2.txt, perf_stat_attempt3.txt
 - flamegraph.svg, flamegraph_original.svg
-- flamegraph_pyspy_baseline.svg, flamegraph_pyspy_attempt1.svg, flamegraph_pyspy_attempt2.svg, flamegraph_pyspy_attempt3.svg, final_flamegraph_pyspy.svg
+- flamegraph_pyspy_baseline.svg, flamegraph_pyspy_attempt1.svg, flamegraph_pyspy_attempt2.svg, flamegraph_pyspy_attempt3.svg, flamegraph_pyspy_final.svg
 
 ## 6. Hardware Acceleration
 Selected accelerator kernel scope:

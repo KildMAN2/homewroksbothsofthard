@@ -269,7 +269,7 @@ Interpretation:
 
 Compared artifacts:
 - Original reference: `subRay/profiling/flamegraph_pyspy.svg`
-- Final reference: `subRay/profiling/final_flamegraph_pyspy.svg`
+- Final reference: `subRay/profiling/flamegraph_pyspy_final.svg`
 
 Important documented caveat:
 - These two compared py-spy graphs were not captured under identical workload mode (`--fast` vs non-fast), so direct width-to-width quantitative claims are not valid.

@@ -8,7 +8,7 @@ This comparison uses the same profiling tools used earlier:
 
 Requested artifacts generated:
 - `subRay/profiling/final_perf_stat.txt`
-- `subRay/profiling/final_flamegraph_pyspy.svg`
+- `subRay/profiling/flamegraph_pyspy_final.svg`
 
 ## Workload and Comparability Notes
 
@@ -21,11 +21,11 @@ Original flame graph used for comparison:
 	- no `--fast`
 
 Final flame graph generated here:
-- `subRay/profiling/final_flamegraph_pyspy.svg`
-- Produced by reusing the existing Attempt 1 capture (`flamegraph_pyspy_attempt1.svg`) because `subRay/optimized/final/` is the same implementation as Attempt 1.
+- `subRay/profiling/flamegraph_pyspy_final.svg`
+- Captured directly from `subRay/optimized/final/run_benchmark.py` (same implementation as Attempt 1).
 - Embedded command metadata shows:
 	- `py-spy record --rate 100 --native`
-	- `python3-dbg /root/homewroksbothsofthard/subRay/optimized/attempt1/run_benchmark.py`
+	- `python3-dbg /root/homewroksbothsofthard/subRay/optimized/final/run_benchmark.py`
 	- `--width=64 --height=64`
 	- no `--fast`
 
@@ -52,7 +52,7 @@ Not claimed as a precise percentage change.
 
 What is visible:
 - In `flamegraph_pyspy_baseline.svg`, prominent sampled width appears around pyperf runner/manager and worker orchestration paths.
-- In `final_flamegraph_pyspy.svg`, wide regions are still dominated by pyperf orchestration/worker communication paths.
+- In `flamegraph_pyspy_final.svg`, wide regions are still dominated by pyperf orchestration/worker communication paths.
 
 Conclusion: the dominant stack families remain mostly in orchestration/control paths in both graphs; direct qualitative comparison is valid, but no exact narrowing percentage is claimed.
 
@@ -130,4 +130,4 @@ So the optimization clearly improved runtime. The flame-graph pair is suitable f
 
 ## Recommendation for a Strict Apples-to-Apples Flamegraph Comparison
 
-No re-run is required for qualitative comparison between `flamegraph_pyspy_baseline.svg` and `final_flamegraph_pyspy.svg`, because their command metadata already matches key workload settings.
+No re-run is required for qualitative comparison between `flamegraph_pyspy_baseline.svg` and `flamegraph_pyspy_final.svg`, because their command metadata already matches key workload settings.
