@@ -80,7 +80,7 @@ The historical record above remains correct for that earlier step: py-spy was in
 Later in the project, py-spy profiling was run successfully and the following artifacts now exist:
 
 - [subRay/profiling/flamegraph_pyspy_baseline.svg](subRay/profiling/flamegraph_pyspy_baseline.svg)
-- [subRay/profiling/final_flamegraph_pyspy.svg](subRay/profiling/final_flamegraph_pyspy.svg)
+- [subRay/profiling/flamegraph_pyspy_final.svg](subRay/profiling/flamegraph_pyspy_final.svg)
 
 Embedded command metadata read directly from SVG titles:
 
@@ -89,10 +89,10 @@ Embedded command metadata read directly from SVG titles:
 	- `--output /root/homewroksbothsofthard/subRay/profiling/flamegraph_pyspy_baseline.svg`
 	- `-- python3-dbg /root/.local/lib/python3.10/site-packages/pyperformance/data-files/benchmarks/bm_raytrace/run_benchmark.py --width=64 --height=64`
 
-- `final_flamegraph_pyspy.svg`
+- `flamegraph_pyspy_final.svg`
 	- `py-spy record --rate 100 --native`
-	- `--output /root/homewroksbothsofthard/subRay/profiling/flamegraph_pyspy_attempt1.svg`
-	- `-- python3-dbg /root/homewroksbothsofthard/subRay/optimized/attempt1/run_benchmark.py --width=64 --height=64`
+	- `--output /root/homewroksbothsofthard/subRay/profiling/flamegraph_pyspy_final.svg`
+	- `-- python3-dbg /root/homewroksbothsofthard/subRay/optimized/final/run_benchmark.py --width=64 --height=64`
 
 What this later py-spy evidence adds on top of perf:
 

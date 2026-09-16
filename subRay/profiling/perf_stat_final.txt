@@ -1,17 +1,21 @@
 
- Performance counter stats for 'python3-dbg /root/homewroksbothsofthard/subRay/optimized/final/run_benchmark.py --width=64 --height=64' (3 runs):
+ Performance counter stats for 'python3-dbg /root/homewroksbothsofthard/subRay/optimized/final/run_benchmark.py --width=64 --height=64':
 
-          19425.34 msec cpu-clock                 #    0.988 CPUs utilized            ( +-  0.04% )
-          19425.74 msec task-clock                #    0.988 CPUs utilized            ( +-  0.04% )
+          19415.18 msec cpu-clock                 #    0.987 CPUs utilized          
+          19415.53 msec task-clock                #    0.987 CPUs utilized          
                  0      cpu-cycles                #    0.000 GHz                    
-       99721273070      instructions                                                  ( +-  0.04% )
-         197448720      cache-references          #   10.165 M/sec                    ( +-  0.02% )
-           2558772      cache-misses              #    1.296 % of all cache refs      ( +-  1.13% )
-       23737266897      branches                  #    1.222 G/sec                    ( +-  0.05% )
-         166221794      branch-misses             #    0.70% of all branches          ( +-  0.03% )
-             87900      page-faults               #    4.525 K/sec                    ( +-  0.01% )
-              2047      context-switches          #  105.380 /sec                     ( +-  0.21% )
+       99522163151      instructions                                                
+         198261770      cache-references          #   10.212 M/sec                  
+           2925764      cache-misses              #    1.476 % of all cache refs    
+       23673592504      branches                  #    1.219 G/sec                  
+         166181093      branch-misses             #    0.70% of all branches        
+             87875      page-faults               #    4.526 K/sec                  
+              2101      context-switches          #  108.213 /sec                   
                  0      cpu-migrations            #    0.000 /sec                   
 
-           19.6686 +- 0.0106 seconds time elapsed  ( +-  0.05% )
+      19.667052090 seconds time elapsed
+
+      19.035345000 seconds user
+       0.447634000 seconds sys
+
 
