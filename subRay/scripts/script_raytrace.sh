@@ -141,15 +141,23 @@ run_profile_mode() {
   echo "PROFILE_TARGET=$target PROFILE_USE_FAST=$use_fast RUNS=$runs"
   PROFILE_TARGET="$target" PROFILE_USE_FAST="$use_fast" RUNS="$runs" bash "$script"
 
-  # generate_flamegraph.sh expects profiling/perf.data specifically.
+  # run_profile.sh writes a target-specific perf_<target>.data, but
+  # generate_flamegraph.sh reads exactly profiling/perf.data; bridge them here.
+  local target_perf_data="$SUBRAY_DIR/profiling/perf_${target}.data"
   local perf_data="$SUBRAY_DIR/profiling/perf.data"
   local flamegraph_script="$SCRIPT_DIR/generate_flamegraph.sh"
-  if [ -f "$perf_data" ] && [ -f "$flamegraph_script" ]; then
-    print_step "Found profiling/perf.data; generating flamegraph.svg using existing script"
+  if [ -f "$target_perf_data" ] && [ -f "$flamegraph_script" ]; then
+    print_step "Generating perf flamegraph.svg from perf_${target}.data"
+    cp -f "$target_perf_data" "$perf_data"
     bash "$flamegraph_script"
+    local target_flamegraph="$SUBRAY_DIR/profiling/flamegraph_${target}.svg"
+    if [ -f "$SUBRAY_DIR/profiling/flamegraph.svg" ]; then
+      cp -f "$SUBRAY_DIR/profiling/flamegraph.svg" "$target_flamegraph"
+      echo "Perf flamegraph: $target_flamegraph"
+    fi
   else
     print_step "Skipping generate_flamegraph.sh"
-    echo "Reason: $perf_data was not found (script expects that exact filename)."
+    echo "Reason: $target_perf_data was not found."
     echo "Profiling artifacts from run_profile.sh are preserved under $SUBRAY_DIR/profiling/."
   fi
 }
