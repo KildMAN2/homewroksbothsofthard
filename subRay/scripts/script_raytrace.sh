@@ -178,49 +178,67 @@ extract_mean_seconds() {
   awk '/seconds time elapsed/ { print $1; exit }' "$file"
 }
 
-# Full pyperformance-methodology profiling (many processes/values), like run_baseline.sh.
+# Full pyperformance-methodology profiling. Reuses run_baseline.sh / run_attempt1.sh
+# for those targets so it exactly matches the existing baseline/attempt1 scripts.
 run_profile_suite_mode() {
   print_step "Mode: profile-suite"
   check_common_runtime_deps
   check_pyperformance_deps
+  require_cmd perf "perf"
 
   local target="${PROFILE_TARGET:-baseline}"
-  local manifest=""
-  local bench=""
+  local produced_perf_data=""
+
   case "$target" in
-    baseline) bench="raytrace" ;;
-    attempt1) manifest="$SUBRAY_DIR/optimized/attempt1/MANIFEST"; bench="raytrace_attempt1" ;;
-    attempt2) manifest="$SUBRAY_DIR/optimized/attempt2/MANIFEST"; bench="raytrace_attempt2" ;;
-    attempt3) manifest="$SUBRAY_DIR/optimized/attempt3/MANIFEST"; bench="raytrace_attempt3" ;;
-    final)    manifest="$SUBRAY_DIR/optimized/final/MANIFEST"; bench="raytrace_attempt1" ;;
+    baseline)
+      local bscript="$SCRIPT_DIR/run_baseline.sh"
+      [ -f "$bscript" ] || die "Missing script: $bscript"
+      print_step "Reusing existing baseline script: run_baseline.sh"
+      bash "$bscript"
+      produced_perf_data="$SUBRAY_DIR/results/baseline/perf.data"
+      ;;
+    attempt1)
+      local ascript="$SCRIPT_DIR/run_attempt1.sh"
+      [ -f "$ascript" ] || die "Missing script: $ascript"
+      print_step "Reusing existing attempt1 script: run_attempt1.sh"
+      bash "$ascript"
+      produced_perf_data="$SUBRAY_DIR/results/attempt1/perf.data"
+      ;;
+    attempt2|attempt3|final)
+      # No dedicated script exists for these; replicate the same pyperformance command.
+      local manifest="" bench=""
+      case "$target" in
+        attempt2) manifest="$SUBRAY_DIR/optimized/attempt2/MANIFEST"; bench="raytrace_attempt2" ;;
+        attempt3) manifest="$SUBRAY_DIR/optimized/attempt3/MANIFEST"; bench="raytrace_attempt3" ;;
+        final)    manifest="$SUBRAY_DIR/optimized/final/MANIFEST"; bench="raytrace_attempt1" ;;
+      esac
+      [ -f "$manifest" ] || die "Missing manifest: $manifest"
+      produced_perf_data="$SUBRAY_DIR/results/${target}/perf.data"
+      mkdir -p "$SUBRAY_DIR/results/${target}"
+      cd "$SUBRAY_DIR"
+      print_step "perf record (full pyperformance run) -> $produced_perf_data"
+      echo "perf record -F 999 -g -o $produced_perf_data -- python3-dbg -m pyperformance run --manifest $manifest --bench $bench"
+      perf record -F 999 -g -o "$produced_perf_data" -- python3-dbg -m pyperformance run --manifest "$manifest" --bench "$bench"
+      ;;
     *) die "invalid PROFILE_TARGET=$target (use baseline, attempt1, attempt2, attempt3, or final)" ;;
   esac
 
-  require_cmd perf "perf"
-  local data_file="$SUBRAY_DIR/profiling/perf_suite_${target}.data"
   local report_file="$SUBRAY_DIR/profiling/perf_report_suite_${target}.txt"
-
-  local run_cmd=(python3-dbg -m pyperformance run --bench "$bench")
-  if [ -n "$manifest" ]; then
-    [ -f "$manifest" ] || die "Missing manifest: $manifest"
-    run_cmd=(python3-dbg -m pyperformance run --manifest "$manifest" --bench "$bench")
+  if [ ! -f "$produced_perf_data" ]; then
+    warn "Expected perf data not found: $produced_perf_data"
+    return 0
   fi
 
-  cd "$SUBRAY_DIR"
-  print_step "perf record (full pyperformance run) -> $data_file"
-  echo "perf record -F 999 -g -o $data_file -- ${run_cmd[*]}"
-  perf record -F 999 -g -o "$data_file" -- "${run_cmd[@]}"
-
   print_step "perf report --stdio -> $report_file"
-  perf report --stdio -i "$data_file" > "$report_file" 2>/dev/null
+  perf report --stdio -i "$produced_perf_data" > "$report_file" 2>/dev/null
   echo "Suite perf report: $report_file"
 
   # Perf flamegraph via existing generator, which reads exactly profiling/perf.data.
   local perf_data="$SUBRAY_DIR/profiling/perf.data"
   local flamegraph_script="$SCRIPT_DIR/generate_flamegraph.sh"
   if [ -f "$flamegraph_script" ]; then
-    print_step "Generating suite flamegraph.svg from perf_suite_${target}.data"
-    cp -f "$data_file" "$perf_data"
+    print_step "Generating suite flamegraph.svg from $target perf data"
+    cp -f "$produced_perf_data" "$perf_data"
     bash "$flamegraph_script"
     local suite_flamegraph="$SUBRAY_DIR/profiling/flamegraph_suite_${target}.svg"
     if [ -f "$SUBRAY_DIR/profiling/flamegraph.svg" ]; then
