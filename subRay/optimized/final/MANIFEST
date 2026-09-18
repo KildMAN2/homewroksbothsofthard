@@ -3,4 +3,4 @@
 
 [benchmarks]
 name	metafile
-raytrace_attempt1	optimized/attempt1/pyproject.toml
+raytrace_final	optimized/final/pyproject.toml

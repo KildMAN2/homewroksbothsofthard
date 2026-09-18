@@ -6,4 +6,4 @@ dependencies = ["pyperf"]
 urls = {repository = "https://github.com/python/pyperformance"}
 
 [tool.pyperformance]
-name = "raytrace_attempt1"
+name = "raytrace_final"
