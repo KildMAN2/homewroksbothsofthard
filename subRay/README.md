@@ -39,11 +39,6 @@ Implemented software variants:
 - optimized/attempt3/
 - optimized/final/
 
-Recorded fast-run means in results files:
-- results/attempt1_fast.txt: 103 ms +- 9 ms
-- results/attempt2_fast.txt: 242 ms +- 28 ms
-- results/attempt3_fast.txt: 243 ms +- 20 ms
-
 Recorded non-fast profiling means in profiling perf_stat files:
 - profiling/perf_stat_attempt1.txt: 19.7062 +- 0.0133 s
 - profiling/perf_stat_attempt2.txt: 19.68433 +- 0.00708 s

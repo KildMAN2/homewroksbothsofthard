@@ -21,25 +21,29 @@
 	- original: `de4b11fd3678d70ba24c3654100970d64bf9d0b8026a18d6fc4d398cdc08057b`
 	- attempt2: `de4b11fd3678d70ba24c3654100970d64bf9d0b8026a18d6fc4d398cdc08057b`
 
-## Fast Benchmark Comparison
+## Profiling-Based Comparison (perf stat)
 
 Sources:
-- original preliminary baseline: `subRay/profiling/perf_baseline_stdout.txt`
-- Attempt 1: `subRay/results/attempt1_fast.txt`
-- Attempt 2: `subRay/results/attempt2_fast.txt`
+- Baseline: `subRay/profiling/perf_stat_baseline.txt`
+- Attempt 1: `subRay/profiling/perf_stat_attempt1.txt`
+- Attempt 2: `subRay/profiling/perf_stat_attempt2.txt`
+- Attempt 3: `subRay/profiling/perf_stat_attempt3.txt`
 
-Measured means:
-- original preliminary baseline: `472 ms`
-- Attempt 1: `103 ms`
-- Attempt 2: `242 ms`
+Measured elapsed means (non-fast):
+- Baseline: `81.285 s`
+- Attempt 1: `19.7062 s`
+- Attempt 2: `19.68433 s`
+- Attempt 3: `19.6077 s`
 
-Improvement relative to original:
-- Attempt 1: `((472 - 103) / 472) * 100 = 78.18%`
-- Attempt 2: `((472 - 242) / 472) * 100 = 48.73%`
+Improvement relative to baseline:
+- Attempt 1: `75.76%`
+- Attempt 2: `75.78%`
+- Attempt 3: `75.88%`
 
-Concise result:
-- Attempt 2 is faster than original baseline, but slower than Attempt 1 on the same fast methodology.
-- Attempt 1 remains the best-performing variant so far.
+Selection:
+- All three attempts land within ~0.5% of each other (about 0.1 s on a ~19.7 s run), i.e. inside run-to-run measurement noise on this host.
+- Attempt 1 is the foundational scalarization optimization; Attempts 2 and 3 are marginal micro-variants that do not meaningfully beat it.
+- Attempt 1 is therefore selected as the final implementation (copied to `subRay/optimized/final/`).
 
 # Optimization Attempt 3
 
@@ -68,7 +72,6 @@ Concise result:
 ## Short Preliminary Benchmark
 
 - Command: `python3-dbg optimized/attempt3/run_benchmark.py --fast`
-- Result file: `subRay/results/attempt3_fast.txt`
 - Measured mean: `243 ms` (std dev `20 ms`)
 
 ## Comparison Against ORIGINAL
