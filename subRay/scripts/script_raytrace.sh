@@ -210,7 +210,7 @@ run_profile_suite_mode() {
       case "$target" in
         attempt2) manifest="$SUBRAY_DIR/optimized/attempt2/MANIFEST"; bench="raytrace_attempt2" ;;
         attempt3) manifest="$SUBRAY_DIR/optimized/attempt3/MANIFEST"; bench="raytrace_attempt3" ;;
-        final)    manifest="$SUBRAY_DIR/optimized/final/MANIFEST"; bench="raytrace_attempt1" ;;
+        final)    manifest="$SUBRAY_DIR/optimized/final/MANIFEST"; bench="raytrace_final" ;;
       esac
       [ -f "$manifest" ] || die "Missing manifest: $manifest"
       produced_perf_data="$SUBRAY_DIR/results/${target}/perf.data"
