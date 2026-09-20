@@ -53,9 +53,12 @@ Official measured before/after (from results/original_official.txt and results/f
 - FINAL: 19.7062 +- 0.0133 s
 - Improvement: 75.76%
 
-Correctness artifacts present:
+Correctness artifacts present (SHA256 byte-equality at a fixed 32x32 scene):
+- results/attempt1/correctness_report.txt: IDENTICAL=YES
 - results/attempt2_correctness_report.txt: IDENTICAL=YES
 - results/attempt3_correctness_report.txt: IDENTICAL=YES
+
+Exact byte/hash equality proves correctness for the tested fixed scene and resolution, not for every possible input.
 
 ## 5. Profiling
 Profiling evidence is stored in profiling/ and includes:
@@ -91,13 +94,14 @@ Verification and evidence:
 - hw/results/SIMULATION_RESULTS.txt
 
 Numeric format in implemented RTL:
-- Q16.16 fixed-point.
+- Q16.16 fixed-point (iterative v1 design).
 
-Measured vs estimated boundary:
-- Measured for hardware in this repo: simulation/functional verification results only.
-- Estimated (not measured in hardware): future acceleration projections in docs/09_hardware_performance.md.
+Evidence boundary:
+- SIMULATED: ModelSim compile clean; all 18/18 functional checks passed (tb_fxp_sqrt 11, tb_intersect_accel 7).
+- ESTIMATED (not measured): 200 MHz target clock, cycles/ray, throughput, Amdahl speedups, area, power, bandwidth (docs/09_hardware_performance.md). These refer to a future pipelined multi-lane target, not the current iterative v1.
+- PROPOSED (not implemented): MMIO, DMA, buffering, Python/C wrapper, driver, real FPGA integration (docs/08_hw_sw_interface.md).
 
-No claim is made here of synthesis, FPGA deployment, real HW/SW integration runtime, measured area, measured power, or measured hardware speedup.
+No claim is made here of synthesis, FPGA deployment, real HW/SW integration runtime, measured area, measured power, measured operating frequency, or measured hardware speedup.
 
 ## 7. How To Reproduce (Existing Scripts)
 Run from repository root on a Linux environment with bash, perf, and python3-dbg available.
@@ -113,11 +117,11 @@ Main entry point (wrapper/orchestrator):
 What script_raytrace.sh compare prints:
 - Official original vs final elapsed, computed speedup (~4.1x) and improvement (75.76%).
 - Attempt perf_stat elapsed values and the final perf_stat elapsed (profiling/perf_stat_final.txt).
-- Baseline vs final perf report hotspots (profiling/perf_report.txt vs profiling/perf_report_final.txt).
+- Baseline vs final perf report hotspots (profiling/perf_report_baseline.txt vs profiling/perf_report_final.txt).
 - A generated summary file: reports/compare_generated.txt (the curated reports/final_performance_comparison.txt is never overwritten).
 
 Note on perf report percentages:
-- perf report shares are relative to each run's samples, not absolute time. `_PyEval_EvalFrameDefault` rises from 20.63% (baseline) to 31.56% (final) because removed overhead shrinks the total, not because it got slower; the speedup is proven by wall-clock time.
+- perf report shares are relative to each run's samples, not absolute time. In the authoritative matched suite reports, `_PyEval_EvalFrameDefault` rises from approximately 23.50% (baseline) to 27.39% (final) because removed object/lookup/dict/allocation overhead shrinks the total, not because it got slower; the speedup is proven by wall-clock time.
 
 Baseline run:
 - bash subRay/scripts/run_baseline.sh

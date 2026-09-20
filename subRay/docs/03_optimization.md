@@ -69,15 +69,7 @@ Selection:
 	- original: `de4b11fd3678d70ba24c3654100970d64bf9d0b8026a18d6fc4d398cdc08057b`
 	- attempt3: `de4b11fd3678d70ba24c3654100970d64bf9d0b8026a18d6fc4d398cdc08057b`
 
-## Short Preliminary Benchmark
+## Preliminary Benchmark Note
 
-- Command: `python3-dbg optimized/attempt3/run_benchmark.py --fast`
-- Measured mean: `243 ms` (std dev `20 ms`)
-
-## Comparison Against ORIGINAL
-
-- ORIGINAL preliminary baseline: `472 ms`
-- Attempt 3: `243 ms`
-- Improvement vs ORIGINAL: `((472 - 243) / 472) * 100 = 48.52%`
-
-Result kept as measured.
+- An early `--fast` preliminary run was used during development, but its raw result files (`attempt*_fast.txt`) were not retained in the repository.
+- The authoritative attempt comparison is the non-fast `perf stat` section above (`Profiling-Based Comparison`).

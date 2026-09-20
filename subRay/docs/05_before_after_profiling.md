@@ -102,24 +102,33 @@ Notes:
 
 ## Perf Report Comparison (Baseline vs Final)
 
-Artifacts:
-- Baseline: `subRay/profiling/perf_report_baseline.txt`
-- Final: `subRay/profiling/perf_report_final.txt`
+Primary matched full-suite flame-graph artifacts:
+- Baseline: `subRay/profiling/flamegraph_suite_baseline.svg`
+- Final: `subRay/profiling/flamegraph_suite_final.svg`
+
+Authoritative matched profiling reports:
+- Baseline: `subRay/profiling/perf_report_suite_baseline.txt`
+- Final: `subRay/profiling/perf_report_suite_final.txt`
 
 Top self-time symbol share:
 
 | Metric | Baseline | Final |
 |---|---:|---:|
-| Samples (cpu-clock) | 41K | 18K |
-| `_PyEval_EvalFrameDefault` | 23.31% | 32.05% |
+| Samples (cpu-clock) | 117K | 34K |
+| `_PyEval_EvalFrameDefault` | 23.50% | 27.39% |
 
 Interpretation:
 - perf report percentages are RELATIVE shares of each run's samples, not absolute time.
-- Sample counts differ (41K vs 18K) because perf samples at a fixed rate and the baseline runs much longer than the final; both are large enough for a stable top-symbol ranking.
-- `_PyEval_EvalFrameDefault` grew in relative share (23.31% -> 32.05%) even though total runtime fell ~4.1x.
+- Sample counts differ (117K vs 34K) because perf samples at a fixed rate and the baseline runs much longer than the final; both are large enough for a stable top-symbol ranking.
+- `_PyEval_EvalFrameDefault` grew in relative share (23.50% -> 27.39%) even though total runtime fell ~4.1x.
 - The optimization removed large amounts of object/attribute/dict overhead (baseline families such as `_PyType_Lookup`, `dict_dealloc`, `lookdict_unicode_nodummy`), so the remaining core interpreter loop is a larger fraction of a much smaller total.
 - The final report's next costs are arithmetic/boxing and frame handling (`binary_op1`, `float_*`, `PyFloat_FromDouble`, `frame_dealloc`, `call_function`), consistent with a tighter scalar compute path.
 - A rising relative percentage is not a regression; wall-clock time and perf_stat elapsed both confirm the speedup.
+
+py-spy flame graphs (supplemental only):
+- `flamegraph_pyspy_baseline.svg` and `flamegraph_pyspy_final.svg` are preserved as supplemental historical evidence, not primary kernel evidence.
+- They contain very few samples and mainly show pyperf manager/import/worker-control paths.
+- The profiling script currently defaults to `PYSPY_SUBPROCESSES=0`, and pyperf launches benchmark workers as subprocesses, so these graphs do not capture the benchmark kernel.
 
 ## Relationship to Measured Speedup
 

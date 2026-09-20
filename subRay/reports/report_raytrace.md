@@ -157,21 +157,27 @@ Hardware candidate selection (separate phase):
 ## 12. Optimization Attempts
 
 ### Attempt 1
-- Strategy: scalar float locals + tuple-based scene data in the hottest paths.
-- Result: became final selected software implementation.
+- Strategy: scalar float locals + tuple-based scene data in the hottest vector/point/ray paths.
+- Effect: introduced the main scalarization optimization and produced almost the entire software speedup.
+- Correctness: `IDENTICAL=YES` (`subRay/results/attempt1/correctness_report.txt`).
 
 ### Attempt 2
-- Strategy: local alias hoisting for hot globals/helpers in `ray_colour()` and `bench_raytrace()`.
+- Strategy: local alias/lookup hoisting for hot globals/helpers in `ray_colour()` and `bench_raytrace()`.
 - Correctness: `IDENTICAL=YES` (`subRay/results/attempt2_correctness_report.txt`).
-- Fast benchmark: **242 ms ± 28 ms**.
 
 ### Attempt 3
-- Strategy: inline per-light visibility logic in Lambert loop to reduce call/frame overhead.
+- Strategy: inlined the per-light visibility check in the Lambert loop to reduce call/frame overhead.
 - Correctness: `IDENTICAL=YES` (`subRay/results/attempt3_correctness_report.txt`).
-- Fast benchmark: **243 ms ± 20 ms**.
 
-### Failed/Regressed or Non-selected outcomes (included as required)
-- Attempt 2 and Attempt 3 were both correct but slower than Attempt 1 in preliminary comparison, so they were not selected.
+### Measured non-fast `perf stat` comparison
+- Attempt 1: `19.7062 ± 0.0133 s`
+- Attempt 2: `19.68433 ± 0.00708 s`
+- Attempt 3: `19.6077 ± 0.0171 s`
+
+Notes:
+- Attempt 3 was slightly faster than Attempt 1 in this later non-fast `perf stat` comparison.
+- Attempt 1 remains the official final implementation because the locked official result and the final submission pipeline were produced from Attempt 1.
+- Attempt 1 is not claimed to be the fastest in every measurement.
 - Earlier supplemental profiling step documented `py-spy` unavailable in one VM stage (`py-spy: command not found`), so that specific requested graph was not generated in that step.
 - Local virtualization/PMU limitations were encountered in some environments (hardware counters unsupported), so PMU-capable runs were done where supported.
 
@@ -181,30 +187,36 @@ Selected final software implementation:
 - `subRay/optimized/final/` (copied from Attempt 1).
 
 Selection basis:
-- Attempt 1 had the best preliminary mean among correct attempts.
-- Attempts 2 and 3 remained correct but slower in preliminary measured comparison.
+- Attempt 1 introduced the main scalarization optimization and produced almost the entire software speedup.
+- Attempt 1 is the locked official final because the official before/after result and the final submission pipeline were generated from Attempt 1.
+- Attempt 3 was slightly faster in the later non-fast `perf stat` comparison, but it is not the locked official final.
 
-Preliminary comparison table:
+Measured non-fast `perf stat` means:
 
-| Version | Correct | Preliminary Mean | Improvement vs Preliminary Original |
-|---|---|---:|---:|
-| Attempt 1 | Yes | 103 ms | 78.18% |
-| Attempt 2 | Yes | 242 ms | 48.73% |
-| Attempt 3 | Yes | 243 ms | 48.52% |
+| Version | Correct | perf stat mean (non-fast) |
+|---|---|---:|
+| Attempt 1 | Yes | 19.7062 ± 0.0133 s |
+| Attempt 2 | Yes | 19.68433 ± 0.00708 s |
+| Attempt 3 | Yes | 19.6077 ± 0.0171 s |
 
 ## 14. Correctness Verification
 
-Correctness checks used deterministic output comparison and SHA256 reporting.
+Correctness checks used deterministic output comparison and SHA256 reporting at a fixed `32×32` scene.
 
 Documented outcomes:
-- Attempt 2: `IDENTICAL=YES` with matching hash.
-- Attempt 3: `IDENTICAL=YES` with matching hash.
-- Final chosen implementation is Attempt 1 code path (selection based on correctness + performance).
+- Attempt 1: `IDENTICAL=YES` with matching hash (`subRay/results/attempt1/correctness_report.txt`).
+- Attempt 2: `IDENTICAL=YES` with matching hash (`subRay/results/attempt2_correctness_report.txt`).
+- Attempt 3: `IDENTICAL=YES` with matching hash (`subRay/results/attempt3_correctness_report.txt`).
 
 Verification artifacts:
+- `subRay/results/attempt1/correctness_report.txt`
 - `subRay/results/attempt2_correctness_report.txt`
 - `subRay/results/attempt3_correctness_report.txt`
 - checker scripts under `subRay/scripts/`
+
+Scope of this evidence:
+- Exact byte/SHA256 equality proves the optimized output matches the original for the tested fixed scene and `32×32` resolution.
+- It does not prove correctness for every possible input, scene, or resolution.
 
 ## 15. Official Before/After Performance
 
@@ -212,12 +224,17 @@ Official measurement files:
 - Original: `subRay/results/original_official.txt`
 - Final: `subRay/results/final_official.txt`
 
+These are matched `perf stat` elapsed measurements over three complete benchmark-script executions at `64×64` (not the time to render a single image).
+
 Official results:
 
 | Version | Mean | Std Dev | Improvement | Correct |
 |---|---:|---:|---:|---|
 | ORIGINAL | 81.285 s | 0.198 s | 0.00% | Yes |
-| FINAL | 19.7062 s | 0.0133 s | 75.76% | Yes |
+| FINAL (Attempt 1) | 19.7062 s | 0.0133 s | 75.76% | Yes |
+
+- Speedup: approximately `4.12x` (`81.285 / 19.7062`).
+- Runtime improvement: `75.76%`.
 
 Threshold check:
 - Target `>= 7%` improvement: **achieved**.
@@ -245,41 +262,47 @@ Notes:
 - Branches dropped ~4.0x (94.4B -> 23.7B) and branch-misses fell ~5.2x, reflecting far less interpreter/object dispatch work.
 - Cache-references roughly halved (405M -> 198M); the cache-miss rate rose slightly (1.045% -> 1.476%) but absolute misses still fell.
 - Elapsed time dropped from 81.285 s to 19.667 s (~4.1x), consistent with the official 81.285 s -> 19.7062 s result.
+- The `cpu-cycles` counter reads `0` because the PMU cycle counter was unavailable in this environment, not because execution used zero cycles.
 
 ## 15B. Perf Report Comparison (Baseline vs Final)
 
 Artifacts:
-- Baseline: `subRay/profiling/perf_report_baseline.txt`
-- Final: `subRay/profiling/perf_report_final.txt`
+- Baseline: `subRay/profiling/perf_report_suite_baseline.txt`
+- Final: `subRay/profiling/perf_report_suite_final.txt`
 
 Top self-time symbol share:
 
 | Metric | Baseline | Final |
 |---|---:|---:|
-| Samples (cpu-clock) | 41K | 18K |
-| `_PyEval_EvalFrameDefault` | 23.31% | 32.05% |
+| Samples (cpu-clock) | 117K | 34K |
+| `_PyEval_EvalFrameDefault` | 23.50% | 27.39% |
 
 Interpretation:
+- The `perf_report_suite_*.txt` pair is the authoritative, matched-methodology capture (baseline via `run_baseline.sh`, final via the `raytrace_final` manifest, both through the identical pyperformance harness invocation), superseding the earlier `perf_report_baseline.txt`/`perf_report_final.txt` pair.
 - perf report percentages are RELATIVE shares of each run's samples, not absolute time.
-- Sample counts differ (41K vs 18K) because perf samples at a fixed rate and the baseline runs much longer than the final; both are large enough for a stable top-symbol ranking.
-- The interpreter dispatch loop `_PyEval_EvalFrameDefault` grew in relative share (23.31% -> 32.05%) even though total runtime fell ~4.1x.
+- Sample counts differ (117K vs 34K) because perf samples at a fixed rate and the baseline runs much longer than the final; both are large enough for a stable top-symbol ranking.
+- The interpreter dispatch loop `_PyEval_EvalFrameDefault` grew in relative share (23.50% -> 27.39%) even though total runtime fell ~4.1x.
 - This is expected: the optimization removed large amounts of object/attribute/dict overhead (baseline families such as `_PyType_Lookup`, `dict_dealloc`, `lookdict_unicode_nodummy`), so the remaining core interpreter loop is a bigger fraction of a much smaller total.
 - In the final report the next costs are arithmetic/boxing and frame handling (`binary_op1`, `float_*`, `PyFloat_FromDouble`, `frame_dealloc`, `call_function`), consistent with a tighter scalar compute path.
 - Conclusion: a rising relative percentage does NOT mean regression; wall-clock time and perf_stat elapsed both confirm the speedup.
 
 ## 16. Before/After Flame Graph Comparison
 
-Compared artifacts:
-- Original reference: `subRay/profiling/flamegraph_pyspy.svg`
-- Final reference: `subRay/profiling/flamegraph_pyspy_final.svg`
+Primary matched full-suite flame-graph artifacts:
+- Baseline: `subRay/profiling/flamegraph_suite_baseline.svg`
+- Final: `subRay/profiling/flamegraph_suite_final.svg`
 
-Important documented caveat:
-- These two compared py-spy graphs were not captured under identical workload mode (`--fast` vs non-fast), so direct width-to-width quantitative claims are not valid.
+Authoritative matched profiling reports (same captures):
+- Baseline: `subRay/profiling/perf_report_suite_baseline.txt` (`_PyEval_EvalFrameDefault` approximately `23.50%`)
+- Final: `subRay/profiling/perf_report_suite_final.txt` (`_PyEval_EvalFrameDefault` approximately `27.39%`)
 
-Qualitative only:
-- Original graph shows broad pyperf runner/manager and startup/control-plane regions.
-- Final graph (reused from Attempt 1 capture because final == attempt1) also shows strong orchestration/worker communication stack presence.
-- The optimization speedup is validated by official timing files, not by a strict matched-workload flame-graph width reduction claim.
+Interpretation:
+- These percentages are relative shares of each run's samples. The final `_PyEval_EvalFrameDefault` share can increase even while total runtime decreases, because other object, lookup, dictionary, and allocation overhead was removed, leaving the core interpreter loop as a larger fraction of a much smaller total.
+
+py-spy flame graphs (supplemental only):
+- `subRay/profiling/flamegraph_pyspy_baseline.svg` and `subRay/profiling/flamegraph_pyspy_final.svg` are preserved as supplemental historical evidence.
+- They contain very few samples and mainly show pyperf manager/import/worker-control paths.
+- The profiling script currently defaults to `PYSPY_SUBPROCESSES=0`, and pyperf launches benchmark workers as subprocesses, so these py-spy graphs do not capture the benchmark kernel and should not be treated as primary kernel evidence.
 
 ## 17. Hardware Acceleration Motivation
 
@@ -287,23 +310,27 @@ Why hardware was pursued:
 - Software profiling showed persistent heavy numeric/interpreter overhead in intersection-heavy hot paths.
 - Intersection and closest-hit logic are high-frequency, arithmetic-dense, and structurally suitable for hardware pipelining/parallelism.
 
-Implemented hardware deliverables:
-- RTL modules in `subRay/hw/rtl/`:
-  - `fxp_sqrt.sv`
-  - `sphere_intersect.sv`
-  - `intersect_accel.sv`
-- Self-checking testbenches in `subRay/hw/tb/`.
-- Simulation evidence in `subRay/hw/results/`.
+Evidence boundaries (kept explicit):
 
-Measured simulation status:
+IMPLEMENTED:
+- Q16.16 fixed-point RTL modules in `subRay/hw/rtl/` (`fxp_sqrt.sv`, `sphere_intersect.sv`, `intersect_accel.sv`).
+- Direct testbench port-level interface in `subRay/hw/tb/`.
+
+SIMULATED:
 - ModelSim compile: 0 errors, 0 warnings.
-- `tb_fxp_sqrt`: all checks passed.
-- `tb_intersect_accel`: all checks passed.
+- All `18/18` functional checks passed (`tb_fxp_sqrt`: 11, `tb_intersect_accel`: 7); evidence in `subRay/hw/results/`.
 
-Boundary conditions:
-- Hardware RTL is currently Q16.16 fixed-point and iterative v1.
-- No synthesis timing/area/power numbers were claimed.
-- Hardware performance speedups remain estimates until hardware integration and measurement.
+ESTIMATED (not measured):
+- `200 MHz` target clock, cycles/ray, throughput, Amdahl-based speedups, area, power, and bandwidth (see `subRay/docs/09_hardware_performance.md`).
+
+PROPOSED (not implemented):
+- MMIO register map, DMA, input/output buffering, Python/C wrapper, driver, and real FPGA integration (see `subRay/docs/08_hw_sw_interface.md`).
+
+Architecture note:
+- The RTL implemented and simulated so far is the iterative Q16.16 v1 design.
+- The higher-performance estimates (cycles/ray, throughput, speedups) refer to a future pipelined, multi-lane target architecture, not the current iterative v1.
+
+No claim is made of synthesis, FPGA deployment, measured hardware speedup, measured area, measured power, or measured operating frequency.
 
 ## 18. Final Conclusions and Remaining Work
 
