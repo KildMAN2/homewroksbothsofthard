@@ -275,8 +275,10 @@ run_compare_mode() {
   local p2="$SUBRAY_DIR/profiling/perf_stat_attempt2.txt"
   local p3="$SUBRAY_DIR/profiling/perf_stat_attempt3.txt"
   local pf="$SUBRAY_DIR/profiling/perf_stat_final.txt"
-  local rb="$SUBRAY_DIR/profiling/perf_report_baseline.txt"
-  local rf="$SUBRAY_DIR/profiling/perf_report_final.txt"
+  local rb="$SUBRAY_DIR/profiling/perf_report_suite_baseline.txt"
+  local rf="$SUBRAY_DIR/profiling/perf_report_suite_final.txt"
+  local rb_single="$SUBRAY_DIR/profiling/perf_report_baseline.txt"
+  local rf_single="$SUBRAY_DIR/profiling/perf_report_final.txt"
 
   print_step "Official before/after artifacts"
   [ -f "$orig" ] || die "Missing file: $orig"
@@ -322,14 +324,18 @@ run_compare_mode() {
     warn "Missing file: $pf"
   fi
   if [ -f "$rf" ]; then
-    echo "perf_report_final.txt -> $rf"
+    echo "perf_report_suite_final.txt -> $rf"
   else
     warn "Missing file: $rf"
   fi
 
-  print_step "Perf report baseline vs final hotspots"
-  show_report_hotspots "BASELINE" "$rb"
-  show_report_hotspots "FINAL" "$rf"
+  print_step "Perf report hotspots (authoritative suite pair)"
+  show_report_hotspots "SUITE BASELINE" "$rb"
+  show_report_hotspots "SUITE FINAL" "$rf"
+
+  print_step "Perf report hotspots (single-run pair, supplemental)"
+  show_report_hotspots "BASELINE" "$rb_single"
+  show_report_hotspots "FINAL" "$rf_single"
   echo "Note: perf percentages are relative shares of each run, not absolute time; speedup is proven by wall-clock time above."
 
   # Write a fresh generated comparison file; the curated file is never overwritten.
@@ -348,8 +354,10 @@ run_compare_mode() {
     fi
     echo
     echo "Final perf_stat: $(extract_elapsed_line "$pf")"
-    echo "Baseline perf report: $rb"
-    echo "Final perf report:    $rf"
+    echo "Suite baseline perf report: $rb"
+    echo "Suite final perf report:    $rf"
+    echo "Single-run baseline perf report: $rb_single"
+    echo "Single-run final perf report:    $rf_single"
   } > "$generated"
   print_step "Generated comparison file written"
   echo "$generated"

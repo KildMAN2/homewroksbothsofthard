@@ -176,42 +176,42 @@ It reduces object allocation, method dispatch, and repeated attribute/lookup ove
 Table: Attempt 2 and 3 strategy + result.
 
 ### Say
-Attempt 2 hoisted hot helper/global lookups. Attempt 3 inlined visibility logic in Lambert loop. Both were correctness-validated, but both were slower than Attempt 1 in preliminary comparisons.
+Attempt 2 hoisted hot helper/global lookups. Attempt 3 inlined visibility logic in the Lambert loop. Both were correctness-validated. In the later non-fast perf stat comparison the three attempts were within about 0.5% of each other, and Attempt 3 was actually slightly faster than Attempt 1.
 
 ### Key Point
-Later attempts were valid but not better than Attempt 1.
+Attempts 2 and 3 are marginal variants; Attempt 1 remains the locked official final.
 
 ### Likely Question
 Were attempts 2 and 3 failures?
 
 ### Answer
-Not correctness failures. They were non-selected because performance was worse than Attempt 1.
+No. They were correctness-valid. Attempt 1 remains the locked official final because the official result and submission pipeline were produced from it, even though Attempt 3 was slightly faster in the later perf stat.
 
-## Slide 12 — Why Attempt 1 Won
+## Slide 12 — Why Attempt 1 Is the Official Final
 
 ### Show
-Preliminary comparison table:
-Attempt 1: 103 ms, Attempt 2: 242 ms, Attempt 3: 243 ms.
+Non-fast perf stat means:
+Attempt 1: 19.7062 s, Attempt 2: 19.68433 s, Attempt 3: 19.6077 s.
 
 ### Say
-Among correct variants, Attempt 1 had the lowest preliminary mean and highest preliminary improvement. That is why final software was copied from Attempt 1.
+Attempt 1 introduced the main scalarization optimization and produced almost the entire software speedup. It is the locked official final because the official before/after result and the final submission pipeline were generated from Attempt 1. Attempt 3 was slightly faster in the later non-fast perf stat comparison, but it is not the locked official final.
 
 ### Key Point
-Selection criterion was best measured performance among correct versions.
+Attempt 1 is the official final; it is not claimed to be the fastest in every measurement.
 
 ### Likely Question
-Why not pick the newest attempt?
+Why not pick the slightly faster Attempt 3?
 
 ### Answer
-Project rule was to select by measured evidence, not recency.
+The official result and submission pipeline were locked to Attempt 1; Attempt 3's small perf stat edge was not re-locked as the official final.
 
 ## Slide 13 — Correctness Verification
 
 ### Show
-Checksum comparison concept and IDENTICAL=YES outputs for attempts 2 and 3.
+Checksum comparison concept and IDENTICAL=YES outputs for attempts 1, 2, and 3.
 
 ### Say
-Correctness checks compared deterministic outputs and hashes. Attempts 2 and 3 explicitly show IDENTICAL=YES in saved reports. Final selection also required correctness, not only speed.
+Correctness checks compared deterministic outputs and SHA256 hashes at a fixed 32x32 scene. All three attempts show IDENTICAL=YES in saved reports (Attempt 1: results/attempt1/correctness_report.txt). Exact byte/hash equality proves correctness for the tested fixed scene and resolution, not for every possible input.
 
 ### Key Point
 Performance gains were accepted only with correctness preserved.
@@ -448,10 +448,10 @@ A: Original 81.285 s, final 19.7062 s, improvement 75.76%.
 A: No. It is measured from official result artifacts.
 
 3. Q: Why was Attempt 1 selected?
-A: It was correct and had the best preliminary mean among correct attempts.
+A: It introduced the main scalarization and produced almost the entire speedup, and it is the locked official final because the official result and submission pipeline were produced from it.
 
 4. Q: Were Attempts 2 and 3 incorrect?
-A: No. They were correctness-valid but slower than Attempt 1.
+A: No. They were correctness-valid; in the later non-fast perf stat comparison Attempt 3 was actually slightly faster, but Attempt 1 remains the locked official final.
 
 5. Q: What does flame graph width mean?
 A: Width is sampled runtime contribution.
@@ -503,7 +503,7 @@ A: Implement real driver/interface, synthesize, deploy, and run hardware-in-the-
 
 # 2-Minute Summary
 
-I optimized the pyperformance Raytrace benchmark and then built a hardware acceleration prototype path. Starting from profiling evidence, I identified interpreter and runtime overhead as dominant, driven by repeated geometric work in hot loops. I implemented three software attempts and selected Attempt 1 because it was correct and had the best measured preliminary performance among correct versions.
+I optimized the pyperformance Raytrace benchmark and then built a hardware acceleration prototype path. Starting from profiling evidence, I identified interpreter and runtime overhead as dominant, driven by repeated geometric work in hot loops. I implemented three software attempts. Attempt 1 introduced the main scalarization and produced almost the entire speedup; it is the locked official final because the official result and submission pipeline were generated from it. Attempt 3 was slightly faster in the later non-fast perf stat comparison, but it is not the locked official final.
 
 The official before/after software comparison showed original 81.285 seconds and final 19.7062 seconds, which is a 75.76% improvement and exceeds the required threshold.
 
