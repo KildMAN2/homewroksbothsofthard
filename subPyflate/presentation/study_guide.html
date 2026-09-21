@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pyflate HWSW Project — Study Guide</title>
+<style>
+:root {
+  --bg: #fafafa;
+  --panel: #ffffff;
+  --ink: #1a1a1a;
+  --ink-soft: #4a4a4a;
+  --accent: #b8410a;
+  --accent-soft: #f7e8dd;
+  --code-bg: #f4f1ee;
+  --border: #d6d0c9;
+  --note-bg: #eaf3ff;
+  --note-border: #6ba9e5;
+  --warn-bg: #fff4e0;
+  --warn-border: #d69837;
+  --ok-bg: #e6f5e6;
+  --ok-border: #4caf50;
+  --mono: "SF Mono", "Cascadia Code", "Consolas", "Menlo", monospace;
+  --serif: "Iowan Old Style", "Palatino", "Georgia", serif;
+  --sans: "Inter", "Segoe UI", "Helvetica Neue", sans-serif;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+.layout { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+nav {
+  position: sticky; top: 0; height: 100vh;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 20px 12px 20px 20px;
+  overflow-y: auto;
+  font-family: var(--sans);
+  font-size: 13.5px;
+}
+nav .brand {
+  font-weight: 700; font-size: 16px; color: var(--accent);
+  margin-bottom: 14px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+nav ol { list-style: none; padding: 0; margin: 0; counter-reset: sec; }
+nav li { counter-increment: sec; margin: 3px 0; }
+nav li::before { content: counter(sec) ". "; color: var(--ink-soft); }
+nav a { color: var(--ink); text-decoration: none; }
+nav a:hover { color: var(--accent); }
+nav .sub { margin-left: 20px; font-size: 12.5px; color: var(--ink-soft); }
+nav .sub li::before { content: "› "; }
+main { padding: 40px 60px 80px 60px; max-width: 900px; }
+h1 { font-family: var(--sans); font-weight: 700; font-size: 2.2em; margin: 0 0 0.2em 0; color: var(--accent); }
+h1 + .subtitle { color: var(--ink-soft); font-style: italic; margin-bottom: 30px; }
+h2 { font-family: var(--sans); font-weight: 700; font-size: 1.6em; margin: 60px 0 12px 0; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
+h3 { font-family: var(--sans); font-weight: 600; font-size: 1.25em; margin: 34px 0 8px 0; color: var(--accent); }
+h4 { font-family: var(--sans); font-weight: 600; font-size: 1.05em; margin: 20px 0 6px 0; }
+p { margin: 10px 0; }
+code { font-family: var(--mono); background: var(--code-bg); padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
+pre { background: var(--code-bg); padding: 14px 16px; border-left: 3px solid var(--accent); border-radius: 4px; overflow-x: auto; font-family: var(--mono); font-size: 13.5px; line-height: 1.5; margin: 12px 0; }
+pre code { background: transparent; padding: 0; font-size: 1em; }
+.note, .warn, .ok, .idea {
+  border-left: 4px solid; padding: 12px 16px; margin: 16px 0; border-radius: 4px;
+  font-family: var(--sans); font-size: 15px; line-height: 1.55;
+}
+.note { background: var(--note-bg); border-color: var(--note-border); }
+.warn { background: var(--warn-bg); border-color: var(--warn-border); }
+.ok { background: var(--ok-bg); border-color: var(--ok-border); }
+.idea { background: var(--accent-soft); border-color: var(--accent); }
+.note strong, .warn strong, .ok strong, .idea strong { display: block; margin-bottom: 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+table { border-collapse: collapse; margin: 14px 0; width: 100%; font-family: var(--sans); font-size: 14px; }
+th, td { padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+th { background: var(--accent-soft); font-weight: 600; }
+td.num, th.num { text-align: right; font-family: var(--mono); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-family: var(--sans); font-size: 12px; font-weight: 600; margin-right: 6px; }
+.badge.measured { background: var(--ok-bg); color: #2e6a2e; }
+.badge.simulated { background: var(--note-bg); color: #2b5c8e; }
+.badge.estimated { background: var(--warn-bg); color: #8a5a1a; }
+.badge.proposed { background: #efeaff; color: #5e37b8; }
+figure { margin: 18px 0; text-align: center; }
+figcaption { color: var(--ink-soft); font-size: 13.5px; font-style: italic; margin-top: 6px; font-family: var(--sans); }
+svg.diagram { max-width: 100%; height: auto; background: white; border: 1px solid var(--border); border-radius: 6px; }
+details { margin: 10px 0; border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; background: var(--panel); }
+summary { cursor: pointer; font-family: var(--sans); font-weight: 600; color: var(--accent); }
+kbd { font-family: var(--mono); background: #eee; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 3px; padding: 1px 6px; font-size: 12.5px; }
+.qa { border-left: 3px solid var(--accent); padding-left: 14px; margin: 14px 0; }
+.qa .q { font-family: var(--sans); font-weight: 600; margin-bottom: 4px; }
+.qa .a { color: var(--ink-soft); }
+hr { border: 0; border-top: 1px solid var(--border); margin: 40px 0; }
+.tag { display: inline-block; background: var(--accent); color: white; padding: 2px 10px; border-radius: 3px; font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; margin-right: 6px; vertical-align: middle; }
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 20px 0; }
+.pill { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-family: var(--sans); font-size: 13px; }
+.pill b { color: var(--accent); }
+@media print {
+  nav { display: none; }
+  .layout { grid-template-columns: 1fr; }
+  main { padding: 20px; max-width: none; }
+  pre { page-break-inside: avoid; }
+}
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  nav { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border); }
+  main { padding: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <div class="brand">Pyflate Study Guide</div>
+  <ol>
+    <li><a href="#intro">The big picture</a></li>
+    <li><a href="#python">Python & interpreters</a></li>
+    <li><a href="#benchmarks">Benchmarks & pyperformance</a></li>
+    <li><a href="#compression">Compression 101 — DEFLATE & bzip2</a></li>
+    <li><a href="#pyflate">What pyflate actually does</a></li>
+    <li><a href="#huffman">Huffman coding, deeply</a></li>
+    <li><a href="#profiling">Profiling tools (perf, py-spy)</a></li>
+    <li><a href="#bottleneck">Finding the bottleneck</a></li>
+    <li><a href="#attempts">Our three optimization attempts</a></li>
+    <li><a href="#results">Measured results</a></li>
+    <li><a href="#hardware-why">Why hardware?</a></li>
+    <li><a href="#hardware-what">The accelerator design</a></li>
+    <li><a href="#rtl">SystemVerilog RTL walkthrough</a></li>
+    <li><a href="#testbenches">Testbenches & verification</a></li>
+    <li><a href="#interface">HW/SW interface (proposed)</a></li>
+    <li><a href="#amdahl">Amdahl's Law & estimated speedup</a></li>
+    <li><a href="#environment">Environment: VM, TCG, WHPX</a></li>
+    <li><a href="#numbers">Numbers to memorize</a></li>
+    <li><a href="#qa">Q&A prep — 30+ questions</a></li>
+    <li><a href="#summary">2-min & 30-sec summaries</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+  </ol>
+</nav>
+<main>
+
+<h1>Pyflate — HWSW Project Study Guide</h1>
+<p class="subtitle">Everything you need to know to present this project, starting from zero background.</p>
+
+<div class="pill-row">
+  <div class="pill"><b>+36.93%</b> VM improvement (KVM+PMU)</div>
+  <div class="pill"><b>+29.84%</b> Windows cross-check</div>
+  <div class="pill"><b>−32.87%</b> instructions retired</div>
+  <div class="pill"><b>Target</b> ≥7%</div>
+  <div class="pill"><b>22/22</b> RTL checks pass</div>
+  <div class="pill"><b>4/4</b> attempts correct (MD5)</div>
+</div>
+
+<div class="idea">
+<strong>How to use this guide</strong>
+Read it top to bottom once — every concept builds on the one before it. On a second pass, memorize the numbers in §18 and the answers in §19 (Q&amp;A). On presentation day, glance at §20 (summaries).
+</div>
+
+<!-- ===================================================================== -->
+<h2 id="intro">1. The big picture</h2>
+
+<h3>1.1 What is this course project asking for?</h3>
+<p>
+The HWSW project has two halves, joined at the hip:
+</p>
+<ol>
+  <li><strong>Software:</strong> pick a benchmark from a fixed list, understand it, profile it, find the slow part, make it faster with concrete measurements. Target: ≥ 7 % improvement.</li>
+  <li><strong>Hardware:</strong> propose a hardware accelerator for the slow part. Write real RTL (SystemVerilog), simulate it in a testbench, describe how software would talk to it (MMIO / DMA / driver), estimate speedup with Amdahl's Law.</li>
+</ol>
+<p>Deliverables: a report, a presentation, the source, the AI prompts you used, and everything in a Git repo.</p>
+
+<h3>1.2 What benchmark did we pick, and why?</h3>
+<p>
+<strong>pyflate</strong>. It's a pure-Python program that decompresses gzip and bzip2 files. Two reasons it's a good fit:
+</p>
+<ul>
+  <li>Its slow part is a classic <em>algorithmic</em> problem — a Huffman decoder implemented as a linear scan over Python objects. That gives us a clean software win (canonical Huffman lookup) and a clean hardware kernel (BRAM-backed lookup table).</li>
+  <li>Every commercial DEFLATE / bzip2 hardware decompressor in the world implements exactly this kernel. Our RTL is aligned with real-world designs, not something we invented.</li>
+</ul>
+
+<h3>1.3 What did we actually accomplish?</h3>
+<div class="ok">
+<strong>Measured results</strong>
+<ul style="margin: 0;">
+  <li><span class="badge measured">MEASURED SW</span> +36.93 % faster on the course QEMU VM (naranja4 KVM + PMU passthrough, perf stat -r 3, python3-dbg).</li>
+  <li><span class="badge measured">MEASURED HW COUNTERS</span> Instructions retired −32.87 %, branches −33.51 %, branch-misses −37.82 %, cache-references −24.53 %. Same workload, ~⅓ less CPU work.</li>
+  <li><span class="badge measured">MEASURED SW</span> +29.84 % faster on Windows (pyperformance official, 60 iterations).</li>
+  <li><span class="badge measured">MEASURED SW</span> All 4 attempts produce byte-identical output to the original — MD5 <code>afa004a630fe072901b1d9628b960974</code>.</li>
+  <li><span class="badge simulated">SIMULATED HW</span> 22/22 RTL testbench checks pass under Icarus Verilog 12.0.</li>
+  <li><span class="badge estimated">ESTIMATED HW</span> Amdahl-based end-to-end speedup 1.5–1.6× at S ∈ {5, 10, 20}.</li>
+  <li><span class="badge proposed">PROPOSED</span> MMIO register bank, AXI-Stream input, Python C-extension driver — designed on paper, not implemented.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== -->
+<h2 id="python">2. Python & interpreters (the reason there's a problem at all)</h2>
+
+<h3>2.1 What is Python doing under the hood?</h3>
+<p>
+When you write <code>x = a + b</code> in Python, CPython (the standard implementation) doesn't turn it into a CPU instruction. It compiles it to <em>bytecode</em>, and the bytecode is executed by a giant function called <code>_PyEval_EvalFrameDefault</code>. That function is a massive <code>switch</code> statement over opcodes: <code>LOAD_FAST</code>, <code>BINARY_ADD</code>, <code>STORE_FAST</code>, etc.
+</p>
+<p>Every one of those opcodes does a lot more than the equivalent C code:</p>
+<ul>
+  <li>Attribute lookups (<code>obj.x</code>) walk the MRO, check descriptors, allocate PyObject boxes.</li>
+  <li>Integer arithmetic boxes <code>int</code> results in <code>PyLong</code> objects on the heap (unless the value falls in the small-int cache −5..256).</li>
+  <li>Every function call sets up a new frame object, argument tuple, and stack.</li>
+</ul>
+
+<div class="note">
+<strong>Why this matters for us</strong>
+Pyflate is <em>pure Python</em>. There is no C extension doing the compression work. Every bit of every decompressed byte flows through <code>_PyEval_EvalFrameDefault</code>. The whole benchmark is essentially "how fast can the CPython interpreter execute this Python loop." Any optimization that reduces the <em>number of bytecodes executed</em> shows up directly as wall-clock time.
+</div>
+
+<h3>2.2 What is <code>python3-dbg</code>?</h3>
+<p>
+A debug build of CPython on Debian/Ubuntu. It's compiled without optimizations, with assertions on, and with debug symbols embedded. The debug symbols let tools like <code>perf</code> print human-readable function names in profile output instead of raw hex addresses. The trade-off: it's roughly 2× slower than the release build and its memory allocator does extra bookkeeping (<code>_PyMem_DebugCheckAddress</code>, <code>_PyMem_DebugRawFree</code>) that shows up in our profiles.
+</p>
+
+<h3>2.3 The GIL (Global Interpreter Lock)</h3>
+<p>
+CPython lets only one thread execute Python bytecode at a time. Concurrent threads don't parallelize CPU-bound Python code. Pyflate is single-threaded so the GIL doesn't hurt us, but the GIL check (<code>PyGILState_Check</code>) still shows up as a few percent of profile time.
+</p>
+
+<!-- ===================================================================== -->
+<h2 id="benchmarks">3. Benchmarks &amp; pyperformance</h2>
+
+<h3>3.1 What is a benchmark?</h3>
+<p>
+A benchmark is a small, self-contained program that measures how fast something runs. Good benchmarks are <em>reproducible</em> (same output every time), <em>deterministic</em> (no random noise dominates), and <em>representative</em> (the slow parts of the benchmark match the slow parts of real code).
+</p>
+
+<h3>3.2 pyperformance and pyperf</h3>
+<ul>
+  <li><strong>pyperformance</strong> is a Python-benchmark suite maintained by the CPython team. It ships ~60 benchmarks and knows how to build isolated virtualenvs, run each benchmark, and print stable timings.</li>
+  <li><strong>pyperf</strong> is the low-level timing engine. It handles warm-up iterations, calibration (deciding how many inner iterations to use), and statistical analysis (mean ± std-dev, outlier detection).</li>
+</ul>
+<p>Typical run:</p>
+<pre>python3-dbg -m pyperformance run --bench pyflate</pre>
+<p>That produces something like:</p>
+<pre>pyflate: Mean +- std dev: 516 ms +- 29 ms</pre>
+
+<h3>3.3 Warm-up, values, processes</h3>
+<p>pyperf uses three levels of repetition:</p>
+<table>
+<tr><th>Level</th><th>What it is</th><th>Why</th></tr>
+<tr><td><strong>loops</strong></td><td>Inner iterations inside one timed measurement</td><td>Make the timed region big enough that clock resolution doesn't dominate</td></tr>
+<tr><td><strong>values</strong></td><td>Number of measurements per process</td><td>Statistical noise reduction</td></tr>
+<tr><td><strong>processes</strong></td><td>Number of fresh Python processes</td><td>Averages out per-process JIT/warm-up effects</td></tr>
+</table>
+<p>Default non-fast mode: 3 processes × 20 values = 60 measured iterations. <code>--fast</code>: fewer, quicker but less stable.</p>
+
+<h3>3.4 The MD5 correctness gate</h3>
+<p>
+At the end of every timed iteration, pyflate does <code>hashlib.md5(out).hexdigest() != "afa004a630fe072901b1d9628b960974"</code> and raises if it fails. This means any correctness bug crashes the benchmark. When we optimized, we automatically had a correctness check on every single measurement.
+</p>
+
+<!-- ===================================================================== -->
+<h2 id="compression">4. Compression 101 — DEFLATE and bzip2</h2>
+
+<h3>4.1 What is compression?</h3>
+<p>
+Compression replaces frequent patterns in a file with shorter codes, and rare patterns with longer codes. The average code length ends up smaller than the raw byte size, so the file shrinks. Decompression is the reverse: turn codes back into original bytes.
+</p>
+
+<h3>4.2 gzip / DEFLATE (RFC 1951)</h3>
+<p>
+gzip uses the DEFLATE algorithm. DEFLATE has two ingredients:
+</p>
+<ul>
+  <li><strong>LZ77</strong>: replace repeated substrings with back-references — "the byte pattern at offset X, N bytes long".</li>
+  <li><strong>Huffman coding</strong>: replace the resulting literal bytes and back-reference tokens with variable-length prefix codes.</li>
+</ul>
+<p>Magic bytes of a gzip file: <code>0x1f 0x8b</code>.</p>
+
+<h3>4.3 bzip2 (used by pyflate's workload)</h3>
+<p>bzip2 is more elaborate. It stacks four transforms:</p>
+<ol>
+  <li><strong>Burrows-Wheeler Transform (BWT)</strong>: shuffle the input so that similar characters cluster. Doesn't compress by itself, but makes subsequent stages much more effective.</li>
+  <li><strong>Move-to-Front (MTF)</strong>: replace each byte with the index of that byte in a "recently seen" list, then move it to the front. Turns clusters into low-numbered indices.</li>
+  <li><strong>Run-Length Encoding (RLE)</strong>: collapse runs of zeros (very common after MTF) into short markers.</li>
+  <li><strong>Huffman coding</strong>: apply canonical Huffman codes to the resulting symbol stream.</li>
+</ol>
+<p>Magic bytes of a bzip2 file: <code>0x42 0x5a</code> (ASCII <code>"BZ"</code>). The pyflate workload starts with <code>0x42 0x5a</code>, so <em>only the bzip2 path is exercised</em>. The gzip code path is present in the source but not timed.</p>
+
+<div class="warn">
+<strong>Common confusion</strong>
+People sometimes think "bzip2 = gzip but bigger." No — they're completely different algorithms. bzip2 uses BWT + MTF + RLE + Huffman; gzip uses LZ77 + Huffman. They just happen to both produce compressed byte streams.
+</div>
+
+<!-- ===================================================================== -->
+<h2 id="pyflate">5. What pyflate actually does, function by function</h2>
+
+<h3>5.1 The entry point</h3>
+<pre>if __name__ == '__main__':
+    runner = pyperf.Runner()
+    filename = os.path.join(os.path.dirname(__file__),
+                            "data", "interpreter.tar.bz2")
+    runner.bench_time_func('pyflate', bench_pyflake, filename)</pre>
+<p><code>bench_pyflake(loops, filename)</code> is the timed function. Inside it, a <code>for _ in range(loops)</code> loop opens the file, wraps it in an <code>RBitfield</code> (MSB-first bit reader), reads two bytes of magic, and dispatches to <code>gzip_main</code> or <code>bzip2_main</code>. When the loop ends, it takes MD5 of the last output and asserts.</p>
+
+<h3>5.2 <code>Bitfield</code> and <code>RBitfield</code></h3>
+<p>These are the bit readers. They wrap a byte-oriented file and let the caller ask for arbitrary numbers of bits at a time.</p>
+<ul>
+  <li><strong><code>Bitfield</code></strong> is LSB-first (used by gzip / DEFLATE — bits within a byte are read low-to-high).</li>
+  <li><strong><code>RBitfield</code></strong> is MSB-first (used by bzip2 — bits within a byte are read high-to-low).</li>
+</ul>
+<p>Both expose two methods used everywhere:</p>
+<ul>
+  <li><code>snoopbits(n)</code>: look at the next n bits without consuming them.</li>
+  <li><code>readbits(n)</code>: return the next n bits and advance.</li>
+</ul>
+
+<h3>5.3 <code>HuffmanTable</code> and <code>HuffmanLength</code></h3>
+<p>
+A Huffman table is a Python list of <code>HuffmanLength</code> objects sorted by bit-length. Each entry stores <code>(code, bits, symbol, reverse_symbol)</code>. The critical method is:
+</p>
+<pre>def find_next_symbol(self, field, reversed=True):
+    cached_length = -1
+    cached = None
+    for x in self.table:
+        if cached_length != x.bits:
+            cached = field.snoopbits(x.bits)
+            cached_length = x.bits
+        if (reversed and x.reverse_symbol == cached) or \
+           (not reversed and x.symbol == cached):
+            field.readbits(x.bits)
+            return x.code
+    raise Exception("unfound symbol")</pre>
+<p>This is a <em>linear scan</em> over the whole table for every symbol emitted. If the table has 200 entries and the block emits a million symbols, that's 100 million Python attribute reads. This is our bottleneck.</p>
+
+<h3>5.4 <code>decode_huffman_block</code> — the timed hot loop</h3>
+<p>Rough structure inside one bzip2 block:</p>
+<pre>while True:
+    r = t.find_next_symbol(b, False)   # <-- called millions of times
+    if 0 <= r <= 1:
+        # accumulate RLE repeat count for RUN symbols
+    elif r == symbols_in_use - 1:
+        break                           # end of block
+    else:
+        buffer.append(favourites[r - 1])
+        move_to_front(favourites, r - 1)   # <-- also hot</pre>
+<p>Then, once the block ends, <code>bwt_reverse(joined_buffer, pointer)</code> inverts the Burrows-Wheeler transform and a byte-level RLE pass writes the decompressed bytes to <code>out</code>.</p>
+
+<h3>5.5 <code>move_to_front</code>, <code>bwt_transform</code>, <code>bwt_reverse</code></h3>
+<p><code>move_to_front(l, c)</code> is a Python one-liner that rotates the element at index c to position 0:</p>
+<pre>def move_to_front(l, c):
+    l[:] = l[c:c+1] + l[0:c] + l[c+1:]</pre>
+<p>Three slice allocations every call. Elegant but not fast.</p>
+<p><code>bwt_transform</code> builds an index array called <code>base</code> for the inverse BWT. The original does:</p>
+<pre>F = bytes(sorted(L))
+base = []
+for i in range(256):
+    base.append(F.find(int2byte(i)))    # 256 linear scans</pre>
+<p>256 <code>bytes.find</code> calls, each O(N) where N can be ~900 000 bytes. That's ~230 million byte comparisons per bzip2 block — pure C-level work but not free.</p>
+
+<!-- ===================================================================== -->
+<h2 id="huffman">6. Huffman coding, deeply</h2>
+
+<h3>6.1 The core idea</h3>
+<p>
+David Huffman's 1952 algorithm builds a binary tree where each leaf is a symbol. Frequent symbols end up near the root (short codes); rare symbols end up deep (long codes). The tree has the <em>prefix property</em>: no code is a prefix of another, so a stream of concatenated codes can be decoded without markers.
+</p>
+<p>Example: for symbols A, B, C, D, E with frequencies (5, 4, 3, 2, 1):</p>
+<pre>              (15)
+             /    \
+           (9)    (6)
+          /  \   /  \
+        (5) (4) (3) (3)
+         A   B   C  / \
+                  (2) (1)
+                   D   E
+
+Codes: A=00  B=01  C=10  D=110  E=111</pre>
+
+<h3>6.2 Canonical Huffman codes</h3>
+<p>
+For a decoder you don't need the tree structure — only the <em>bit-length</em> of every symbol. Given the lengths, canonical form assigns codes in a deterministic way: sort symbols by length, assign the first N-bit code as <code>0…0</code>, increment for each subsequent code of the same length, left-shift when the length increases.
+</p>
+<p>Our example, canonical order (bits, symbol) = (2,A), (2,B), (2,C), (3,D), (3,E):</p>
+<pre>A: code = 00
+B: code = 01     (A+1)
+C: code = 10     (B+1)
+D: code = 110    (C+1) << 1
+E: code = 111    (D+1)</pre>
+<p>This is exactly what <code>HuffmanTable.populate_huffman_symbols</code> computes.</p>
+
+<h3>6.3 The two ways to decode</h3>
+<ol>
+  <li><strong>Linear scan (what pyflate ORIGINALLY does):</strong> for every incoming bit stream, iterate over the table; for each unique bit-length, snoop that many bits and check against <code>x.symbol</code> or <code>x.reverse_symbol</code>. O(#codes) per symbol.</li>
+  <li><strong>Lookup table (what our OPTIMIZED version does):</strong> snoop <code>MAX_BITS</code> bits (where MAX_BITS = the longest code in the table). Use those bits as an index into a precomputed table of size 2^MAX_BITS. Each entry stores <code>(symbol, code_length)</code>. Consume <code>code_length</code> bits from the stream. O(1) per symbol.</li>
+</ol>
+
+<h4>Why the LUT works — the key trick</h4>
+<p>
+When you snoop MAX_BITS bits, a short code (say 2 bits) sits in only part of those MAX_BITS. The remaining <code>MAX_BITS - 2</code> bits are whatever comes next in the stream — the <em>suffix</em>. For a code of length <code>bits</code>, the same code plus every possible suffix would produce <code>2^(MAX_BITS-bits)</code> different snoop values, all of which should decode to the same symbol.
+</p>
+<p>So when we build the LUT we fill all <code>2^(MAX_BITS-bits)</code> matching slots with the same <code>(symbol, code_length)</code> entry. Then a single lookup gets us the right answer no matter what the suffix bits happen to be.</p>
+
+<figure>
+<svg class="diagram" viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg">
+<style>
+.box { fill: #f4f1ee; stroke: #b8410a; stroke-width: 1.5; }
+.txt { font-family: "Cascadia Code", monospace; font-size: 12px; fill: #1a1a1a; }
+.lbl { font-family: "Inter", sans-serif; font-size: 13px; fill: #4a4a4a; }
+.arrow { stroke: #b8410a; stroke-width: 1.5; fill: none; marker-end: url(#a); }
+</style>
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#b8410a"/></marker></defs>
+<text x="20" y="20" class="lbl">Stream bits (MSB-first): 10 111 01 110 ...</text>
+<rect x="20" y="35" width="35" height="30" class="box"/><text x="30" y="55" class="txt">1</text>
+<rect x="55" y="35" width="35" height="30" class="box"/><text x="65" y="55" class="txt">0</text>
+<rect x="90" y="35" width="35" height="30" class="box"/><text x="100" y="55" class="txt">1</text>
+<text x="130" y="55" class="lbl">← snoop 3 bits = 0b101 = 5</text>
+<text x="20" y="100" class="lbl">LUT (max_bits=3, size=8):</text>
+<rect x="20" y="110" width="80" height="20" class="box"/><text x="26" y="124" class="txt">LUT[000]=A,2</text>
+<rect x="20" y="130" width="80" height="20" class="box"/><text x="26" y="144" class="txt">LUT[001]=A,2</text>
+<rect x="20" y="150" width="80" height="20" class="box"/><text x="26" y="164" class="txt">LUT[010]=B,2</text>
+<rect x="20" y="170" width="80" height="20" class="box"/><text x="26" y="184" class="txt">LUT[011]=B,2</text>
+<rect x="20" y="190" width="80" height="20" class="box"/><text x="26" y="204" class="txt">LUT[100]=C,2</text>
+<rect x="120" y="190" width="80" height="20" class="box" fill="#e6f5e6"/><text x="126" y="204" class="txt">LUT[101]=C,2</text>
+<rect x="120" y="170" width="80" height="20" class="box"/><text x="126" y="184" class="txt">LUT[110]=D,3</text>
+<rect x="120" y="150" width="80" height="20" class="box"/><text x="126" y="164" class="txt">LUT[111]=E,3</text>
+<path d="M 145,85 L 145,180" class="arrow"/>
+<text x="240" y="150" class="lbl">Result: symbol C, consume 2 bits.</text>
+<text x="240" y="170" class="lbl">Suffix bit "1" stays in the stream</text>
+<text x="240" y="185" class="lbl">for the next lookup.</text>
+</svg>
+<figcaption>Canonical Huffman LUT lookup — one memory access per symbol.</figcaption>
+</figure>
+
+<div class="idea">
+<strong>Why this is the hardware kernel</strong>
+Every real DEFLATE / bzip2 hardware decompressor implements exactly this: a small BRAM (block RAM inside an FPGA) filled with the LUT entries, and a barrel-shifter feeding it MAX_BITS bits per cycle. Because MAX_BITS ≤ 15 for DEFLATE, the LUT fits in ~64 KB — one or two BRAMs.
+</div>
+
+<!-- ===================================================================== -->
+<h2 id="profiling">7. Profiling tools — perf, py-spy, flame graphs</h2>
+
+<h3>7.1 The generic idea of a profiler</h3>
+<p>
+A profiler answers "where does my program spend its time?" There are two families:
+</p>
+<ul>
+  <li><strong>Sampling profilers</strong> interrupt the program periodically (e.g. 999 times a second) and record the call stack at that instant. If a function takes 30 % of runtime, ~30 % of samples land in it.</li>
+  <li><strong>Instrumenting profilers</strong> insert counters around every function entry/exit. More accurate but slow the program down a lot.</li>
+</ul>
+<p>We use sampling profilers because pyflate finishes quickly and instrumenting overhead would distort the picture.</p>
+
+<h3>7.2 <code>perf</code> (Linux only)</h3>
+<p>
+<code>perf</code> is a Linux kernel tool. It reads two things:
+</p>
+<ol>
+  <li><strong>Software events</strong> from the kernel scheduler: task-clock, cpu-clock, page-faults, context-switches, cpu-migrations. Always available.</li>
+  <li><strong>Hardware events</strong> from the CPU's Performance Monitoring Unit (PMU): cycles, instructions, branches, branch-misses, cache-references, cache-misses. Require direct hardware access — <em>disabled inside most VMs</em>.</li>
+</ol>
+<p>Three modes we use:</p>
+<pre># count events across many runs
+perf stat -r 3 -e task-clock,cpu-clock,cycles,instructions ... -- <cmd>
+
+# sample call stacks at 999 Hz
+perf record -F 999 -g -o out.data -- <cmd>
+
+# read back the samples grouped by function
+perf report --stdio -i out.data > report.txt</pre>
+
+<h3>7.3 py-spy</h3>
+<p>
+py-spy is a Rust binary that reads a running Python process's memory and reconstructs its Python call stack. Unlike perf, it works on Windows too (that's how we generated flame graphs on your laptop). It produces SVG flame graphs directly.
+</p>
+
+<h3>7.4 Flame graphs</h3>
+<p>
+Brendan Gregg's visualization: each bar is a function. The <em>width</em> of the bar is how much time was spent in that function or its callees. The <em>height</em> is how deeply nested it is. Wide bars = big cost. Tall thin bars are just deeply nested but not necessarily costly.
+</p>
+<p>Our five flame graphs (<code>flamegraph_pyspy_{baseline,attempt1,attempt2,attempt3,final}.svg</code>) drop from 6847 samples (baseline) to 4984 (final) over the same workload — visual confirmation of the ~30 % speedup.</p>
+
+<div class="warn">
+<strong>Common exam trap</strong>
+"Flame graph width is the percentage of time" — <em>almost</em>. It's the percentage of <em>sampled</em> time. If your total runtime dropped 30 %, a function that keeps its width didn't get slower; the rest of the program just got faster. Always cross-check against absolute wall-clock time.
+</div>
+
+<!-- ===================================================================== -->
+<h2 id="bottleneck">8. Finding the bottleneck</h2>
+
+<h3>8.1 What we saw in perf report (VM baseline, KVM run)</h3>
+<table>
+<tr><th>Symbol</th><th class="num">Self %</th><th>What it is</th></tr>
+<tr><td><code>_PyEval_EvalFrameDefault</code></td><td class="num">22.81</td><td>Python opcode dispatch loop — always #1 on pure-Python workloads.</td></tr>
+<tr><td><code>_PyMem_DebugCheckAddress</code></td><td class="num">4.06</td><td>python3-dbg's debug allocator, checks every pointer.</td></tr>
+<tr><td><code>__memset_avx2_unaligned_erms</code></td><td class="num">3.11</td><td>libc memory-clear (called during allocation/dealloc).</td></tr>
+<tr><td><code>read_size_t</code></td><td class="num">2.75</td><td>python3-dbg's alloc-size read helper.</td></tr>
+<tr><td><code>call_function.lto_priv.0</code></td><td class="num">2.56</td><td>Fast-path Python function-call setup.</td></tr>
+<tr><td><code>list_dealloc.lto_priv.0</code></td><td class="num"><b>2.33</b></td><td><b>MTF-caused list cleanup</b> — the slice pattern <code>l[:] = l[c:c+1]+l[0:c]+l[c+1:]</code>. Attempt 2 removed this.</td></tr>
+<tr><td><code>list_ass_slice</code></td><td class="num"><b>1.96</b></td><td><b>MTF-caused slice assignment</b> — same origin. Also dropped by Attempt 2.</td></tr>
+<tr><td><code>pthread_getspecific</code></td><td class="num">1.92</td><td>Thread-local storage lookup (GIL / interpreter state).</td></tr>
+</table>
+
+<p><strong>Sharp evidence Attempt 2 worked:</strong> in the FINAL run's perf
+report, <code>list_dealloc</code> and <code>list_ass_slice</code> BOTH drop out of the top 15 —
+they were the fingerprint of the original <code>move_to_front</code>'s three slice
+allocations per symbol, and rewriting it as <code>l.insert(0, l.pop(c))</code> made
+them disappear.</p>
+
+<h3>8.2 Interpretation</h3>
+<p>
+The interpreter loop tops the list because <em>everything</em> in Python runs through it. But underneath, three cost patterns stand out:
+</p>
+<ol>
+  <li><strong>Object churn</strong> (list_dealloc, MTF slices, tuple lookups) — created by the algorithms operating on Python-level objects.</li>
+  <li><strong>Integer boxing</strong> (PyLong_New) — <code>readbits</code>/<code>snoopbits</code> do lots of small arithmetic; each result becomes a heap-allocated <code>PyLong</code>.</li>
+  <li><strong>Debug allocator overhead</strong> — real deployments wouldn't use python3-dbg, so this is inflated; we mention but don't attack it.</li>
+</ol>
+
+<h3>8.3 The one function to attack</h3>
+<p>
+Adding perf report's evidence to the code inspection: <strong><code>HuffmanTable.find_next_symbol</code></strong> is the algorithmic bottleneck. It's called once per emitted symbol and does an O(#codes) Python scan. The interpreter cost that shows up in <code>_PyEval_EvalFrameDefault</code> is largely <em>caused</em> by this function. Replace it and everything else drops proportionally.
+</p>
+
+<!-- ===================================================================== -->
+<h2 id="attempts">9. The three optimization attempts</h2>
+
+<div class="note">
+<strong>Attempt discipline</strong>
+Each attempt makes exactly one focused change. This lets us blame or revert single ideas, and gives the graders a clean before/after per idea.
+</div>
+
+<h3>9.1 Attempt 1 — Canonical Huffman lookup table</h3>
+<p><em>Target: the linear scan in <code>find_next_symbol</code>.</em></p>
+<p>We add a method that builds a lookup table of size <code>2^max_bits</code> and caches it on the <code>HuffmanTable</code> instance. Two directions:</p>
+<ul>
+  <li><strong>reversed=True</strong> (gzip / LSB-first Bitfield): bits are read low-to-high, so the code sits in the LOW bits of the snoop value. LUT index formula: <code>lut[(suffix << bits) | reverse_symbol] = (code, bits)</code>.</li>
+  <li><strong>reversed=False</strong> (bzip2 / MSB-first RBitfield): bits are read high-to-low, so the code sits in the HIGH bits of the snoop value. LUT index formula: <code>lut[(symbol << (max_bits - bits)) | suffix] = (code, bits)</code>.</li>
+</ul>
+<p>The new <code>find_next_symbol</code>:</p>
+<pre>def find_next_symbol(self, field, reversed=True):
+    attr = "_lut_rev" if reversed else "_lut_fwd"
+    lut = getattr(self, attr, None)
+    if lut is None:
+        lut = self._build_lut(reversed); setattr(self, attr, lut)
+    try:
+        code, bits = lut[field.snoopbits(self.max_bits)]
+    except Exception:
+        return self._fallback_scan(field, reversed)   # true EOF safety
+    if code < 0:
+        return self._fallback_scan(field, reversed)   # empty slot
+    field.readbits(bits)
+    return code</pre>
+<p><strong>Correctness risk:</strong> zero if the LUT is built right. The fallback covers the rare edge case where <code>snoopbits(max_bits)</code> throws at end-of-stream before a shorter code would have matched.</p>
+
+<h3>9.2 Attempt 2 — MTF, BWT, and int2byte cleanup</h3>
+<p>Three surgical changes stacked on Attempt 1:</p>
+<pre># before
+def move_to_front(l, c):
+    l[:] = l[c:c+1] + l[0:c] + l[c+1:]
+
+# after
+def move_to_front(l, c):
+    if c:
+        l.insert(0, l.pop(c))</pre>
+<p>Same asymptotic O(N), but no temporary slice objects.</p>
+<pre># before  (256 whole-block scans)
+F = bytes(sorted(L))
+base = [F.find(int2byte(i)) for i in range(256)]
+
+# after  (one pass + cumulative sum)
+counts = [0]*256
+for c in L: counts[c] += 1
+base = [0]*256
+total = 0
+for i in range(256):
+    base[i] = total if counts[i] else -1
+    total += counts[i]</pre>
+<p>The <code>-1</code> sentinel matches the original's <code>bytes.find</code> return value for missing bytes.</p>
+<pre># precomputed byte-to-bytes table replaces struct.pack per call
+_INT2BYTE = tuple(bytes((i,)) for i in range(256))</pre>
+
+<h3>9.3 Attempt 3 — Hot-loop attribute hoisting</h3>
+<p>Python attribute reads (e.g. <code>favourites.pop</code>) do a dict lookup on the object. In a tight loop that adds up. We hoist them to local variables:</p>
+<pre>while True:
+    ...
+    r = t_find(b, False)                # was t.find_next_symbol
+    if 0 <= r <= 1:
+        ...
+    elif repeat > 0:
+        buffer_append(favourites[0] * repeat)   # was buffer.append
+        repeat = 0
+    if r == end_symbol:
+        break
+    else:
+        idx = r - 1
+        o = favourites[idx]
+        if idx:
+            favourites_insert(0, favourites_pop(idx))
+        buffer_append(o)</pre>
+<p>Also the byte-RLE decode uses direct integer indexing into the <code>bytes</code> object (no per-byte slicing) with the precomputed <code>_INT2BYTE</code> table.</p>
+
+<h3>9.4 Final = Attempt 3</h3>
+<p><code>subPyflate/optimized/final/</code> is a copy of Attempt 3. Rationale: it strictly layers all three optimizations, and both the Windows pyperformance run (+29.84 %) and the VM perf run (+41.10 %) confirm it as the fastest correct choice.</p>
+
+<!-- ===================================================================== -->
+<h2 id="results">10. Measured results</h2>
+
+<h3>10.1 VM official (course CS-lab QEMU on naranja4, KVM + PMU passthrough)</h3>
+<table>
+<tr><th>Metric</th><th class="num">Baseline</th><th class="num">Final</th><th class="num">Δ %</th></tr>
+<tr><td>Elapsed (s)</td><td class="num">120.99 ± 6.80</td><td class="num">76.307 ± 0.236</td><td class="num"><b>−36.93 %</b></td></tr>
+<tr><td>task-clock (msec)</td><td class="num">113,777</td><td class="num">76,417</td><td class="num">−32.84 %</td></tr>
+<tr><td>instructions</td><td class="num">579.5 B</td><td class="num">389.0 B</td><td class="num"><b>−32.87 %</b></td></tr>
+<tr><td>branches</td><td class="num">142.4 B</td><td class="num">94.7 B</td><td class="num"><b>−33.51 %</b></td></tr>
+<tr><td>branch-misses</td><td class="num">770.7 M (0.52 %)</td><td class="num">479.3 M (0.51 %)</td><td class="num"><b>−37.82 %</b></td></tr>
+<tr><td>cache-references</td><td class="num">543.6 M</td><td class="num">410.3 M</td><td class="num"><b>−24.53 %</b></td></tr>
+<tr><td>cache-misses</td><td class="num">28.0 M (4.09 %)</td><td class="num">28.4 M (6.93 %)</td><td class="num">+1.47 %</td></tr>
+<tr><td>page-faults</td><td class="num">463,011</td><td class="num">458,789</td><td class="num">−0.91 %</td></tr>
+</table>
+<p>Speedup: <b>1.586×</b>. Target ≥ 7 % — <strong>ACHIEVED with ~5× margin</strong>.</p>
+<p><strong>Cycles counter:</strong> reports 0 due to a KVM-specific PMU-event limitation on the naranja4 Xeon E5-2630 v3 host. Every OTHER hardware counter is captured. Documented in the report; identical caveat as the raytrace team's own PMU note.</p>
+
+<h3>10.2 Windows cross-check (CPython 3.12, pyperformance non-fast)</h3>
+<table>
+<tr><th>Version</th><th class="num">Mean (ms)</th><th class="num">Std dev (ms)</th></tr>
+<tr><td>ORIGINAL</td><td class="num">516</td><td class="num">29</td></tr>
+<tr><td>FINAL</td><td class="num">362</td><td class="num">22</td></tr>
+<tr><td>Improvement</td><td class="num" colspan="2"><b>+29.84 %</b></td></tr>
+</table>
+
+<h3>10.3 Windows sweep across attempts (pyperformance --fast)</h3>
+<table>
+<tr><th>Version</th><th class="num">Mean (ms)</th><th class="num">Std dev</th><th class="num">Δ vs baseline</th></tr>
+<tr><td>baseline</td><td class="num">540</td><td class="num">24</td><td class="num">—</td></tr>
+<tr><td>attempt1 (LUT alone)</td><td class="num">453</td><td class="num">17</td><td class="num">+16.1 %</td></tr>
+<tr><td>attempt2 (+MTF/BWT/int2byte)</td><td class="num">354</td><td class="num">9</td><td class="num">+34.4 %</td></tr>
+<tr><td>attempt3 (+hoisting)</td><td class="num">324</td><td class="num">6</td><td class="num">+40.0 %</td></tr>
+<tr><td>final (=attempt3)</td><td class="num">348</td><td class="num">22</td><td class="num">+35.6 %</td></tr>
+</table>
+
+<h3>10.4 Correctness</h3>
+<p>Every attempt, every environment: <code>IDENTICAL=YES</code> against the preserved original bytes, <code>MATCHES_REFERENCE=YES</code> against the pyflate MD5 <code>afa004a630fe072901b1d9628b960974</code>. See <code>results/{attempt1,attempt2,attempt3,final}/correctness_report.txt</code>.</p>
+
+<h3>10.5 The "Attempt 1 alone is a regression" finding</h3>
+<p>
+Our custom cold-loop benchmark (<code>scripts/windows_bench.py</code>) showed Attempt 1 <em>slower</em> than baseline by 32 %. Reason: <code>_build_lut</code> is a Python <code>for</code> loop that fills up to <code>2^max_bits</code> entries (≈ 131 000 for max_bits=17) per Huffman group. On short workloads the build cost dominates the per-symbol savings.
+</p>
+<p>Under pyperformance's warmed-up methodology the same code shows <em>+16 %</em> because the LUT-build cost is amortized across many timed iterations. Both are true; they measure different aspects of the same optimization.</p>
+<p>This finding <strong>strengthens the hardware story</strong>: BRAM has O(1) load <em>and</em> O(1) lookup with no interpreter overhead on either axis.</p>
+
+<!-- ===================================================================== -->
+<h2 id="hardware-why">11. Why hardware?</h2>
+
+<h3>11.1 Where the Python-side wins run out</h3>
+<p>Even after all three optimizations, the interpreter tax on Python is unavoidable. Each symbol still passes through <code>_PyEval_EvalFrameDefault</code>. There's no way to write pure Python that gets faster than one opcode per emitted symbol.</p>
+
+<h3>11.2 Hardware removes the whole interpreter</h3>
+<p>An FPGA can execute the canonical Huffman lookup in one clock cycle (with pipelining, potentially one symbol per clock). No opcode dispatch, no attribute reads, no garbage-collected boxes. The <em>same algorithm</em> we discovered in software becomes 100–1000× faster in hardware because it's not running through an interpreter.</p>
+
+<h3>11.3 Why this specific kernel</h3>
+<p>Three reasons Huffman decoding is a natural hardware target:</p>
+<ul>
+  <li>The data-flow is fixed — snoop, look up, consume. No branches on the actual data.</li>
+  <li>The state is tiny — a bit buffer, a symbol counter, a small FSM.</li>
+  <li>The lookup table maps beautifully onto FPGA block RAM (BRAM). One BRAM tile = ~36 kbit = enough for a MAX_BITS=15 table.</li>
+</ul>
+
+<!-- ===================================================================== -->
+<h2 id="hardware-what">12. The accelerator design</h2>
+
+<h3>12.1 The three modules</h3>
+
+<figure>
+<svg class="diagram" viewBox="0 0 700 330" xmlns="http://www.w3.org/2000/svg">
+<style>
+.mod { fill: #f7e8dd; stroke: #b8410a; stroke-width: 2; }
+.blk { fill: #f4f1ee; stroke: #4a4a4a; stroke-width: 1.2; }
+.io  { fill: none; stroke: #4a4a4a; stroke-dasharray: 4 3; stroke-width: 1; }
+.lbl { font-family: "Inter", sans-serif; font-size: 12px; fill: #1a1a1a; }
+.tit { font-family: "Inter", sans-serif; font-size: 13px; font-weight: 700; fill: #b8410a; }
+.arrow { stroke: #b8410a; stroke-width: 1.8; fill: none; marker-end: url(#a2); }
+</style>
+<defs><marker id="a2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#b8410a"/></marker></defs>
+<rect x="30" y="40" width="640" height="260" rx="10" class="mod"/>
+<text x="50" y="60" class="tit">huffman_decoder.sv — top module</text>
+
+<rect x="60" y="90" width="180" height="90" class="blk"/>
+<text x="80" y="112" class="tit">bit_shifter</text>
+<text x="80" y="132" class="lbl">rolling MSB-first buffer</text>
+<text x="80" y="148" class="lbl">snoop(MAX_BITS) → out</text>
+<text x="80" y="164" class="lbl">consume(N) → advance</text>
+
+<rect x="460" y="90" width="180" height="90" class="blk"/>
+<text x="480" y="112" class="tit">huff_lut</text>
+<text x="480" y="132" class="lbl">BRAM 1 &lt;&lt; MAX_BITS deep</text>
+<text x="480" y="148" class="lbl">entry: {code_bits, symbol}</text>
+<text x="480" y="164" class="lbl">write port + read port</text>
+
+<rect x="260" y="200" width="180" height="80" class="blk"/>
+<text x="280" y="222" class="tit">FSM</text>
+<text x="280" y="242" class="lbl">S_IDLE → S_ISSUE</text>
+<text x="280" y="256" class="lbl">→ S_WAIT → S_CONSUME</text>
+<text x="280" y="272" class="lbl">counts symbols_left</text>
+
+<path d="M 240,135 L 460,135" class="arrow"/>
+<text x="260" y="128" class="lbl">snoop (MAX_BITS bits)</text>
+
+<path d="M 460,155 L 240,155" class="arrow"/>
+<text x="260" y="172" class="lbl">consume ← code_bits</text>
+
+<path d="M 550,180 L 550,235 L 440,235" class="arrow"/>
+<text x="465" y="195" class="lbl">(symbol, bits) → FSM</text>
+
+<path d="M 260,240 L 150,240 L 150,180" class="arrow"/>
+<text x="160" y="255" class="lbl">consume signal</text>
+
+<rect x="20" y="230" width="30" height="30" class="io"/>
+<text x="0" y="270" class="lbl">byte in</text>
+<path d="M 50,245 L 60,150" class="arrow"/>
+
+<rect x="650" y="230" width="30" height="30" class="io"/>
+<text x="650" y="270" class="lbl">symbol out</text>
+<path d="M 550,220 L 655,240" class="arrow"/>
+</svg>
+<figcaption>Three RTL modules and their data flow.</figcaption>
+</figure>
+
+<h4><code>huff_lut.sv</code> — the memory</h4>
+<p>A synchronous BRAM-shaped block. One write port lets the CPU upload the canonical Huffman table one entry at a time before decode starts. One read port lets the decoder query the LUT during decode. Each entry is <code>{code_bits[4:0], symbol[15:0]}</code> — 21 bits, padded to 32 for BRAM friendliness. Depth = <code>1 << MAX_BITS</code>.</p>
+
+<h4><code>bit_shifter.sv</code> — the bit reader</h4>
+<p>A rolling buffer that mirrors the software <code>RBitfield</code>:</p>
+<ul>
+  <li>Accepts a new byte per cycle when <code>can_accept_byte</code> is high; new byte enters the LOW 8 bits, old bits shift UP by 8 (matches RBitfield's <code>_more()</code>).</li>
+  <li>Exposes <code>snoop</code> — the top MAX_BITS bits of the valid buffer contents.</li>
+  <li>Accepts <code>consume</code> per cycle — drops that many bits from the top.</li>
+</ul>
+<p>Combinational path (single cycle): the same clock edge can consume old bits AND absorb a new byte, matching what pyflate does in software when <code>readbits</code> triggers <code>needbits</code>.</p>
+
+<h4><code>huffman_decoder.sv</code> — the FSM</h4>
+<p>Four states:</p>
+<ol>
+  <li><code>S_IDLE</code>: wait for <code>start</code>. On start, latch <code>max_symbols</code> and flush the shifter.</li>
+  <li><code>S_ISSUE</code>: when <code>snoop_ready</code> is high (buffer has ≥ MAX_BITS bits), assert LUT read enable with <code>rd_addr = snoop</code>.</li>
+  <li><code>S_WAIT</code>: wait one cycle for the LUT synchronous read to return <code>(symbol, code_bits)</code>. If <code>code_bits == 0</code>, latch error and go idle.</li>
+  <li><code>S_CONSUME</code>: assert <code>bs_consume = code_bits</code>, pulse <code>symbol_valid</code>. Decrement <code>symbols_left</code>. If zero, pulse <code>done</code> and go idle; else back to <code>S_ISSUE</code>.</li>
+</ol>
+<p>Throughput: 1 symbol every 3 clocks in this v1. A pipelined v2 (registering the snoop, folding WAIT into ISSUE) could hit 1 symbol per clock. That improvement is documented as future work in <code>docs/13_hardware_performance.md</code>.</p>
+
+<!-- ===================================================================== -->
+<h2 id="rtl">13. SystemVerilog RTL walkthrough</h2>
+
+<h3>13.1 SystemVerilog crash course</h3>
+<ul>
+  <li><strong>module</strong>: reusable block with named ports.</li>
+  <li><strong>logic</strong>: signal type (like <code>wire</code> or <code>reg</code>, but modern).</li>
+  <li><strong>always_ff @(posedge clk)</strong>: describes flip-flops. Assignments here are <code>&lt;=</code> (non-blocking) and take effect at the next clock edge.</li>
+  <li><strong>always_comb</strong>: describes combinational logic (no state). Assignments are <code>=</code> and are re-evaluated whenever inputs change.</li>
+  <li><strong>parameter</strong>: compile-time constant that can be overridden when the module is instantiated.</li>
+  <li><strong>typedef enum</strong>: names for FSM state values.</li>
+</ul>
+
+<h3>13.2 <code>huff_lut.sv</code> annotated</h3>
+<pre>module huff_lut #( parameter int MAX_BITS = 15, ...) (
+    input  logic clk, rst_n,
+    input  logic wr_en, [MAX_BITS-1:0] wr_addr, ...,   // write port
+    input  logic rd_en, [MAX_BITS-1:0] rd_addr,        // read port
+    output logic [SYMBOL_WIDTH-1:0] rd_symbol,
+    output logic [CODE_BITS_W-1:0]  rd_bits,
+    output logic rd_valid);
+
+    logic [ENTRY_W-1:0] mem [0:DEPTH-1];   // this array becomes BRAM
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) rd_valid_q <= 0;
+        else begin
+            rd_valid_q <= 0;
+            if (wr_en) mem[wr_addr] <= {wr_bits, wr_symbol};
+            if (rd_en) begin
+                rd_data_q  <= mem[rd_addr];
+                rd_valid_q <= 1;
+            end
+        end
+    end
+    ...
+endmodule</pre>
+<p>Key point: the read is <em>registered</em> — data appears one cycle after <code>rd_en</code>. That's why the FSM has a separate <code>S_WAIT</code> state.</p>
+
+<h3>13.3 <code>bit_shifter.sv</code> — the tricky masking</h3>
+<pre>always_comb begin
+    if (consume != 0 && !under_run) begin
+        bits_after_consume = bits_q - consume;
+        buf_after_consume  = buffer & ((ONE << bits_after_consume) - ONE);
+    end else begin
+        bits_after_consume = bits_q;
+        buf_after_consume  = buffer;
+    end
+end</pre>
+<p>
+<code>(ONE << bits_after_consume) - ONE</code> is a mask of the low <code>bits_after_consume</code> bits set. ANDing zeroes out the bits we consumed from the top. In the flip-flops we then <em>maybe</em> shift a new byte in:
+</p>
+<pre>always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n || flush) begin buffer <= 0; bits_q <= 0; end
+    else if (byte_valid && (bits_after_consume + 8) <= BUF_W) begin
+        buffer <= (buf_after_consume << 8) | byte_data;
+        bits_q <= bits_after_consume + 8;
+    end else begin
+        buffer <= buf_after_consume;
+        bits_q <= bits_after_consume;
+    end
+end</pre>
+
+<h3>13.4 <code>huffman_decoder.sv</code> — the FSM in one page</h3>
+<p>Standard 2-block FSM (combinational <code>state_n</code> + sequential <code>state</code>):</p>
+<pre>always_comb begin
+    state_n = state;                       // default hold
+    /* default all outputs */
+    case (state)
+        S_IDLE:    if (start)         state_n = S_ISSUE;
+        S_ISSUE:   if (snoop_ready)   begin lut_rd_en=1; state_n=S_WAIT; end
+        S_WAIT:    if (lut_rd_valid) begin
+                      if (lut_rd_bits == 0) begin error=1; state_n=S_IDLE; end
+                      else state_n = S_CONSUME;
+                   end
+        S_CONSUME: begin
+                      bs_consume   = lut_rd_bits;
+                      symbol_valid = 1;
+                      if (symbols_left_q == 1) begin done=1; state_n=S_IDLE; end
+                      else state_n = S_ISSUE;
+                   end
+    endcase
+end
+always_ff @(posedge clk or negedge rst_n)
+    if (!rst_n) state <= S_IDLE; else state <= state_n;</pre>
+
+<!-- ===================================================================== -->
+<h2 id="testbenches">14. Testbenches &amp; verification</h2>
+
+<h3>14.1 What a testbench does</h3>
+<p>
+A testbench is not part of the chip. It's a Verilog program that <em>drives</em> the design (the DUT — Device Under Test), <em>checks</em> its outputs against an expected reference, and prints PASS/FAIL. Every module we wrote has a matching testbench under <code>hw/tb/</code>.
+</p>
+
+<h3>14.2 The three testbenches</h3>
+
+<h4><code>tb_huff_lut.sv</code></h4>
+<p>Writes 5 entries at random addresses, reads each back one cycle later, asserts exact match. Coverage: does the storage work?</p>
+
+<h4><code>tb_bit_shifter.sv</code></h4>
+<p>Maintains an in-testbench <em>software mirror</em> of the shifter (a scalar buffer). On every push/consume, compares the DUT's <code>snoop</code> and <code>bits_avail</code> against the mirror. Coverage: does the bit math match RBitfield's exact semantics under every combination of push, consume, and buffer fill level?</p>
+
+<h4><code>tb_huffman_decoder.sv</code> — the end-to-end test</h4>
+<p>Builds this canonical Huffman table (5 symbols, max_bits = 3):</p>
+<table>
+<tr><th>Symbol</th><th>Bits</th><th>Code (MSB-first)</th></tr>
+<tr><td>0</td><td>2</td><td>00</td></tr>
+<tr><td>1</td><td>2</td><td>01</td></tr>
+<tr><td>2</td><td>2</td><td>10</td></tr>
+<tr><td>3</td><td>3</td><td>110</td></tr>
+<tr><td>4</td><td>3</td><td>111</td></tr>
+</table>
+<p>Encodes the reference message <code>[0, 1, 2, 3, 4, 0, 4, 1]</code>:</p>
+<p><code>00 01 10 110 111 00 111 01</code> = <strong>19 bits</strong> = padded to 3 bytes = <code>0x1B 0x73 0xA0</code>.</p>
+<p>Loads the LUT via the write port, drives those three bytes into the shifter, calls <code>start</code>, collects the emitted symbols, compares against the reference — <strong>all 8 symbols must match exactly</strong>.</p>
+
+<h3>14.3 The simulator</h3>
+<p>Icarus Verilog 12.0 on Windows. Command per testbench:</p>
+<pre>iverilog -g2012 -o results/tb_X.vvp \
+    rtl/huff_lut.sv rtl/bit_shifter.sv rtl/huffman_decoder.sv tb/tb_X.sv
+vvp results/tb_X.vvp</pre>
+
+<h3>14.4 Results</h3>
+<div class="ok">
+<strong>All 22 checks pass</strong>
+<pre style="background: transparent; border: 0; padding: 0; margin: 0;">tb_huff_lut:         checks=5  errors=0  LUT RESULT:     ALL PASS
+tb_bit_shifter:      checks=8  errors=0  SHIFTER RESULT: ALL PASS
+tb_huffman_decoder:  checks=9  errors=0  DECODER RESULT: ALL PASS
+Total:               checks=22 errors=0</pre>
+</div>
+<p>Documented in <code>hw/results/SIMULATION_RESULTS.txt</code> with exact commands, simulator version, and per-testbench output.</p>
+
+<!-- ===================================================================== -->
+<h2 id="interface">15. HW/SW interface (proposed, not implemented)</h2>
+
+<h3>15.1 Register map at some base <code>BASE</code></h3>
+<table>
+<tr><th>Offset</th><th>Register</th><th>Purpose</th></tr>
+<tr><td><code>0x00</code></td><td><code>CTRL</code></td><td>bit 0 = start pulse; bit 1 = flush</td></tr>
+<tr><td><code>0x04</code></td><td><code>STATUS</code></td><td>bit 0 = busy; bit 1 = done; bit 2 = error</td></tr>
+<tr><td><code>0x08</code></td><td><code>MAX_SYMBOLS</code></td><td>32-bit symbols-to-decode counter</td></tr>
+<tr><td><code>0x0C</code></td><td><code>TABLE_ADDR</code></td><td>LUT write address</td></tr>
+<tr><td><code>0x10</code></td><td><code>TABLE_DATA</code></td><td><code>{code_bits[4:0], symbol[15:0]}</code></td></tr>
+<tr><td><code>0x14</code></td><td><code>INPUT_FIFO</code></td><td>push a compressed byte</td></tr>
+<tr><td><code>0x18</code></td><td><code>OUTPUT_FIFO</code></td><td>pop a decoded symbol</td></tr>
+</table>
+
+<h3>15.2 Execution sequence</h3>
+<pre>Python → C extension → driver → hardware
+   build canonical table (already software today)
+   for each Huffman group:
+       load LUT (2^MAX_BITS writes)
+       set MAX_SYMBOLS
+       CTRL[0] = 1                 (start)
+       feed bytes on AXI-Stream
+       drain symbols on AXI-Stream
+       wait for STATUS.done
+   assemble bytes for MTF/BWT/RLE post-processing on CPU</pre>
+
+<h3>15.3 What "proposed" means</h3>
+<p>The RTL is implemented and simulated. The MMIO wrapper, DMA engine, AXI4-Lite bus adapter, Python C-extension driver, and real FPGA integration are documented on paper (<code>docs/12_hw_sw_interface.md</code>) but not implemented. This is the same boundary the raytrace subproject drew.</p>
+
+<!-- ===================================================================== -->
+<h2 id="amdahl">16. Amdahl's Law &amp; estimated speedup</h2>
+
+<h3>16.1 The formula</h3>
+<p>If a fraction <em>P</em> of the total runtime is accelerated by a factor <em>S</em>, the overall speedup is:</p>
+<pre>Speedup = 1 / ( (1 − P) + P/S )</pre>
+<p>Two intuitions from this:</p>
+<ul>
+  <li>If P is small, even S → ∞ can't help much. That's why we pick a hotspot.</li>
+  <li>If P is close to 1, the achievable speedup approaches S.</li>
+</ul>
+
+<h3>16.2 Applied to our case</h3>
+<p>Suppose <em>P</em> = 0.40 (the fraction of runtime inside the Huffman inner loop) and <em>S</em> = 10 (the accelerator runs the per-symbol work 10× faster than pure Python):</p>
+<pre>Speedup = 1 / (0.60 + 0.40/10) = 1 / 0.64 ≈ <b>1.56×</b>
+Improvement = (1 − 1/1.56) × 100 ≈ <b>36 %</b></pre>
+<p>Bracketing at S ∈ {5, 10, 20}:</p>
+<table>
+<tr><th>S</th><th class="num">Speedup</th><th class="num">Improvement</th></tr>
+<tr><td>5</td><td class="num">1.47×</td><td class="num">32.0 %</td></tr>
+<tr><td>10</td><td class="num">1.56×</td><td class="num">36.0 %</td></tr>
+<tr><td>20</td><td class="num">1.61×</td><td class="num">38.0 %</td></tr>
+</table>
+<p>All labeled <span class="badge estimated">ESTIMATED HW</span> in the report. The real <em>P</em> should be filled from a call-graph analysis of <code>profiling/perf_report_baseline.txt</code>.</p>
+
+<!-- ===================================================================== -->
+<h2 id="environment">17. Environment — VM, TCG, WHPX, and why we care</h2>
+
+<h3>17.1 What is QEMU?</h3>
+<p>
+QEMU is a machine emulator. It can run an entire operating system (a "guest") inside a program on your host. It emulates CPU, RAM, disks, network — everything a real machine has.
+</p>
+
+<h3>17.2 Acceleration backends</h3>
+<ul>
+  <li><strong>KVM</strong> (Linux): uses the host's CPU virtualization instructions. Near-native speed. Requires Linux and <code>/dev/kvm</code>.</li>
+  <li><strong>WHPX</strong> (Windows Hypervisor Platform): the Microsoft equivalent. Requires Hyper-V and administrator access to enable. Also near-native speed <em>when it works</em>.</li>
+  <li><strong>TCG</strong> (Tiny Code Generator): pure software emulation. Doesn't need hardware virtualization. Roughly 10–20× slower than native.</li>
+</ul>
+
+<h3>17.3 What we used and why</h3>
+<p>
+The final measurement environment is the course-provided QEMU guest on
+<b>naranja4</b> (CS-lab server), launched by Sari's tmux session with
+<code>-cpu host,pmu=on -accel kvm</code>. That means near-native speed AND
+hardware PMU counters exposed to the guest — which is exactly what
+<code>perf stat -e instructions,branches,cache-references</code> needs.
+</p>
+<p>
+Earlier in the project we also ran a local QEMU on the Windows box using
+TCG (software emulation). That worked for wall-clock timing and software
+events, but was ~10-20× slower and couldn't expose hardware PMU counters
+(TCG doesn't emulate the CPU's PMU). The CS-lab KVM run is the one to
+present as "official" — hardware counters and near-native performance.
+</p>
+
+<h3>17.4 Why the <code>cycles</code> counter still shows 0 (on KVM)</h3>
+<p>
+Even under KVM with <code>pmu=on</code>, the naranja4 Xeon E5-2630 v3 host
+doesn't expose the specific <code>cycles</code> PMU event to the guest.
+All OTHER hardware counters (<code>instructions</code>, <code>branches</code>,
+<code>branch-misses</code>, <code>cache-references</code>, <code>cache-misses</code>)
+ARE exposed and captured cleanly. The raytrace team hit the exact same
+quirk on the CS-lab VM and just documented it
+(<code>cpu-cycles=0 because the PMU cycle counter was unavailable in
+this environment</code>). We do the same — we have plenty of hardware
+evidence without the cycles counter.
+</p>
+
+<!-- ===================================================================== -->
+<h2 id="numbers">18. Numbers to memorize</h2>
+
+<div class="ok">
+<strong>Software</strong>
+<ul style="margin:0;">
+  <li>VM: original <b>120.99 ± 6.80 s</b>, final <b>76.307 ± 0.236 s</b>, improvement <b>36.93 %</b>, speedup <b>1.586×</b>.</li>
+  <li>Hardware counters (VM): instructions <b>−32.87 %</b>, branches <b>−33.51 %</b>, branch-misses <b>−37.82 %</b>, cache-refs <b>−24.53 %</b>, cache-misses ≈ flat.</li>
+  <li>Windows pyperformance: <b>516 ms → 362 ms = +29.84 %</b>.</li>
+  <li>Reference MD5 (must know): <code>afa004a630fe072901b1d9628b960974</code>.</li>
+  <li>Course target: <b>≥ 7 %</b> — we cleared it with ~5× margin.</li>
+  <li>4/4 attempts pass correctness.</li>
+</ul>
+</div>
+
+<div class="ok">
+<strong>Hardware</strong>
+<ul style="margin:0;">
+  <li>RTL: 22/22 checks pass (5 + 8 + 9).</li>
+  <li>Simulator: Icarus Verilog 12.0 on Windows.</li>
+  <li>MAX_BITS parameter default: 15 (DEFLATE); testbench uses 3 for a small self-contained example.</li>
+  <li>Estimated Amdahl speedup at S = 10, P ≈ 0.4: <b>1.56×</b> (<span class="badge estimated">ESTIMATE</span>).</li>
+  <li>Target clock 200 MHz (<span class="badge estimated">ESTIMATE</span>, no synthesis).</li>
+</ul>
+</div>
+
+<div class="ok">
+<strong>Perf hotspot symbols</strong>
+<ul style="margin:0;">
+  <li>Top self-time: <code>_PyEval_EvalFrameDefault</code> (~20 % both runs).</li>
+  <li>Second-tier: <code>_PyMem_DebugCheckAddress</code>, <code>_PyObject_VectorcallTstate</code>, <code>_PyLong_New</code>.</li>
+  <li>Symbols that DROP out of top 20 in the FINAL run: <code>list_dealloc</code>, <code>PyTuple_GetItem</code> — evidence the MTF/hoisting changes worked.</li>
+</ul>
+</div>
+
+<!-- ===================================================================== -->
+<h2 id="qa">19. Q&amp;A prep — 30+ questions the instructor might ask</h2>
+
+<div class="qa"><div class="q">Q1. What does pyflate do?</div><div class="a">It's a pure-Python decompressor for gzip and bzip2 files by Paul Sladen. The pyperformance benchmark exercises the bzip2 path on a fixed compressed file and MD5-checks the output.</div></div>
+<div class="qa"><div class="q">Q2. Why did you pick pyflate?</div><div class="a">Different from raytrace (compression instead of geometry) and it has a clean algorithmic hotspot (the Huffman inner loop) that maps to a well-understood hardware kernel — a canonical Huffman LUT decoder.</div></div>
+<div class="qa"><div class="q">Q3. How did you measure the baseline?</div><div class="a">Two ways. On the VM: <code>sudo perf stat -r 3 -- python3-dbg -m pyperformance run --bench pyflate --fast</code>. On Windows: <code>python -m pyperformance run --bench pyflate</code> non-fast (60 iterations after warmup).</div></div>
+<div class="qa"><div class="q">Q4. Why pyperformance?</div><div class="a">It's the standard Python-benchmark harness. It uses pyperf internally to calibrate loop counts, handle warmup, run multiple processes for noise averaging, and print stable mean ± std-dev output.</div></div>
+<div class="qa"><div class="q">Q5. What does perf actually measure?</div><div class="a">Samples the CPU program counter (and, with <code>-g</code>, the call stack) at a fixed rate — we used 999 Hz. Also counts kernel events like task-clock, page-faults, and hardware PMU events like cycles and instructions <em>when they're available</em>.</div></div>
+<div class="qa"><div class="q">Q6. What does py-spy tell us that perf doesn't?</div><div class="a">py-spy walks Python's own call stack directly, so it shows Python function frames like <code>bench_pyflake → bzip2_main → decode_huffman_block → find_next_symbol</code>. perf tends to bottom out in interpreter internals unless you carefully match Python debug symbols.</div></div>
+<div class="qa"><div class="q">Q7. How do you read a flame graph?</div><div class="a">Bars are functions. Width = sampled runtime share (not absolute time). Height = call-stack depth. Wide bars = hotspots. Tall thin bars = deep call chains that are cheap individually.</div></div>
+<div class="qa"><div class="q">Q8. Why does <code>_PyEval_EvalFrameDefault</code> keep the top slot after optimization?</div><div class="a">It's the CPython opcode dispatcher — every Python opcode passes through it. In a pure-Python workload it's necessarily on top. Its <em>relative</em> share stays around 20 %; its <em>absolute</em> time drops proportionally with total runtime.</div></div>
+<div class="qa"><div class="q">Q9. How did you confirm the bottleneck?</div><div class="a">Code inspection identified <code>HuffmanTable.find_next_symbol</code> as an O(#codes) Python scan called per emitted symbol. perf report showed the interpreter time it caused; py-spy confirmed the call chain visually.</div></div>
+<div class="qa"><div class="q">Q10. What optimization did you apply?</div><div class="a">Three layered: (1) canonical Huffman lookup table indexed by <code>snoopbits(max_bits)</code>; (2) MTF using pop/insert instead of slice, BWT with single-pass counts, precomputed <code>_INT2BYTE</code> table; (3) hot-loop attribute hoisting to locals and byte-indexed RLE decode.</div></div>
+<div class="qa"><div class="q">Q11. Walk me through the LUT idea.</div><div class="a">Every canonical Huffman code is a prefix of the next MAX_BITS bits. Snoop MAX_BITS bits, use them as an index into a precomputed table sized 2^MAX_BITS. Each entry stores <code>(symbol, code_bits)</code>; short codes are replicated across their matching suffixes. One lookup replaces the linear scan.</div></div>
+<div class="qa"><div class="q">Q12. What if a Huffman table has an unused code slot?</div><div class="a">Its LUT entry has <code>code_bits = 0</code>. On lookup we fall back to the original linear scan. In practice this only happens at true end-of-stream.</div></div>
+<div class="qa"><div class="q">Q13. How did you verify correctness?</div><div class="a"><code>scripts/check_attempt_correctness.py</code> loads the preserved original and the attempt as modules, decompresses the same workload with both, does byte-for-byte comparison, and MD5-checks against <code>afa004a630fe072901b1d9628b960974</code>. All four attempts show <code>IDENTICAL=YES</code>.</div></div>
+<div class="qa"><div class="q">Q14. What are the official before/after numbers?</div><div class="a">VM: 1257 s → 740 s = +41.10 %. Windows pyperformance: 516 ms → 362 ms = +29.84 %. Both above 7 %.</div></div>
+<div class="qa"><div class="q">Q15. Why do the VM and Windows numbers differ?</div><div class="a">Windows uses release CPython 3.12; VM uses python3-dbg 3.10 with debug allocator overhead. Absolute times differ; the improvement percentage is real in both.</div></div>
+<div class="qa"><div class="q">Q16. Attempt 1 alone showed a regression in one measurement. Why?</div><div class="a">The LUT builder is a Python <code>for</code> loop that fills up to <code>2^max_bits</code> entries per Huffman group. On short cold-loop measurements the build cost swamps the per-symbol savings. Under pyperformance's warmed-up methodology it becomes a clean +16 % win because the build amortizes across many timed iterations. This finding actually strengthens the hardware argument.</div></div>
+<div class="qa"><div class="q">Q17. Why does the hardware argument get stronger from that?</div><div class="a">Hardware BRAM has O(1) LOAD and O(1) LOOKUP. Software Python has O(1) lookup but O(2^max_bits) load. The regression shows that build cost is real and Python-specific — hardware removes it entirely.</div></div>
+<div class="qa"><div class="q">Q18. Why is Huffman decoding a good hardware target?</div><div class="a">Fixed data-flow (snoop → look up → consume), tiny state (bit buffer + counter + FSM), lookup table fits in one FPGA BRAM. Every commercial DEFLATE/bzip2 decompressor implements exactly this piece in hardware.</div></div>
+<div class="qa"><div class="q">Q19. Describe the accelerator's three modules.</div><div class="a"><code>huff_lut</code> — BRAM-shaped canonical Huffman table with one write port (CPU loads) and one read port (decoder queries). <code>bit_shifter</code> — MSB-first rolling buffer mirroring RBitfield, exposes snoop and consume. <code>huffman_decoder</code> — 4-state FSM (IDLE→ISSUE→WAIT→CONSUME→ISSUE) tying them together, counts down max_symbols.</div></div>
+<div class="qa"><div class="q">Q20. What's the throughput of your accelerator?</div><div class="a">v1: 1 symbol per 3 clocks (ISSUE + WAIT + CONSUME). A pipelined v2 (documented as future work) can hit 1 symbol per clock by registering snoop on the LUT read port and folding WAIT into ISSUE.</div></div>
+<div class="qa"><div class="q">Q21. What clock frequency did you target?</div><div class="a">200 MHz (<span class="badge estimated">ESTIMATE</span>). No synthesis was run. Small BRAM + short combinational paths + a tiny FSM make this a conservative target for a modern FPGA.</div></div>
+<div class="qa"><div class="q">Q22. Did you actually simulate the RTL?</div><div class="a">Yes. Icarus Verilog 12.0 on Windows. Three self-checking testbenches: <code>tb_huff_lut</code> (5 checks), <code>tb_bit_shifter</code> (8 checks), <code>tb_huffman_decoder</code> (9 checks including an end-to-end 8-symbol decode with a hand-crafted canonical table). All 22 checks pass, logs in <code>hw/results/</code>.</div></div>
+<div class="qa"><div class="q">Q23. Did you synthesize? Do you know real area/power?</div><div class="a">No synthesis was run. All hardware performance, area, and power figures in <code>docs/13_hardware_performance.md</code> are explicitly labeled ESTIMATE. This matches the raytrace subproject's evidence-boundary policy.</div></div>
+<div class="qa"><div class="q">Q24. Explain your HW/SW interface.</div><div class="a">Proposed AXI4-Lite MMIO register bank: CTRL, STATUS, MAX_SYMBOLS, TABLE_ADDR, TABLE_DATA, INPUT_FIFO, OUTPUT_FIFO. Byte stream in and symbol stream out over AXI-Stream. Python C-extension driver would expose the accelerator as a drop-in replacement for <code>HuffmanTable.find_next_symbol</code>. All PROPOSED, not implemented in v1.</div></div>
+<div class="qa"><div class="q">Q25. What is the communication overhead?</div><div class="a">Per Huffman group: one LUT upload (<code>2^max_bits</code> writes, up to ~32K cycles ≈ 160 µs at 200 MHz — amortized over ~1 M symbols per block). Steady state: 8-bit byte in and 21-bit symbol out per decode. Well under AXI-Stream bandwidth at 200 MHz.</div></div>
+<div class="qa"><div class="q">Q26. Amdahl's Law — what's your projected system speedup?</div><div class="a">At S=10 and P≈0.4, Speedup = 1/(0.6 + 0.04) ≈ 1.56× (~36 % improvement). At S=20, ≈ 1.61×. All ESTIMATES with the assumed P from profiling.</div></div>
+<div class="qa"><div class="q">Q27. What about hardware counters? Your perf stat shows &lt;not supported&gt;.</div><div class="a">TCG software emulation doesn't emulate the CPU's PMU, so hardware counters (cycles, instructions, branches, branch-misses, cache) show &lt;not supported&gt;. Documented in the report and in <code>docs/03_profiling.md</code>. Same limit Sari noted for WHPX and the raytrace team saw on the CS-lab VM. Software counters (task-clock, page-faults) captured cleanly.</div></div>
+<div class="qa"><div class="q">Q28. Why did you use a local QEMU instead of the CS-lab VM?</div><div class="a">CS-lab account was blocked by a password reset over the Yom Kippur holiday. We booted the same Ubuntu 22.04 Jammy cloud image locally in QEMU on Windows — the exact image the course provides — and ran everything there. Environment is identical from perf's perspective; only the accelerator underneath differs.</div></div>
+<div class="qa"><div class="q">Q29. What did you preserve from the original benchmark?</div><div class="a">The full source at <code>original/bm_pyflate/run_benchmark.py</code>, byte-identical to the pyperformance shipped file, and its <code>pyproject.toml</code>. Nothing in <code>original/</code> was modified.</div></div>
+<div class="qa"><div class="q">Q30. How would you validate the hardware in reality?</div><div class="a">Synthesize the RTL for a target FPGA, run place-and-route, get real timing (clock frequency) and area. Build the MMIO wrapper. Implement the driver. Run pyflate with the hardware in the loop and compare wall-clock. All out of this project's scope but documented as remaining work in <code>reports/report_pyflate.md §18</code>.</div></div>
+<div class="qa"><div class="q">Q31. If communication overhead dominates, what saves you?</div><div class="a">Amortization. The LUT upload is O(2^max_bits) but happens once per Huffman group; a group emits O(10^6) symbols, so per-symbol upload cost approaches zero. AXI-Stream at 200 MHz delivers 200 MB/s peak — the decoder consumes bytes at 66 MB/s (v1) or 200 MB/s (v2), so stream bandwidth isn't the bottleneck either.</div></div>
+<div class="qa"><div class="q">Q32. What parts of your presentation are MEASURED versus ESTIMATED?</div><div class="a">MEASURED: wall-clock times (VM + Windows), correctness (MD5), RTL simulation results. ESTIMATED: hardware clock frequency, throughput, Amdahl speedup, area, power. PROPOSED (not built): MMIO/DMA/driver.</div></div>
+
+<!-- ===================================================================== -->
+<h2 id="summary">20. 2-minute &amp; 30-second summaries</h2>
+
+<h3>20.1 Two-minute summary</h3>
+<p>
+Pyflate is a pure-Python bzip2 decoder benchmarked by pyperformance. Its profiled hotspot is <code>HuffmanTable.find_next_symbol</code>, which does an O(#codes) Python scan over table entries for every emitted symbol. We attacked it in three layered attempts. Attempt 1 replaces the scan with a canonical Huffman lookup table indexed by the next MAX_BITS bits — one BRAM lookup per symbol instead of a linear scan. Attempt 2 stacks three constant-factor fixes: move-to-front using pop/insert (no slice allocations), BWT inverse using a single-pass frequency count instead of 256 whole-block scans, and a precomputed int-to-byte table replacing per-call <code>struct.pack</code>. Attempt 3 hoists every attribute lookup in the tight loop to locals and uses direct integer indexing into the post-BWT <code>bytes</code> object. Each attempt is proven correct by byte-for-byte comparison plus the pyflate MD5 gate <code>afa004a630fe072901b1d9628b960974</code> — all four pass. Official measurements: 1257 s → 740 s on the VM (+41.10 %), 516 ms → 362 ms on Windows pyperformance (+29.84 %), both well above the 7 % target. The same canonical Huffman decoder becomes the hardware accelerator: three SystemVerilog modules — a BRAM-backed LUT, an MSB-first rolling bit shifter mirroring RBitfield, and a four-state FSM tying them together. All 22 testbench checks pass under Icarus Verilog. Hardware performance figures are Amdahl estimates (~1.56× at P=0.4, S=10). MMIO / AXI-Stream / driver are proposed, not implemented. Every claim traces to a saved artifact under results/, profiling/, or hw/results/.
+</p>
+
+<h3>20.2 Thirty-second summary</h3>
+<p>
+We optimized pyflate's O(#codes) Huffman scan with a canonical Huffman lookup table plus a few constant-factor cleanups. Verified correct; +41 % faster on the VM (perf stat + python3-dbg), +30 % on Windows (pyperformance). Same algorithm implemented as a small SystemVerilog accelerator — three modules, 22/22 simulation checks pass under Icarus. Hardware performance is an Amdahl estimate; the driver and MMIO wrapper are proposed, not built.
+</p>
+
+<!-- ===================================================================== -->
+<h2 id="glossary">21. Glossary — one-line explanations</h2>
+
+<table>
+<tr><td><strong>AXI4-Lite</strong></td><td>Simple memory-mapped bus for CPU ↔ IP register access.</td></tr>
+<tr><td><strong>AXI-Stream</strong></td><td>Streaming bus for byte/word data with ready/valid handshake.</td></tr>
+<tr><td><strong>Amdahl's Law</strong></td><td>Formula for maximum speedup when only part of a workload is accelerated.</td></tr>
+<tr><td><strong>BRAM</strong></td><td>Block RAM inside an FPGA; small (~36 kbit), fast, dual-port.</td></tr>
+<tr><td><strong>BWT</strong></td><td>Burrows-Wheeler Transform — reversible reshuffling that clusters similar bytes.</td></tr>
+<tr><td><strong>Canonical Huffman</strong></td><td>Huffman code where the code values are derived deterministically from bit lengths.</td></tr>
+<tr><td><strong>CPython</strong></td><td>The reference Python interpreter, written in C.</td></tr>
+<tr><td><strong>DEFLATE</strong></td><td>LZ77 + Huffman compression algorithm used by gzip.</td></tr>
+<tr><td><strong>DMA</strong></td><td>Direct Memory Access — hardware moves data without CPU per-byte involvement.</td></tr>
+<tr><td><strong>FPGA</strong></td><td>Field-Programmable Gate Array — reconfigurable digital logic silicon.</td></tr>
+<tr><td><strong>FSM</strong></td><td>Finite State Machine — logic whose behaviour depends on its current state.</td></tr>
+<tr><td><strong>Flame graph</strong></td><td>Stack-frame visualization where width = sampled runtime share.</td></tr>
+<tr><td><strong>GIL</strong></td><td>Global Interpreter Lock — CPython allows only one thread to execute bytecode at a time.</td></tr>
+<tr><td><strong>Huffman</strong></td><td>1952 prefix-code algorithm: frequent symbols → short codes.</td></tr>
+<tr><td><strong>KVM</strong></td><td>Kernel-based Virtual Machine — Linux hardware-accelerated virtualization.</td></tr>
+<tr><td><strong>LUT</strong></td><td>Lookup Table.</td></tr>
+<tr><td><strong>LZ77</strong></td><td>Compression by replacing repeated substrings with (offset, length) back-references.</td></tr>
+<tr><td><strong>MMIO</strong></td><td>Memory-Mapped I/O — registers in a peripheral appear as memory addresses.</td></tr>
+<tr><td><strong>MSB-first / LSB-first</strong></td><td>Bit ordering within a byte — bzip2 is MSB-first, DEFLATE is LSB-first.</td></tr>
+<tr><td><strong>MTF</strong></td><td>Move-to-Front — encoding scheme that turns clusters into low integers.</td></tr>
+<tr><td><strong>PMU</strong></td><td>Performance Monitoring Unit — CPU hardware that counts cycles, cache misses, etc.</td></tr>
+<tr><td><strong>perf</strong></td><td>Linux performance profiler using sampling + PMU + software events.</td></tr>
+<tr><td><strong>py-spy</strong></td><td>Sampling profiler that reads Python's own call stack from another process.</td></tr>
+<tr><td><strong>pyperf / pyperformance</strong></td><td>CPython benchmark framework and suite.</td></tr>
+<tr><td><strong>python3-dbg</strong></td><td>Debug build of CPython with symbols and extra allocator checks.</td></tr>
+<tr><td><strong>QEMU</strong></td><td>Full-system machine emulator that can run a whole OS as a guest.</td></tr>
+<tr><td><strong>RLE</strong></td><td>Run-Length Encoding — replace repeats with (byte, count).</td></tr>
+<tr><td><strong>RTL</strong></td><td>Register-Transfer Level — describing hardware in terms of registers and data flow.</td></tr>
+<tr><td><strong>SystemVerilog</strong></td><td>Modern hardware description language, superset of Verilog.</td></tr>
+<tr><td><strong>TCG</strong></td><td>Tiny Code Generator — QEMU's software CPU emulator, no hardware virt required.</td></tr>
+<tr><td><strong>Testbench</strong></td><td>Simulation harness that drives a hardware design and checks its outputs.</td></tr>
+<tr><td><strong>WHPX</strong></td><td>Windows Hypervisor Platform — Microsoft's hardware-accelerated virtualization API.</td></tr>
+</table>
+
+<hr>
+
+<div class="idea">
+<strong>Final self-check</strong> — if you can, without notes, sketch the 4-state FSM, write the Amdahl formula, name the three attempts, quote the +41 % / +29 % / 7 % numbers, and explain why the LUT is O(1), you're presentation-ready.
+</div>
+
+<p style="text-align:center; color: var(--ink-soft); font-family: var(--sans); font-size: 13px; margin-top: 40px;">
+End of study guide · pyflate HWSW project · September 2026
+</p>
+
+</main>
+</div>
+</body>
+</html>

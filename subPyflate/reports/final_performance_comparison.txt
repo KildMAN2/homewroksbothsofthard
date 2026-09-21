@@ -46,31 +46,57 @@ Correctness (results/*/correctness_report.txt):
   attempt3: IDENTICAL=YES  MATCHES_REFERENCE=YES
   final:    IDENTICAL=YES  MATCHES_REFERENCE=YES
 
---- OFFICIAL VM (Ubuntu 22.04 Jammy in local QEMU/TCG, 2026-09-21) ---
+--- OFFICIAL VM (Sari's course tmux QEMU on naranja4, KVM + PMU, 2026-09-21) ---
 
 Ran on: Ubuntu 22.04.5 LTS guest, python3-dbg 3.10.12, perf 5.15.209,
-pyperformance 1.14.0. QEMU accel = TCG (WHPX unavailable on host).
+pyperformance 1.14.0. QEMU accel = KVM with -cpu host,pmu=on (real
+hardware PMU counters exposed).
 
 Original (perf stat -r 3, --fast):
-  seconds time elapsed:  1257.09 +- 158.09 s
-  task-clock:            1,079,180 msec  (0.858 CPUs utilized)
-  page-faults:           447,077
+  seconds time elapsed:  120.99 +- 6.80 s
+  task-clock:            113,777 msec  (0.940 CPUs utilized)
+  instructions:          579,459,257,273
+  branches:              142,417,577,761
+  branch-misses:         770,743,225  (0.52 %)
+  cache-references:      543,649,894
+  cache-misses:          28,010,769   (4.09 %)
+  page-faults:           463,011
+  context-switches:      3,089
 
 Final    (perf stat -r 3, --fast):
-  seconds time elapsed:   740.39 +- 10.04 s
-  task-clock:            726,769 msec  (0.982 CPUs utilized)
-  page-faults:           444,899
+  seconds time elapsed:   76.307 +- 0.236 s
+  task-clock:             76,417 msec  (1.001 CPUs utilized)
+  instructions:           388,984,213,555
+  branches:               94,689,052,878
+  branch-misses:          479,262,450  (0.51 %)
+  cache-references:       410,288,916
+  cache-misses:           28,422,250   (6.93 %)
+  page-faults:            458,789
+  context-switches:       2,888
 
-Speedup:     1.70x
-Improvement: 41.10%   (target >=7%, ~6x margin)
+Speedup:     1.586x
+Improvement: 36.93%   (target >=7%, ~5x margin)
 
-Hardware counters (cycles, instructions, branches, branch-misses,
-cache-references, cache-misses): <not supported> under TCG. Documented
-in docs/03_profiling.md. Same limit Sari noted for WHPX on Windows and
-the raytrace team saw on the CS-lab VM (cpu-cycles=0).
+Hardware counter deltas (baseline -> final):
+  instructions:      -32.87 %
+  branches:          -33.51 %
+  branch-misses:     -37.82 %
+  cache-references:  -24.53 %
+  cache-misses:       +1.47 % (essentially flat)
+  page-faults:        -0.91 % (essentially flat)
+  context-switches:   -6.51 %
 
-perf record + perf report:
-  profiling/perf_baseline.data      (80 MB)
-  profiling/perf_final.data         (50 MB)
-  profiling/perf_report_baseline.txt (6 MB)  top: _PyEval_EvalFrameDefault 20.79%
-  profiling/perf_report_final.txt   (5 MB)  top: _PyEval_EvalFrameDefault 20.34%
+Note on cycles: shows 0 due to KVM-specific PMU limitation on the
+naranja4 Xeon E5-2630 v3 host. Every other hardware counter is
+captured. Documented in docs/03_profiling.md. Same limit the raytrace
+team hit on their CS-lab VM.
+
+perf record + perf report (-e cpu-clock sampling):
+  profiling/vm_perf_baseline.data      (8.8 MB, 76k+ samples)
+  profiling/vm_perf_final.data         (5.9 MB, ~76k samples)
+  profiling/vm_perf_report_baseline.txt (2.3 MB) top: _PyEval_EvalFrameDefault 22.81%
+  profiling/vm_perf_report_final.txt   (2.2 MB) top: _PyEval_EvalFrameDefault 24.26%
+
+Evidence Attempt 2's MTF change worked:
+  list_dealloc:  2.33% in baseline -> dropped out of top 15 in final
+  list_ass_slice: 1.96% in baseline -> dropped out of top 15 in final

@@ -3,68 +3,86 @@ Pyflate FINAL benchmark - official measurement
 
 Selected implementation: subPyflate/optimized/final/  (copy of Attempt 3)
 
---- VM official (Ubuntu 22.04 Jammy inside local QEMU, TCG) ---
+--- VM OFFICIAL (Sari's tmux QEMU on naranja4, KVM + PMU passthrough) ---
 
-Command: sudo perf stat -r 3 -e task-clock,cpu-clock,cycles,instructions,branches,branch-misses,cache-references,cache-misses,page-faults,context-switches -- python3-dbg -m pyperformance run --manifest optimized/final/MANIFEST --bench pyflate_final --fast
-Host guest:  Ubuntu 22.04.5 LTS (jammy-server-cloudimg-amd64) inside QEMU 11.1.0
-Accel:       TCG (WHPX unavailable on host)
+Command: perf stat -r 3 -e cycles,instructions,branches,branch-misses,cache-references,cache-misses,page-faults,context-switches,task-clock,cpu-clock -- python3-dbg -m pyperformance run --manifest optimized/final/MANIFEST --bench pyflate_final --fast
+Host guest:  Ubuntu 22.04.5 LTS (jammy-server-cloudimg-amd64) inside QEMU
+Naranja4 host: Ubuntu 24.04.4 LTS, Intel Xeon E5-2630 v3 @ 2.40 GHz
+Accel:       KVM with -cpu host,pmu=on
 Python:      python3-dbg 3.10.12
 perf:        5.15.209
 pyperformance: 1.14.0
 Runs:        3 (perf stat -r 3, --fast pyperformance)
-Date:        2026-09-21
+Date:        2026-09-21 14:59:56 UTC
 
 Result:
-    seconds time elapsed:    740.39 +- 10.04 s
-    task-clock:              726,769.23 msec   (0.982 CPUs utilized)
-    cpu-clock:               726,747.57 msec
-    page-faults:             444,899
-    context-switches:        3,071
-    cycles/instructions/branches/branch-misses/cache-refs/cache-misses: <not supported>  (TCG)
+    seconds time elapsed:    76.307 +- 0.236 s  (+- 0.31%)
+    task-clock:              76,416.71 msec   (1.001 CPUs utilized)
+    cpu-clock:               76,415.67 msec
+    cycles:                  0                  (KVM PMU limit, same as baseline)
+    instructions:            388,984,213,555   (+- 0.02%)
+    branches:                94,689,052,878    (1.246 G/sec, +- 0.04%)
+    branch-misses:           479,262,450        (0.51 % of all branches, +- 0.23%)
+    cache-references:        410,288,916        (5.400 M/sec, +- 0.10%)
+    cache-misses:            28,422,250         (6.934 % of cache refs, +- 0.11%)
+    page-faults:             458,789            (6.038 K/sec)
+    context-switches:        2,888              (38.007 /sec)
 
-perf record + perf report:
-    profiling/perf_final.data          (50 MB)
-    profiling/perf_report_final.txt    (5 MB)
+perf record + perf report (-e cpu-clock sampling):
+    profiling/vm_perf_final.data         (5.9 MB, ~76k samples)
+    profiling/vm_perf_report_final.txt   (2.2 MB)
 Top self-time symbols:
-    _PyEval_EvalFrameDefault           20.34%
-    _PyMem_DebugCheckAddress            3.31%
-    _PyMem_DebugRawFree                 2.69%
-    PyGILState_Check                    2.36%
-    _PyObject_VectorcallTstate          2.23%
-    _PyEval_MakeFrameVector             1.77%
-    _PyLong_New                         1.74%
-    _PyFrame_New_NoTrack                1.73%
-    PyThread_tss_get                    1.71%
-    PyLong_FromLong                     1.61%
+    _PyEval_EvalFrameDefault           24.26%
+    _PyMem_DebugCheckAddress            4.42%
+    read_size_t                         2.94%
+    __memset_avx2_unaligned_erms        2.90%
+    call_function.lto_priv.0            2.61%
+    pthread_getspecific                 2.02%
+    _PyObject_Malloc                    1.86%
+    list_item.lto_priv.0                1.80%
+    arena_map_get                       1.58%
+
+**Symbols that DISAPPEARED from top-15 vs baseline (evidence Attempt 3 worked):**
+    list_dealloc.lto_priv.0    2.33%  (baseline) -> dropped out
+    list_ass_slice             1.96%  (baseline) -> dropped out
+Both are direct evidence that the move_to_front pop/insert change and the
+attribute-hoisting cleanup removed the corresponding list-slice churn.
 
 Correctness:
     IDENTICAL=YES  MATCHES_REFERENCE=YES  (md5 afa004a630fe072901b1d9628b960974)
     See results/final/correctness_report.txt.
 
-Official VM before/after:
+--- Official VM before/after summary ---
 
-| Version  | Elapsed (s)   | task-clock (msec) | page-faults |
-|----------|--------------:|------------------:|------------:|
-| ORIGINAL | 1257.09 ± 158 |         1,079,180 |     447,077 |
-| FINAL    |  740.39 ± 10  |           726,769 |     444,899 |
-| Δ        |    -516.70 s  |        -352,411   |      -2,178 |
-| %        |    -41.10%    |           -32.66% |      -0.49% |
+| Metric                        |         Baseline |            Final |         Delta |         % change |
+|-------------------------------|-----------------:|-----------------:|--------------:|-----------------:|
+| seconds time elapsed          | 120.99 +- 6.80 s | 76.307 +- 0.236s |    -44.68  s  |     **-36.93 %** |
+| task-clock (msec)             |       113,777.02 |        76,416.71 |     -37,360   |          -32.84% |
+| instructions                  |  579,459,257,273 |  388,984,213,555 | -190,475,043,718 |    **-32.87 %** |
+| branches                      |  142,417,577,761 |   94,689,052,878 |  -47,728,524,883 |    **-33.51 %** |
+| branch-misses                 |      770,743,225 |      479,262,450 |    -291,480,775 |    **-37.82 %** |
+| cache-references              |      543,649,894 |      410,288,916 |    -133,360,978 |    **-24.53 %** |
+| cache-misses                  |       28,010,769 |       28,422,250 |         +411,481 |           +1.47 %|
+| page-faults                   |          463,011 |          458,789 |          -4,222 |           -0.91 %|
+| context-switches              |            3,089 |            2,888 |            -201 |           -6.51 %|
 
-Speedup: 1.70x (using time-elapsed means).
-Improvement: **41.10%** (well above the >=7% target).
+Speedup: **1.586x** (120.99 / 76.307)
+Improvement: **36.93 %** (well above the >= 7 % target -- ~5x margin)
 
 Interpretation:
-- Wall-clock time drops by 41% between original and final. task-clock
-  drops less (33%) because pyperformance's warmup/manager overhead is
-  identical in both runs. Both metrics show the same trend.
-- page-fault count is nearly identical between original and final,
-  showing the optimization removed *interpreter dispatches*, not
-  memory allocations. Consistent with the Attempt-3 hoisting cleanup.
-- The 12.6% stddev on ORIGINAL vs 1.4% on FINAL reflects TCG's
-  higher scheduling jitter when the workload is longer; the final
-  optimized workload is short enough to be stable.
-- Hardware PMU counters unavailable under TCG (documented in
-  docs/03_profiling.md).
+- All indicators of "less work done" drop by roughly a THIRD: instructions
+  retired -32.87 %, branches -33.51 %, branch-misses -37.82 %.
+- Wall-clock time drops by more (-36.93 %) than pure instruction count
+  (-32.87 %) - the remaining instructions also have better temporal
+  locality (branch-misses fall harder than branches, cache references drop
+  -24.53 %).
+- cache-misses is essentially flat: the workload's working set was already
+  small enough to fit in cache; the optimization removed interpreter work
+  rather than memory traffic. Cache-miss RATE went up (4.09 % -> 6.93 %)
+  purely because the RATIO shifts when the numerator stays roughly the
+  same but references drop. Absolute misses are unchanged.
+- page-faults and context-switches are basically flat, showing the
+  optimization is CPU work, not memory allocation or OS scheduling.
 
 --- Windows preliminary (CPython 3.12 on Windows 11 host) ---
 
@@ -79,6 +97,8 @@ Result:
     pyflate_final: Mean +- std dev: 362 ms +- 22 ms
 
 Cross-check improvement (Windows):
-    ORIGINAL 516 ms -> FINAL 362 ms = **+29.84%** (also well above 7%).
+    ORIGINAL 516 ms -> FINAL 362 ms = +29.84 % (also well above 7 %).
 
-Both environments agree the optimization is a real, substantial win.
+Both environments agree. The VM's larger delta reflects python3-dbg's
+heavier baseline overhead - Attempt 3's optimizations remove a larger
+absolute chunk of interpreter dispatch work on the debug build.

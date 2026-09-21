@@ -35,27 +35,32 @@ Everything below is verified on Windows without the CS-lab VM.
 - [x] `prompts/prompts.md` contains the 21-prompt sequence and the
       build-instructions record.
 
-## VM Audit — 2026-09-21 (DONE via local QEMU/TCG)
+## VM Audit — 2026-09-21 (DONE on course CS-lab VM, naranja4 KVM)
 
-Instead of the CS-lab VM (blocked by password reset over Yom Kippur),
-we booted an equivalent Ubuntu 22.04 Jammy image (`jammy-server-cloudimg-amd64.img`
-from cloud-images.ubuntu.com — the SAME image the course provides) in
-local QEMU on Windows and ran the perf profiling there.
+After the Yom Kippur password reset came through, we ran the profiling
+on the ACTUAL course-provided QEMU guest on naranja4 (KVM-accelerated,
+with `-cpu host,pmu=on` — real hardware PMU counters).
 
-- [x] `profiling/perf_stat_baseline.txt`, `profiling/perf_stat_final.txt`
-      generated with `perf stat -r 3 -e ...` under `python3-dbg` 3.10.12
-      and `pyperformance` 1.14.0.
-- [x] `profiling/perf_report_baseline.txt` (6 MB),
-      `profiling/perf_report_final.txt` (5 MB) generated with
-      `perf record -F 999 -g` + `perf report --stdio`.
+- [x] `profiling/vm_perf_stat_baseline.txt`,
+      `profiling/vm_perf_stat_final.txt` generated with `perf stat -r 3
+      -e cycles,instructions,branches,branch-misses,cache-references,cache-misses,...`
+      under `python3-dbg` 3.10.12 and `pyperformance` 1.14.0.
+- [x] `profiling/vm_perf_report_baseline.txt` (2.3 MB),
+      `profiling/vm_perf_report_final.txt` (2.2 MB) generated with
+      `perf record -F 999 -g -e cpu-clock` + `perf report --stdio`.
+      76k+ samples per run.
+- [x] `profiling/vm_perf_baseline.data` (8.8 MB),
+      `profiling/vm_perf_final.data` (5.9 MB) preserved as raw samples.
 - [x] `results/original_official.txt` and `results/final_official.txt`
-      updated with both the VM official numbers (elapsed +
-      software counters) and the Windows cross-check numbers.
-- [x] Hardware counters (cycles/instructions/branches/branch-misses/
-      cache-refs/cache-misses) show `<not supported>` — explicitly
-      documented in the report and in `docs/03_profiling.md` as a TCG
-      limit, mirroring the raytrace team's own note about WHPX
-      (`Project/RUN_JAMMY_LOCAL.md`) and the CS-lab VM's PMU issue.
+      updated with the VM numbers (elapsed + hardware + software
+      counters) alongside the Windows cross-check numbers.
+- [x] Hardware counters captured: instructions (−32.87 %), branches
+      (−33.51 %), branch-misses (−37.82 %), cache-references (−24.53 %),
+      cache-misses (+1.47 %, essentially flat).
+- [x] `cycles` counter shows 0 due to a KVM-specific PMU-event
+      limitation on the naranja4 Xeon E5-2630 v3 host — documented in
+      the report and `docs/03_profiling.md`. All OTHER hardware counters
+      captured cleanly.
 
 ## Corrected Items
 
@@ -80,19 +85,23 @@ local QEMU on Windows and ran the perf profiling there.
 
 Two measurements captured; both agree on a real ~30-40% improvement.
 
-### VM official (Ubuntu 22.04 Jammy inside local QEMU, TCG)
+### VM official (course CS-lab QEMU on naranja4, KVM + PMU passthrough)
 
-| Metric | Value | Source |
-|---|---:|---|
-| Original elapsed | 1257.09 ± 158 s | `results/original_official.txt` |
-| Final elapsed | 740.39 ± 10 s | `results/final_official.txt` |
-| Improvement | **41.10%** | derived |
-| Speedup | 1.70x | derived |
-| task-clock original | 1,079,180 msec | `profiling/perf_stat_baseline.txt` |
-| task-clock final | 726,769 msec | `profiling/perf_stat_final.txt` |
-| Hardware counters | `<not supported>` (TCG) | docs/03_profiling.md |
-| perf_report_baseline top | `_PyEval_EvalFrameDefault` 20.79% | `profiling/perf_report_baseline.txt` |
-| perf_report_final top | `_PyEval_EvalFrameDefault` 20.34% | `profiling/perf_report_final.txt` |
+| Metric | Baseline | Final | Δ % | Source |
+|---|---:|---:|---:|---|
+| Elapsed (s) | 120.99 ± 6.80 | 76.307 ± 0.236 | **−36.93 %** | `results/{original,final}_official.txt` |
+| Speedup | — | — | **1.586×** | derived |
+| task-clock (msec) | 113,777 | 76,417 | −32.84 % | `profiling/vm_perf_stat_*.txt` |
+| **instructions** | 579,459,257,273 | 388,984,213,555 | **−32.87 %** | perf stat -e instructions |
+| **branches** | 142,417,577,761 | 94,689,052,878 | **−33.51 %** | perf stat -e branches |
+| **branch-misses** | 770,743,225 | 479,262,450 | **−37.82 %** | perf stat -e branch-misses |
+| **cache-references** | 543,649,894 | 410,288,916 | **−24.53 %** | perf stat -e cache-references |
+| cache-misses | 28,010,769 | 28,422,250 | +1.47 % | perf stat -e cache-misses |
+| page-faults | 463,011 | 458,789 | −0.91 % | perf stat -e page-faults |
+| context-switches | 3,089 | 2,888 | −6.51 % | perf stat -e context-switches |
+| cycles | 0 | 0 | — | KVM PMU limit on naranja4 Xeon |
+| perf_report top | `_PyEval_EvalFrameDefault` 22.81 % | `_PyEval_EvalFrameDefault` 24.26 % | (relative share ↑; absolute time −33 %) | `profiling/vm_perf_report_*.txt` |
+| MTF-cleanup evidence | `list_dealloc` 2.33 % + `list_ass_slice` 1.96 % in top 15 | both DROPPED out of top 15 | — | same |
 
 ### Windows cross-check (CPython 3.12 pyperformance)
 

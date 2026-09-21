@@ -1,60 +1,59 @@
 Pyflate ORIGINAL benchmark - official measurement
 ===================================================
 
---- VM official (Ubuntu 22.04 Jammy inside local QEMU, TCG) ---
+--- VM OFFICIAL (Sari's tmux QEMU on naranja4, KVM + PMU passthrough) ---
 
-Command: sudo perf stat -r 3 -e task-clock,cpu-clock,cycles,instructions,branches,branch-misses,cache-references,cache-misses,page-faults,context-switches -- python3-dbg -m pyperformance run --bench pyflate --fast
-Host guest:  Ubuntu 22.04.5 LTS (jammy-server-cloudimg-amd64) inside QEMU 11.1.0
-Accel:       TCG (WHPX unavailable on host, admin-only to enable)
+Command: perf stat -r 3 -e cycles,instructions,branches,branch-misses,cache-references,cache-misses,page-faults,context-switches,task-clock,cpu-clock -- python3-dbg -m pyperformance run --bench pyflate --fast
+Host guest:  Ubuntu 22.04.5 LTS (jammy-server-cloudimg-amd64) inside QEMU
+Naranja4 host: Ubuntu 24.04.4 LTS, Intel Xeon E5-2630 v3 @ 2.40 GHz
+Accel:       KVM with -cpu host,pmu=on (hardware PMU counters exposed)
 Python:      python3-dbg 3.10.12
 perf:        5.15.209
 pyperformance: 1.14.0
 Runs:        3 (perf stat -r 3, --fast pyperformance)
-Date:        2026-09-21
+Date:        2026-09-21 14:51:57 UTC
 
 Result:
-    seconds time elapsed:   1257.09 +- 158.09 s   (per pyperformance --fast run under perf)
-    task-clock:             1,079,180.83 msec   (0.858 CPUs utilized)
-    cpu-clock:              1,079,150.83 msec
-    page-faults:            447,077
-    context-switches:       4,797
-    cycles:                 <not supported>      (TCG limit; see docs/03_profiling.md)
-    instructions:           <not supported>      (TCG limit)
-    branches:               <not supported>      (TCG limit)
-    branch-misses:          <not supported>      (TCG limit)
-    cache-references:       <not supported>      (TCG limit)
-    cache-misses:           <not supported>      (TCG limit)
+    seconds time elapsed:   120.99 +- 6.80 s   (+- 5.62%)
+    task-clock:             113,777.02 msec   (0.940 CPUs utilized)
+    cpu-clock:              113,775.87 msec
+    cycles:                 0                    (unavailable via KVM PMU on this host)
+    instructions:           579,459,257,273     (+- 3.92%)
+    branches:               142,417,577,761     (1.190 G/sec, +- 3.92%)
+    branch-misses:          770,743,225          (0.52 % of all branches, +- 8.83%)
+    cache-references:       543,649,894          (4.543 M/sec, +- 24.65%)
+    cache-misses:           28,010,769           (4.090 % of cache refs, +- 9.62%)
+    page-faults:            463,011              (3.869 K/sec)
+    context-switches:       3,089                (25.814 /sec)
 
-perf record + perf report:
-    profiling/perf_baseline.data       (80 MB)
-    profiling/perf_report_baseline.txt (6 MB)
+perf record + perf report (-e cpu-clock sampling):
+    profiling/vm_perf_baseline.data      (8.8 MB, 76k+ samples)
+    profiling/vm_perf_report_baseline.txt (2.3 MB)
 Top self-time symbols:
-    _PyEval_EvalFrameDefault           20.79%
-    _PyMem_DebugCheckAddress            3.13%
-    _PyMem_DebugRawFree                 2.59%
-    PyGILState_Check                    2.22%
-    _PyObject_VectorcallTstate          1.96%
-    _PyEval_MakeFrameVector             1.83%
-    list_dealloc                        1.47%
-    PyTuple_GetItem                     1.38%
-    _PyLong_New                         1.38%
+    _PyEval_EvalFrameDefault           22.81%   (interpreter dispatch loop)
+    _PyMem_DebugCheckAddress            4.06%   (python3-dbg debug allocator)
+    __memset_avx2_unaligned_erms        3.11%   (libc memory clear)
+    read_size_t                         2.75%
+    call_function.lto_priv.0            2.56%
+    list_dealloc.lto_priv.0             2.33%   (list cleanup - MTF/temporary lists)
+    list_ass_slice                      1.96%   (MTF slice pattern)
+    pthread_getspecific@GLIBC_2.34      1.92%
 
 Interpretation:
-- The Python interpreter dispatch loop `_PyEval_EvalFrameDefault`
-  dominates, consistent with the pure-Python decompressor: every symbol
-  the Huffman decoder emits goes through it.
-- Debug-allocator overhead (`_PyMem_DebugCheckAddress`, `_PyMem_DebugRawFree`)
-  is visible because python3-dbg turns on extra memory-safety checks;
-  these disappear under a release build.
-- The measured wall clock (1257 s) reflects TCG's software emulation
-  slowdown (~15-20x vs native). Comparisons vs the FINAL run are still
-  meaningful because both used the identical TCG environment.
+- `_PyEval_EvalFrameDefault` dominates - every Python opcode passes through it.
+- `list_dealloc` and `list_ass_slice` appear high, both driven by the
+  original `move_to_front` slice pattern (three list allocations per symbol).
+- Debug-allocator overhead (`_PyMem_DebugCheckAddress`) is inherent to
+  python3-dbg and would disappear under release CPython.
+- `cycles` shows 0 because the specific cycles PMU event isn't exposed by
+  the current KVM PMU config on this Xeon host. All other hardware counters
+  (instructions, branches, branch-misses, cache-references, cache-misses)
+  ARE exposed and captured cleanly - see the numbers above.
 
 Hardware counters status:
-- Not supported under TCG (also not supported under Windows/WHPX per
-  the raytrace team's own note in Project/RUN_JAMMY_LOCAL.md). See
-  docs/03_profiling.md for the explicit documentation of this
-  environment limit.
+- Available: instructions, branches, branch-misses, cache-references, cache-misses
+- Not available: cycles (KVM host-specific PMU limitation)
+- Software counters: task-clock, cpu-clock, page-faults, context-switches all captured
 
 --- Windows preliminary (CPython 3.12 on Windows 11 host) ---
 

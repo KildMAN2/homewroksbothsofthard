@@ -19,19 +19,19 @@ Scope and evidence policy:
 Primary intended outcome:
 - Best software version selected: `subPyflate/optimized/final/` (copy of
   Attempt 3).
-- **VM official (Ubuntu 22.04 Jammy under local QEMU/TCG, python3-dbg 3.10.12,
-  perf 5.15.209, pyperformance 1.14.0): +41.10 %** wall-clock improvement
-  (1257 s -> 740 s under TCG). Speedup ~1.70x. Hardware PMU counters
-  reported `<not supported>` because the guest runs under TCG software
-  emulation (same limit Sari documented for WHPX); all software-event
-  perf counters (task-clock, page-faults, context-switches) captured
-  cleanly.
+- **VM OFFICIAL (course QEMU on naranja4, KVM + PMU passthrough,
+  python3-dbg 3.10.12, perf 5.15.209, pyperformance 1.14.0): +36.93 %**
+  wall-clock improvement (120.99 s → 76.307 s). Speedup 1.586×. Hardware
+  PMU counters captured: instructions retired dropped **−32.87 %**,
+  branches **−33.51 %**, branch-misses **−37.82 %**, cache-references
+  **−24.53 %**. (The cycles counter shows 0 due to a KVM-specific PMU
+  limitation on the naranja4 Xeon E5-2630 v3 host; every other hardware
+  counter is exposed and measured.)
 - **Windows cross-check pyperformance: +29.84 %** (CPython 3.12 release
-  build, 60 iterations after warmup — 516 ms -> 362 ms). Correctness
-  confirmed — every attempt matches the pyflate reference MD5
+  build, 60 iterations after warmup — 516 ms → 362 ms).
+- Correctness confirmed — every attempt matches the pyflate reference MD5
   `afa004a630fe072901b1d9628b960974`.
-- Both environments agree the optimization clears the 7 % target with
-  large margin.
+- Both environments agree; the target ≥ 7 % is cleared with ~5× margin.
 
 ## 2. Benchmark Purpose
 
@@ -130,36 +130,37 @@ Both stages captured for baseline AND for the selected final; see
 
 ## 9. Original Profile Analysis
 
-Top self-time symbols from `profiling/perf_report_baseline.txt` (VM run,
-python3-dbg 3.10.12 + pyperformance 1.14.0 --fast under TCG, 2026-09-21):
+Top self-time symbols from `profiling/vm_perf_report_baseline.txt` (VM
+run on naranja4 KVM, python3-dbg 3.10.12 + pyperformance 1.14.0 --fast,
+sampled via `-e cpu-clock`, 2026-09-21):
 
 | Symbol | Self % |
 |---|---:|
-| `_PyEval_EvalFrameDefault` | 20.79% |
-| `_PyMem_DebugCheckAddress` | 3.13% |
-| `_PyMem_DebugRawFree` | 2.59% |
-| `PyGILState_Check` | 2.22% |
-| `_PyObject_VectorcallTstate` | 1.96% |
-| `_PyEval_MakeFrameVector` | 1.83% |
-| `list_dealloc` | 1.47% |
-| `PyTuple_GetItem` | 1.38% |
-| `_PyLong_New` | 1.38% |
+| `_PyEval_EvalFrameDefault` | 22.81 % |
+| `_PyMem_DebugCheckAddress` | 4.06 % |
+| `__memset_avx2_unaligned_erms` (libc) | 3.11 % |
+| `read_size_t` | 2.75 % |
+| `call_function.lto_priv.0` | 2.56 % |
+| **`list_dealloc.lto_priv.0`** | **2.33 %** |
+| **`list_ass_slice`** | **1.96 %** |
+| `pthread_getspecific` (libc) | 1.92 % |
+| `_PyObject_Malloc` | ~1.8 % |
 
 Interpretation:
-- `_PyEval_EvalFrameDefault` is the interpreter dispatch loop — every
-  Python opcode goes through it, so it necessarily tops the list on a
-  pure-Python decompressor like pyflate.
-- `_PyMem_DebugCheckAddress` / `_PyMem_DebugRawFree` are debug-allocator
-  checks unique to `python3-dbg`; they vanish under a release build and
-  are inflated here.
-- `list_dealloc` and `PyTuple_GetItem` reflect the per-symbol Python
-  object churn in `find_next_symbol` and `decode_huffman_block`.
-- `_PyLong_New` reflects integer boxing inside the bit-shift arithmetic
-  of `RBitfield.readbits`.
+- `_PyEval_EvalFrameDefault` is the CPython opcode dispatch loop — every
+  bytecode opcode passes through it, so it necessarily tops the list on
+  a pure-Python decompressor.
+- **`list_dealloc` + `list_ass_slice` together** are ~4.3 % — those are
+  directly caused by the ORIGINAL `move_to_front(l, c)` implementation
+  (`l[:] = l[c:c+1] + l[0:c] + l[c+1:]` — three list slice allocations
+  per Huffman symbol). The FINAL run shows both drop out of the top-15,
+  clean evidence Attempt 2's pop/insert change worked.
+- `_PyMem_DebugCheckAddress` is python3-dbg's per-allocation memory-safety
+  check; it would disappear under a release CPython build.
 - The Python-frame call graph (viewable with `perf report -g -i
-  profiling/perf_baseline.data`) shows `bench_pyflake -> bzip2_main ->
-  decode_huffman_block -> find_next_symbol` accounting for the bulk of
-  the interpreter's samples.
+  profiling/vm_perf_baseline.data`) traces
+  `bench_pyflake → bzip2_main → decode_huffman_block →
+  find_next_symbol` accounting for most of the interpreter's samples.
 
 ## 10. Bottlenecks (measured)
 
@@ -275,70 +276,89 @@ Both produced with `perf stat -r 3 -- python3-dbg -m pyperformance run
 --bench {pyflate,pyflate_final}` so wall-clock and instruction counts are
 directly comparable.
 
-| Version | Mean | Std Dev | Improvement | Correct |
-|---|---:|---:|---:|---|
-| ORIGINAL (VM official — perf stat + python3-dbg under TCG) | 1257 s | 158 s | 0.00% | Yes |
-| FINAL   (VM official — perf stat + python3-dbg under TCG) | 740 s | 10 s | **+41.10%** | Yes |
-| ORIGINAL (Windows cross-check — CPython 3.12 pyperformance) | 516 ms | 29 ms | 0.00% | Yes |
-| FINAL   (Windows cross-check — CPython 3.12 pyperformance) | 362 ms | 22 ms | **+29.84%** | Yes |
+| Metric | Baseline | Final | Δ | % change |
+|---|---:|---:|---:|---:|
+| Elapsed (s) | 120.99 ± 6.80 | 76.307 ± 0.236 | −44.68 | **−36.93 %** |
+| task-clock (msec) | 113,777 | 76,417 | −37,360 | −32.84 % |
+| **instructions** | 579,459,257,273 | 388,984,213,555 | −190.5 B | **−32.87 %** |
+| **branches** | 142,417,577,761 | 94,689,052,878 | −47.7 B | **−33.51 %** |
+| **branch-misses** | 770,743,225 | 479,262,450 | −291 M | **−37.82 %** |
+| **cache-references** | 543,649,894 | 410,288,916 | −133 M | **−24.53 %** |
+| cache-misses | 28,010,769 | 28,422,250 | +411 K | +1.47 % |
+| page-faults | 463,011 | 458,789 | −4,222 | −0.91 % |
+| context-switches | 3,089 | 2,888 | −201 | −6.51 % |
 
-Target `>= 7%` improvement:
-- VM official (perf stat + python3-dbg under TCG): **ACHIEVED (+41.10%)** with ~6x margin.
-- Windows cross-check pyperformance: **ACHIEVED (+29.84%)** with ~4x margin.
+**Speedup: 1.586×** (120.99 / 76.307). **Target ≥ 7 %: ACHIEVED** (~5×
+margin) — VM: +36.93 %, Windows cross-check: +29.84 %.
 
-Both environments agree the win is real; the VM's larger delta reflects
-python3-dbg's heavier baseline overhead (Attempt 3's hoisting removes a
-larger absolute chunk of interpreter dispatch work).
+Cross-cutting interpretation:
+- All "work done" indicators drop by roughly a third (instructions,
+  branches, branch-misses ≈ −33 %). This is exactly the profile of an
+  optimization that removes interpreter opcodes rather than tightening
+  memory access.
+- Wall-clock elapsed drops MORE (−36.93 %) than pure instruction count
+  because the remaining instructions also have better temporal locality
+  (branch-misses fall harder than branches).
+- cache-misses is essentially flat: the working set was already
+  cache-resident; the win is CPU-side, not memory-side. The cache-miss
+  RATE ratio rises (4.09 % → 6.93 %) purely because references dropped
+  while absolute misses stayed constant.
+- page-faults and context-switches are within noise: no memory-allocation
+  or scheduling behaviour change.
 
-Hardware counters (`cycles`, `instructions`, `branches`, `branch-misses`,
-`cache-references`, `cache-misses`) reported `<not supported>` under TCG.
-This mirrors Sari's own note in `Project/RUN_JAMMY_LOCAL.md` about WHPX
-also being limited to software events on Windows. Same limit was
-documented by the raytrace team for their CS-lab VM (`perf_stat_baseline.txt`
-reported `cpu-cycles=0`). Software counters that ARE captured on the VM:
-task-clock, cpu-clock, page-faults, context-switches.
+**Hardware counter caveat**: `cycles` reports 0 due to a KVM-specific PMU
+event limitation on the naranja4 Xeon host (E5-2630 v3). All OTHER
+hardware counters (instructions, branches, branch-misses, cache-refs,
+cache-misses) ARE exposed and captured. Every software counter
+(task-clock, cpu-clock, page-faults, context-switches) is also captured.
+This mirrors the raytrace project's own PMU quirk on the same class of
+host.
 
 ## 16. Before/After Flame Graph and perf Report
 
 Artifacts:
-- `profiling/flamegraph_pyspy_baseline.svg` vs
-  `profiling/flamegraph_pyspy_final.svg` (Windows py-spy, matched
-  workload, 20 decompressions each; sample counts 6847 → 4984,
-  monotonically dropping).
-- `profiling/perf_report_baseline.txt` (6 MB) vs
-  `profiling/perf_report_final.txt` (5 MB) — VM `perf record -F 999 -g`
-  with `python3-dbg` symbol resolution.
+- **VM (naranja4 KVM)** perf record + report:
+  `profiling/vm_perf_baseline.data` (8.8 MB) →
+  `profiling/vm_perf_report_baseline.txt` (2.3 MB)
+  `profiling/vm_perf_final.data` (5.9 MB) →
+  `profiling/vm_perf_report_final.txt` (2.2 MB)
+- **VM (naranja4 KVM)** perf stat (hardware counters):
+  `profiling/vm_perf_stat_baseline.txt`, `profiling/vm_perf_stat_final.txt`.
+- **Windows py-spy** flame graphs (Python-frame view, matched workload):
+  `profiling/flamegraph_pyspy_baseline.svg` (6847 samples) →
+  `profiling/flamegraph_pyspy_final.svg` (4984 samples). Sample counts
+  drop monotonically.
 
 VM perf-report top-symbol comparison:
 
 | Symbol | Baseline % | Final % | Δ |
 |---|---:|---:|---:|
-| `_PyEval_EvalFrameDefault` | 20.79 | 20.34 | -0.45 |
-| `_PyMem_DebugCheckAddress` | 3.13 | 3.31 | +0.18 |
-| `_PyMem_DebugRawFree` | 2.59 | 2.69 | +0.10 |
-| `PyGILState_Check` | 2.22 | 2.36 | +0.14 |
-| `_PyObject_VectorcallTstate` | 1.96 | 2.23 | +0.27 |
-| `list_dealloc` | 1.47 | (below top 20) | drop |
-| `PyTuple_GetItem` | 1.38 | (below top 20) | drop |
+| `_PyEval_EvalFrameDefault` | 22.81 | 24.26 | +1.45 |
+| `_PyMem_DebugCheckAddress` | 4.06 | 4.42 | +0.36 |
+| `__memset_avx2_unaligned_erms` | 3.11 | 2.90 | −0.21 |
+| `read_size_t` | 2.75 | 2.94 | +0.19 |
+| `call_function.lto_priv.0` | 2.56 | 2.61 | +0.05 |
+| **`list_dealloc.lto_priv.0`** | **2.33** | **out of top 15** | **drop** |
+| **`list_ass_slice`** | **1.96** | **out of top 15** | **drop** |
+| `pthread_getspecific` (libc) | 1.92 | 2.02 | +0.10 |
 
 Interpretation (identical caveat as in the raytrace report):
 
 - `perf report` percentages are relative shares of each run's samples,
   not absolute time.
-- `_PyEval_EvalFrameDefault`'s share is roughly stable across baseline
-  and final. Absolute time drops proportionally with total elapsed:
-  20.79% of 1257 s = 261 s baseline vs 20.34% of 740 s = 151 s final.
-  That is a 42 % absolute drop for the same symbol, matching the +41 %
-  wall-clock improvement.
-- `list_dealloc` and `PyTuple_GetItem` fall out of the top 20 in the
-  final run — Attempt 2's `move_to_front` pop/insert and Attempt 3's
-  attribute hoisting removed the majority of the list/tuple churn.
-- The remaining hot symbols (`_PyMem_Debug*`, `PyGILState_Check`,
-  `_PyObject_VectorcallTstate`) are inherent to `python3-dbg`'s
+- `_PyEval_EvalFrameDefault`'s share rises from 22.81 % to 24.26 %.
+  Absolute time drops proportionally with total elapsed: 22.81 % of 120.99 s
+  = 27.6 s baseline vs 24.26 % of 76.307 s = 18.5 s final. That is a 33 %
+  absolute drop for the same symbol, matching the wall-clock trend.
+- **`list_dealloc` and `list_ass_slice` fall entirely out of the top 15
+  in the final run** — hard evidence that Attempt 2's `move_to_front`
+  pop/insert change removed the corresponding list-slice churn.
+- The remaining hot symbols (`_PyMem_Debug*`, `read_size_t`,
+  `call_function`, `pthread_getspecific`) are inherent to `python3-dbg`'s
   bookkeeping. They cannot be attacked from application code.
 
 py-spy Python-frame view (Windows, matched workload):
-- baseline samples 6847; final samples 4984 (both at rate 500 Hz over
+- Baseline samples 6847; final samples 4984 (both at rate 500 Hz over
   20 decompressions). Same monotonic drop pattern for each attempt.
 
 ## 17. Hardware Acceleration Motivation

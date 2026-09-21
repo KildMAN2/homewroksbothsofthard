@@ -333,20 +333,23 @@ for the pyperformance workload.
 Table from `docs/06_final_software.md` §15.
 
 ### Say
-Windows-preliminary measurement (`scripts/windows_bench.py`, Python
-3.12, 8 × 3 loops, `time.perf_counter`) is already recorded — that
-proves correctness and gives a realistic improvement number pending the
-VM's official `perf stat` + `pyperformance` run.
+Two measurements, both agree:
 
-Windows preliminary:
-- ORIGINAL: 1.8877 s ± 0.1628 s
-- FINAL:   1.6394 s ± 0.1079 s
-- Improvement: **+13.16%**   (target ≥ 7% ACHIEVED)
+VM OFFICIAL (naranja4 KVM + PMU passthrough, python3-dbg, perf stat -r 3,
+--fast pyperformance):
+- ORIGINAL: 120.99 s ± 6.80 s
+- FINAL:    76.307 s ± 0.236 s
+- Improvement: **+36.93 %** (target ≥ 7 % ACHIEVED with ~5× margin)
+- Instructions retired: **−32.87 %**
+- Branches: **−33.51 %**, branch-misses: **−37.82 %**
+- Cache-references: **−24.53 %**
+- (cycles counter reports 0 due to KVM PMU limit on naranja4 Xeon — every
+  other hardware counter is captured)
 
-VM official (pending account access):
-- ORIGINAL: `TBD` s ± `TBD` s
-- FINAL:   `TBD` s ± `TBD` s
-- Improvement: `TBD %`
+Windows cross-check (CPython 3.12 pyperformance, non-fast, 60 iterations):
+- ORIGINAL: 516 ms ± 29 ms
+- FINAL:    362 ms ± 22 ms
+- Improvement: **+29.84 %**
 
 ### Key Point
 Same command shape for both, so the comparison is like-for-like.
@@ -610,9 +613,10 @@ lookup that made the software `>= 7 %` faster is what the RTL implements.
     we prefer the simpler one.
 14. **How was correctness verified?** Byte-for-byte match against the
     preserved original + MD5 gate `afa004a630fe072901b1d9628b960974`.
-15. **What is the official before/after?** Windows preliminary
-    `1.8877 → 1.6394` s, improvement `+13.16 %`, ≥ 7% target ACHIEVED.
-    Official VM numbers: `TBD` (pending VM access).
+15. **What is the official before/after?** VM (naranja4 KVM):
+    `120.99 → 76.307` s, improvement `+36.93 %`, speedup 1.586×.
+    Instructions retired dropped `−32.87 %`. Windows cross-check:
+    `516 → 362` ms = `+29.84 %`. Target ≥ 7 % ACHIEVED both places.
 16. **What fraction of runtime is hardware-accelerable?** `P` = TBD from
     `profiling/perf_report_baseline.txt`.
 17. **Why is Huffman suitable for hardware?** Fixed-latency BRAM lookup,
@@ -637,15 +641,19 @@ lookup that made the software `>= 7 %` faster is what the RTL implements.
 - Estimated accelerator clock: **200 MHz** (ESTIMATE).
 - v1 throughput: **~66 M symbols/s** at 200 MHz (ESTIMATE).
 - v2 throughput target: **~200 M symbols/s** at 200 MHz (ESTIMATE).
-- Baseline mean (Windows preliminary): **1.8877 s** (± 0.1628 s over 8 iters).
-- Final mean (Windows preliminary): **1.6394 s** (± 0.1079 s over 8 iters).
-- Improvement (Windows preliminary): **+13.16 %** (target ≥ 7 % ACHIEVED).
-- Baseline / Final / Improvement (VM official): **TBD**.
-- Accelerated fraction `P`: **TBD** (from
-  `profiling/perf_report_baseline.txt` after VM run).
-- Attempt 1 alone (LUT-only) on Windows: **-31.82 %** — LUT build cost
-  dominates on the short workload; strengthens the hardware-acceleration
+- **VM baseline** (naranja4 KVM + PMU): **120.99 ± 6.80 s**.
+- **VM final**: **76.307 ± 0.236 s**.
+- **VM improvement**: **+36.93 %** (speedup 1.586×, target ≥ 7 % ACHIEVED with ~5× margin).
+- **Instructions retired: −32.87 %** (from 579B to 389B).
+- **Branches: −33.51 %**, **branch-misses: −37.82 %**.
+- **Cache-references: −24.53 %**, cache-misses ≈ flat.
+- Windows cross-check: **516 ms → 362 ms = +29.84 %**.
+- Attempt 1 alone (LUT-only) on Windows cold-loop: −31.82 % — LUT build
+  cost dominates on that short measurement; strengthens the hardware
   argument (BRAM has O(1) load AND O(1) lookup).
+- MTF-cleanup evidence in perf report: `list_dealloc` (2.33 %) +
+  `list_ass_slice` (1.96 %) both DROPPED out of top 15 between baseline
+  and final.
 
 # Important Commands to Know
 
