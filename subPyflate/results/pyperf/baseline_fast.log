@@ -1,0 +1,98 @@
+﻿Python benchmark suite 1.14.0
+
+Creating the virtual environment C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a
+# 'C:\Users\Fshaf\AppData\Local\Programs\Python\Python312\python.exe' -m venv --without-pip 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a'
+# 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\Scripts\python.exe' -m ensurepip -v -U
+Using pip 25.0.1 from C:\Users\Fshaf\AppData\Local\Temp\tmp1ggv2jw1\pip-25.0.1-py3-none-any.whl\pip (python 3.12)
+Looking in links: c:\Users\Fshaf\AppData\Local\Temp\tmp1ggv2jw1
+Processing c:\users\fshaf\appdata\local\temp\tmp1ggv2jw1\pip-25.0.1-py3-none-any.whl
+Installing collected packages: pip
+Successfully installed pip-25.0.1
+# 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\Scripts\python.exe' -m pip install -U 'setuptools>=18.5' wheel
+Collecting setuptools>=18.5
+  Downloading setuptools-84.0.0-py3-none-any.whl.metadata (6.6 kB)
+Collecting wheel
+  Downloading wheel-0.48.0-py3-none-any.whl.metadata (2.3 kB)
+Collecting packaging>=24.0 (from wheel)
+  Using cached packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+Downloading setuptools-84.0.0-py3-none-any.whl (818 kB)
+   ---------------------------------------- 818.2/818.2 kB 3.2 MB/s eta 0:00:00
+Downloading wheel-0.48.0-py3-none-any.whl (33 kB)
+Using cached packaging-26.3-py3-none-any.whl (129 kB)
+Installing collected packages: setuptools, packaging, wheel
+Successfully installed packaging-26.3 setuptools-84.0.0 wheel-0.48.0
+python : 
+At line:1 char:568
++ ... | Out-Null; python -m pyperformance run --bench pyflate --fast -o res ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[notice] A new release of pip is available: 25.0.1 -> 26.2.1
+[notice] To update, run: C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1
+ce0-compat-31b33d68c68a\Scripts\python.exe -m pip install --upgrade pip
+# 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\Scripts\python.exe' -m pip --version
+pip 25.0.1 from C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\Lib\site-packages\pip (python 3.12)
+
+
+==================================================
+( 1/1) creating venv for benchmark (pyflate)
+
+(trying common venv first)
+Installing requirements into the virtual environment C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a
+# 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\Scripts\python.exe' -m pip install pyperf==2.10.0
+Collecting pyperf==2.10.0
+  Using cached pyperf-2.10.0-py3-none-any.whl.metadata (6.2 kB)
+Collecting psutil>=5.9.0 (from pyperf==2.10.0)
+  Using cached psutil-7.2.2-cp37-abi3-win_amd64.whl.metadata (22 kB)
+Using cached pyperf-2.10.0-py3-none-any.whl (144 kB)
+Using cached psutil-7.2.2-cp37-abi3-win_amd64.whl (137 kB)
+Installing collected packages: psutil, pyperf
+Successfully installed psutil-7.2.2 pyperf-2.10.0
+
+[notice] A new release of pip is available: 25.0.1 -> 26.2.1
+[notice] To update, run: C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1
+ce0-compat-31b33d68c68a\Scripts\python.exe -m pip install --upgrade pip
+Installing requirements into the virtual environment C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a
+# 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\Scripts\python.exe' -m pip install psutil
+Requirement already satisfied: psutil in c:\users\fshaf\desktop\courses\hwsw\hwsw_hw\hwsw_project\subpyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\lib\site-packages (7.2.2)
+
+[notice] A new release of pip is available: 25.0.1 -> 26.2.1
+[notice] To update, run: C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1
+ce0-compat-31b33d68c68a\Scripts\python.exe -m pip install --upgrade pip
+# 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\Scripts\python.exe' -m pip freeze
+packaging==26.3
+psutil==7.2.2
+pyperf==2.10.0
+setuptools==84.0.0
+wheel==0.48.0
+# 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\Scripts\python.exe' -m pip freeze
+packaging==26.3
+psutil==7.2.2
+pyperf==2.10.0
+setuptools==84.0.0
+wheel==0.48.0
+
+[1/1] pyflate...
+# 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\Scripts\python.exe' -u 'C:\Users\Fshaf\AppData\Local\Programs\Python\Python312\Lib\site-packages\pyperformance\data-files\benchmarks\bm_pyflate\run_benchmark.py' --fast --output 'C:\Users\Fshaf\AppData\Local\Temp\tmpdupcg07v' --inherit-environ PYPERFORMANCE_RUNID
+...........
+WARNING: the benchmark result may be unstable
+* Not enough samples to get a stable result (95% certainly of less than 1% variation)
+
+Try to rerun the benchmark with more runs, values and/or loops.
+Run 'python.exe -m pyperf system tune' command to reduce the system jitter.
+Use pyperf stats, pyperf dump and pyperf hist to analyze results.
+Use --quiet option to hide these warnings.
+
+pyflate: Mean +- std dev: 540 ms +- 24 ms
+
+Performance version: 1.14.0
+Python version: 3.12.10 (64-bit) revision 0cc8128
+Report on Windows-11-10.0.26200-SP0
+Number of logical CPUs: 8
+Start date: 2026-09-21 00:17:06.242547
+End date: 2026-09-21 00:17:28.721107
+
+### pyflate ###
+Mean +- std dev: 540 ms +- 24 ms
+

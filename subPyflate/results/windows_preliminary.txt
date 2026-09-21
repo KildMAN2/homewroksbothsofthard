@@ -1,0 +1,14 @@
+Pyflate Windows preliminary results
+Python: 3.12.10
+Workload: C:\Users\Fshaf\AppData\Local\Programs\Python\Python312\Lib\site-packages\pyperformance\data-files\benchmarks\bm_pyflate\data\interpreter.tar.bz2
+Loops per iteration: 3
+Iterations per variant: 8
+Timing method: time.perf_counter around bzip2_main / gzip_main (mirrors bench_pyflake).
+These are WINDOWS PRELIMINARY numbers. Official VM numbers are collected with perf stat + pyperformance.
+
+variant             mean         min      stddev   improvement
+original          1.8877      1.5927      0.1628         0.00%
+attempt1          2.4883      2.1073      0.2028       -31.82%
+attempt2          1.7626      1.4993      0.1670        +6.63%
+attempt3          1.6855      1.4777      0.1200       +10.71%
+final             1.6394      1.4947      0.1079       +13.16%

@@ -1,0 +1,12 @@
+﻿PASS [empty] snoop not ready (bits=0)
+PASS [after 1 byte] snoop=0xab bits=8
+PASS [after 2 bytes] snoop=0xab bits=16
+PASS [after consume 3] snoop=0x5e bits=13
+PASS [after consume 5 more] snoop=0xcd bits=8
+PASS [after refill] snoop=0xcd bits=16
+PASS [after full consume] snoop=0x5a bits=8
+PASS [two more bytes] snoop=0x5a bits=24
+--------------------------------------------------
+SHIFTER TESTS: checks=8 errors=0
+SHIFTER RESULT: ALL PASS
+tb\tb_bit_shifter.sv:157: $finish called at 200000 (1ps)

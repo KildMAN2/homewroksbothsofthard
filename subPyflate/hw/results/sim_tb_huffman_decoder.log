@@ -1,0 +1,13 @@
+﻿PASS [0] symbol=0
+PASS [1] symbol=1
+PASS [2] symbol=2
+PASS [3] symbol=3
+PASS [4] symbol=4
+PASS [5] symbol=0
+PASS [6] symbol=4
+PASS [7] symbol=1
+PASS error clear at end of session
+--------------------------------------------------
+DECODER TESTS: checks=9 errors=0
+DECODER RESULT: ALL PASS
+tb\tb_huffman_decoder.sv:206: $finish called at 540000 (1ps)

@@ -1,0 +1,9 @@
+[project]
+name = "subpyflate_attempt2_pyflate"
+version = "0.1.0"
+requires-python = ">=3.8"
+dependencies = ["pyperf"]
+urls = {repository = "https://github.com/python/pyperformance"}
+
+[tool.pyperformance]
+name = "pyflate_attempt2"

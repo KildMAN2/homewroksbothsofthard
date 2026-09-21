@@ -1,0 +1,6 @@
+[includes]
+<default>
+
+[benchmarks]
+name	metafile
+pyflate_final	optimized/final/pyproject.toml

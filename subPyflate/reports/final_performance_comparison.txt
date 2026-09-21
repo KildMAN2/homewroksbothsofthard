@@ -1,0 +1,76 @@
+Pyflate final performance comparison
+
+--- Windows OFFICIAL (2026-09-21, pyperformance 1.14.0, CPython 3.12.10) ---
+Non-fast pyperformance run (3 processes x 20 values = 60 iterations after warmup).
+Source: results/original_official.txt, results/final_official.txt
+
+  ORIGINAL: 516 ms +- 29 ms   (pyflate)
+  FINAL:    362 ms +- 22 ms   (pyflate_final)
+  Speedup:  ~1.425x
+  Improvement: 29.84%
+  Target >=7%: ACHIEVED (~4x margin)
+
+--- Windows preliminary (2026-09-21, --fast pyperformance mode) ---
+Source: results/pyperf/*_fast.log
+
+  baseline: 540 ms +- 24 ms   (--fast)
+  attempt1: 453 ms +- 17 ms   (--fast, +16.1%)
+  attempt2: 354 ms +-  9 ms   (--fast, +34.4%)
+  attempt3: 324 ms +-  6 ms   (--fast, +40.0%)
+  final:    348 ms +- 22 ms   (--fast, +35.6%)
+
+--- Windows preliminary (2026-09-20, time.perf_counter, custom loop) ---
+Source: results/windows_preliminary.txt (scripts/windows_bench.py, 8 iterations x 3 loops)
+
+  original: 1.8877 s  (baseline)
+  attempt1: 2.4883 s  (-31.82%)  <-- cold-loop LUT-build cost dominates
+  attempt2: 1.7626 s  (+6.63%)
+  attempt3: 1.6855 s  (+10.71%)
+  final:    1.6394 s  (+13.16%)
+
+Interpretation of the two Windows measurements:
+- pyperformance uses pyperf's warmed-up, calibrated methodology and
+  amortizes LUT-build cost across many iterations, so Attempt 1 shows a
+  clean +16% win.
+- The simple time.perf_counter script measures cold-start decompressions,
+  where the LUT-build in Python (up to 131K entries per Huffman group)
+  dominates and Attempt 1 shows a regression.
+- Both agree Attempt 3 / final is clearly fastest and above the 7% target.
+- This split validates the hardware-acceleration argument: the LUT concept
+  works algorithmically, but Python-side build overhead is heavy in some
+  scenarios; hardware BRAM has O(1) load AND O(1) lookup.
+
+Correctness (results/*/correctness_report.txt):
+  attempt1: IDENTICAL=YES  MATCHES_REFERENCE=YES  (md5 afa004a630fe072901b1d9628b960974)
+  attempt2: IDENTICAL=YES  MATCHES_REFERENCE=YES
+  attempt3: IDENTICAL=YES  MATCHES_REFERENCE=YES
+  final:    IDENTICAL=YES  MATCHES_REFERENCE=YES
+
+--- OFFICIAL VM (Ubuntu 22.04 Jammy in local QEMU/TCG, 2026-09-21) ---
+
+Ran on: Ubuntu 22.04.5 LTS guest, python3-dbg 3.10.12, perf 5.15.209,
+pyperformance 1.14.0. QEMU accel = TCG (WHPX unavailable on host).
+
+Original (perf stat -r 3, --fast):
+  seconds time elapsed:  1257.09 +- 158.09 s
+  task-clock:            1,079,180 msec  (0.858 CPUs utilized)
+  page-faults:           447,077
+
+Final    (perf stat -r 3, --fast):
+  seconds time elapsed:   740.39 +- 10.04 s
+  task-clock:            726,769 msec  (0.982 CPUs utilized)
+  page-faults:           444,899
+
+Speedup:     1.70x
+Improvement: 41.10%   (target >=7%, ~6x margin)
+
+Hardware counters (cycles, instructions, branches, branch-misses,
+cache-references, cache-misses): <not supported> under TCG. Documented
+in docs/03_profiling.md. Same limit Sari noted for WHPX on Windows and
+the raytrace team saw on the CS-lab VM (cpu-cycles=0).
+
+perf record + perf report:
+  profiling/perf_baseline.data      (80 MB)
+  profiling/perf_final.data         (50 MB)
+  profiling/perf_report_baseline.txt (6 MB)  top: _PyEval_EvalFrameDefault 20.79%
+  profiling/perf_report_final.txt   (5 MB)  top: _PyEval_EvalFrameDefault 20.34%

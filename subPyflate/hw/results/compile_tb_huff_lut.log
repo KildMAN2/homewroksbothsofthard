@@ -1,0 +1,8 @@
+﻿iverilog : rtl\huffman_decoder.sv:128: sorry: constant selects in always_* processes are not currently supported (all 
+bits will be included).
+At line:1 char:589
++ ... e $tb ==="; iverilog -g2012 -o "results\$tb.vvp" rtl\huff_lut.sv rtl\ ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (rtl\huffman_dec...l be included).:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

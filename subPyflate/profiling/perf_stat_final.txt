@@ -1,0 +1,16 @@
+
+ Performance counter stats for 'python3-dbg -m pyperformance run --manifest optimized/final/MANIFEST --bench pyflate_final --fast' (3 runs):
+
+         726769.23 msec task-clock                #    0.982 CPUs utilized            ( +-  1.38% )
+         726747.57 msec cpu-clock                 #    0.982 CPUs utilized            ( +-  1.38% )
+   <not supported>      cycles                                                      
+   <not supported>      instructions                                                
+   <not supported>      branches                                                    
+   <not supported>      branch-misses                                               
+   <not supported>      cache-references                                            
+   <not supported>      cache-misses                                                
+            444899      page-faults               #  601.918 /sec                     ( +-  0.00% )
+              3071      context-switches          #    4.155 /sec                     ( +-  2.51% )
+
+            740.39 +- 10.04 seconds time elapsed  ( +-  1.36% )
+

@@ -1,0 +1,9 @@
+ATTEMPT=attempt3
+WORKLOAD=C:\Users\Fshaf\AppData\Local\Programs\Python\Python312\Lib\site-packages\pyperformance\data-files\benchmarks\bm_pyflate\data\interpreter.tar.bz2
+ORIGINAL_LEN=399360
+OPTIMIZED_LEN=399360
+ORIGINAL_MD5=afa004a630fe072901b1d9628b960974
+OPTIMIZED_MD5=afa004a630fe072901b1d9628b960974
+REFERENCE_MD5=afa004a630fe072901b1d9628b960974
+MATCHES_REFERENCE=YES
+IDENTICAL=YES

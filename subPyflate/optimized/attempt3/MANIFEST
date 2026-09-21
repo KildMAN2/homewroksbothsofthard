@@ -1,0 +1,6 @@
+[includes]
+<default>
+
+[benchmarks]
+name	metafile
+pyflate_attempt3	optimized/attempt3/pyproject.toml

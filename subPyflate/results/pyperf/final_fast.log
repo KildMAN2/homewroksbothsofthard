@@ -1,0 +1,64 @@
+﻿Python benchmark suite 1.14.0
+
+
+==================================================
+( 1/1) creating venv for benchmark (pyflate_final)
+
+(trying common venv first)
+Installing requirements into the virtual environment C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a
+# 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\Scripts\python.exe' -m pip install pyperf==2.10.0
+Requirement already satisfied: pyperf==2.10.0 in c:\users\fshaf\desktop\courses\hwsw\hwsw_hw\hwsw_project\subpyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\lib\site-packages (2.10.0)
+Requirement already satisfied: psutil>=5.9.0 in c:\users\fshaf\desktop\courses\hwsw\hwsw_hw\hwsw_project\subpyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\lib\site-packages (from pyperf==2.10.0) (7.2.2)
+python : 
+At line:1 char:497
++ ... ubPyflate'; python -m pyperformance run --manifest optimized\final\MA ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[notice] A new release of pip is available: 25.0.1 -> 26.2.1
+[notice] To update, run: C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1
+ce0-compat-31b33d68c68a\Scripts\python.exe -m pip install --upgrade pip
+Installing requirements into the virtual environment C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a
+# 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\Scripts\python.exe' -m pip install psutil
+Requirement already satisfied: psutil in c:\users\fshaf\desktop\courses\hwsw\hwsw_hw\hwsw_project\subpyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\lib\site-packages (7.2.2)
+
+[notice] A new release of pip is available: 25.0.1 -> 26.2.1
+[notice] To update, run: C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1
+ce0-compat-31b33d68c68a\Scripts\python.exe -m pip install --upgrade pip
+# 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\Scripts\python.exe' -m pip freeze
+packaging==26.3
+psutil==7.2.2
+pyperf==2.10.0
+setuptools==84.0.0
+wheel==0.48.0
+# 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\Scripts\python.exe' -m pip freeze
+packaging==26.3
+psutil==7.2.2
+pyperf==2.10.0
+setuptools==84.0.0
+wheel==0.48.0
+
+[1/1] pyflate_final...
+# 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\venv\cpython3.12-f9beec0a1ce0-compat-31b33d68c68a\Scripts\python.exe' -u 'C:\Users\Fshaf\Desktop\Courses\HWSW\HWSW_HW\HWSW_Project\subPyflate\optimized\final\run_benchmark.py' --fast --output 'C:\Users\Fshaf\AppData\Local\Temp\tmpt72so7vy' --inherit-environ PYPERFORMANCE_RUNID
+...........
+WARNING: the benchmark result may be unstable
+* Not enough samples to get a stable result (95% certainly of less than 1% variation)
+
+Try to rerun the benchmark with more runs, values and/or loops.
+Run 'python.exe -m pyperf system tune' command to reduce the system jitter.
+Use pyperf stats, pyperf dump and pyperf hist to analyze results.
+Use --quiet option to hide these warnings.
+
+pyflate_final: Mean +- std dev: 348 ms +- 22 ms
+
+Performance version: 1.14.0
+Python version: 3.12.10 (64-bit) revision 0cc8128
+Report on Windows-11-10.0.26200-SP0
+Number of logical CPUs: 8
+Start date: 2026-09-21 00:20:30.666082
+End date: 2026-09-21 00:20:46.760797
+
+### pyflate_final ###
+Mean +- std dev: 348 ms +- 22 ms
+

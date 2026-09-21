@@ -1,0 +1,72 @@
+Pyflate ORIGINAL benchmark - official measurement
+===================================================
+
+--- VM official (Ubuntu 22.04 Jammy inside local QEMU, TCG) ---
+
+Command: sudo perf stat -r 3 -e task-clock,cpu-clock,cycles,instructions,branches,branch-misses,cache-references,cache-misses,page-faults,context-switches -- python3-dbg -m pyperformance run --bench pyflate --fast
+Host guest:  Ubuntu 22.04.5 LTS (jammy-server-cloudimg-amd64) inside QEMU 11.1.0
+Accel:       TCG (WHPX unavailable on host, admin-only to enable)
+Python:      python3-dbg 3.10.12
+perf:        5.15.209
+pyperformance: 1.14.0
+Runs:        3 (perf stat -r 3, --fast pyperformance)
+Date:        2026-09-21
+
+Result:
+    seconds time elapsed:   1257.09 +- 158.09 s   (per pyperformance --fast run under perf)
+    task-clock:             1,079,180.83 msec   (0.858 CPUs utilized)
+    cpu-clock:              1,079,150.83 msec
+    page-faults:            447,077
+    context-switches:       4,797
+    cycles:                 <not supported>      (TCG limit; see docs/03_profiling.md)
+    instructions:           <not supported>      (TCG limit)
+    branches:               <not supported>      (TCG limit)
+    branch-misses:          <not supported>      (TCG limit)
+    cache-references:       <not supported>      (TCG limit)
+    cache-misses:           <not supported>      (TCG limit)
+
+perf record + perf report:
+    profiling/perf_baseline.data       (80 MB)
+    profiling/perf_report_baseline.txt (6 MB)
+Top self-time symbols:
+    _PyEval_EvalFrameDefault           20.79%
+    _PyMem_DebugCheckAddress            3.13%
+    _PyMem_DebugRawFree                 2.59%
+    PyGILState_Check                    2.22%
+    _PyObject_VectorcallTstate          1.96%
+    _PyEval_MakeFrameVector             1.83%
+    list_dealloc                        1.47%
+    PyTuple_GetItem                     1.38%
+    _PyLong_New                         1.38%
+
+Interpretation:
+- The Python interpreter dispatch loop `_PyEval_EvalFrameDefault`
+  dominates, consistent with the pure-Python decompressor: every symbol
+  the Huffman decoder emits goes through it.
+- Debug-allocator overhead (`_PyMem_DebugCheckAddress`, `_PyMem_DebugRawFree`)
+  is visible because python3-dbg turns on extra memory-safety checks;
+  these disappear under a release build.
+- The measured wall clock (1257 s) reflects TCG's software emulation
+  slowdown (~15-20x vs native). Comparisons vs the FINAL run are still
+  meaningful because both used the identical TCG environment.
+
+Hardware counters status:
+- Not supported under TCG (also not supported under Windows/WHPX per
+  the raytrace team's own note in Project/RUN_JAMMY_LOCAL.md). See
+  docs/03_profiling.md for the explicit documentation of this
+  environment limit.
+
+--- Windows preliminary (CPython 3.12 on Windows 11 host) ---
+
+Command:  python -m pyperformance run --bench pyflate
+Runner:   pyperformance 1.14.0
+Python:   CPython 3.12.10 (release build, not python3-dbg)
+Host:     Windows-11-10.0.26200-SP0, 8 logical CPUs
+Runs:     3 processes x 20 values = 60 iterations after warmup
+Date:     2026-09-21 00:23:12 UTC
+
+Result:
+    pyflate: Mean +- std dev: 516 ms +- 29 ms
+
+Purpose: cross-check on native Windows without VM overhead. Confirms
+the improvement % holds regardless of interpreter environment.

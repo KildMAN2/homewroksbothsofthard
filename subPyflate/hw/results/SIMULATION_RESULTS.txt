@@ -1,0 +1,85 @@
+Pyflate Accelerator - Simulation Results
+=========================================
+
+Simulator:       Icarus Verilog 12.0 (devel), s20150603-1539-g2693dd32b
+Host:            Windows-11-10.0.26200-SP0
+Date of run:     2026-09-21 00:26 UTC
+
+RTL files (all under subPyflate/hw/rtl/):
+  huff_lut.sv          -- Huffman LUT storage (BRAM-shaped)
+  bit_shifter.sv       -- MSB-first rolling bit buffer (mirrors RBitfield)
+  huffman_decoder.sv   -- Top FSM: LUT + shifter + control
+
+Testbenches (under subPyflate/hw/tb/):
+  tb_huff_lut.sv         -- 5 write/read pairs on random addresses; exact match.
+  tb_bit_shifter.sv      -- Snoop/consume/refill across empty/partial/full states;
+                            compared byte-for-byte against an in-TB software
+                            mirror of RBitfield.
+  tb_huffman_decoder.sv  -- End-to-end: 5-symbol canonical Huffman table loaded
+                            via the LUT write port, byte stream [0x1B, 0x73, 0xA0]
+                            streamed in, expected symbol sequence
+                            [0,1,2,3,4,0,4,1] compared exactly.
+
+Exact commands (run from subPyflate/hw):
+  iverilog -g2012 -o results/tb_huff_lut.vvp        rtl/huff_lut.sv rtl/bit_shifter.sv rtl/huffman_decoder.sv tb/tb_huff_lut.sv
+  vvp        results/tb_huff_lut.vvp
+  iverilog -g2012 -o results/tb_bit_shifter.vvp     rtl/huff_lut.sv rtl/bit_shifter.sv rtl/huffman_decoder.sv tb/tb_bit_shifter.sv
+  vvp        results/tb_bit_shifter.vvp
+  iverilog -g2012 -o results/tb_huffman_decoder.vvp rtl/huff_lut.sv rtl/bit_shifter.sv rtl/huffman_decoder.sv tb/tb_huffman_decoder.sv
+  vvp        results/tb_huffman_decoder.vvp
+
+Compilation notes:
+  Icarus prints one warning at rtl/huffman_decoder.sv line 128
+  ("sorry: constant selects in always_* processes are not currently
+  supported (all bits will be included)"). This refers to the truncation
+  `lut_rd_bits[SHIFT_CONS_W-1:0]` in the S_CONSUME state.
+  Icarus falls back to passing the full 5-bit value, which is then
+  truncated implicitly at the 4-bit assignment to `bs_consume`. The
+  observed behaviour is identical, and the decoder produces the correct
+  decoded symbol stream (tb_huffman_decoder DECODER RESULT: ALL PASS).
+
+Results per testbench:
+  tb_huff_lut:         checks=5  errors=0  LUT RESULT:     ALL PASS
+  tb_bit_shifter:      checks=8  errors=0  SHIFTER RESULT: ALL PASS
+  tb_huffman_decoder:  checks=9  errors=0  DECODER RESULT: ALL PASS
+
+Total:                 checks=22 errors=0
+
+Per-testbench sample output:
+
+  === tb_huff_lut ===
+    PASS lut[0]  = (sym=42 bits=3)
+    PASS lut[1]  = (sym=7  bits=4)
+    PASS lut[7]  = (sym=257 bits=5)
+    PASS lut[15] = (sym=0  bits=1)
+    PASS lut[31] = (sym=65535 bits=15)
+
+  === tb_bit_shifter ===
+    PASS [empty]              snoop not ready (bits=0)
+    PASS [after 1 byte]       snoop=0xab bits=8
+    PASS [after 2 bytes]      snoop=0xab bits=16
+    PASS [after consume 3]    snoop=0x5e bits=13
+    PASS [after consume 5]    snoop=0xcd bits=8
+    PASS [after refill]       snoop=0xcd bits=16
+    PASS [after full consume] snoop=0x5a bits=8
+    PASS [two more bytes]     snoop=0x5a bits=24
+
+  === tb_huffman_decoder ===
+    PASS [0] symbol=0
+    PASS [1] symbol=1
+    PASS [2] symbol=2
+    PASS [3] symbol=3
+    PASS [4] symbol=4
+    PASS [5] symbol=0
+    PASS [6] symbol=4
+    PASS [7] symbol=1
+    PASS error clear at end of session
+
+Notes:
+  - Reference values are computed inside each testbench (see the software
+    mirror in tb_bit_shifter.sv and the hand-derived byte stream +
+    hand-derived canonical Huffman table in tb_huffman_decoder.sv).
+  - No synthesis was run. No area / frequency / power numbers are claimed
+    from this simulation; the estimates in docs/13_hardware_performance.md
+    are labeled ESTIMATE.
+  - Rerun with: bash subPyflate/hw/run_sim.sh (auto-detects iverilog).
