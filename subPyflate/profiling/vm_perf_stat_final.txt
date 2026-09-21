@@ -1,0 +1,18 @@
+# started on Mon Sep 21 14:59:56 2026
+
+
+ Performance counter stats for 'python3-dbg -m pyperformance run --manifest optimized/final/MANIFEST --bench pyflate_final --fast' (3 runs):
+
+                 0      cycles                    #    0.000 GHz                    
+      388984213555      instructions                                                  ( +-  0.02% )
+       94689052878      branches                  #    1.246 G/sec                    ( +-  0.04% )
+         479262450      branch-misses             #    0.51% of all branches          ( +-  0.23% )
+         410288916      cache-references          #    5.400 M/sec                    ( +-  0.10% )
+          28422250      cache-misses              #    6.934 % of all cache refs      ( +-  0.11% )
+            458789      page-faults               #    6.038 K/sec                    ( +-  0.00% )
+              2888      context-switches          #   38.007 /sec                     ( +-  0.48% )
+          76416.71 msec task-clock                #    1.001 CPUs utilized            ( +-  0.28% )
+          76415.67 msec cpu-clock                 #    1.001 CPUs utilized            ( +-  0.28% )
+
+            76.307 +- 0.236 seconds time elapsed  ( +-  0.31% )
+

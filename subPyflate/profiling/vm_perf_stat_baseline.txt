@@ -1,0 +1,18 @@
+# started on Mon Sep 21 14:51:57 2026
+
+
+ Performance counter stats for 'python3-dbg -m pyperformance run --bench pyflate --fast' (3 runs):
+
+                 0      cycles                    #    0.000 GHz                    
+      579459257273      instructions                                                  ( +-  3.92% )
+      142417577761      branches                  #    1.190 G/sec                    ( +-  3.92% )
+         770743225      branch-misses             #    0.52% of all branches          ( +-  8.83% )
+         543649894      cache-references          #    4.543 M/sec                    ( +- 24.65% )
+          28010769      cache-misses              #    4.090 % of all cache refs      ( +-  9.62% )
+            463011      page-faults               #    3.869 K/sec                    ( +-  7.32% )
+              3089      context-switches          #   25.814 /sec                     ( +- 39.94% )
+         113777.02 msec task-clock                #    0.940 CPUs utilized            ( +-  5.16% )
+         113775.87 msec cpu-clock                 #    0.940 CPUs utilized            ( +-  5.16% )
+
+            120.99 +- 6.80 seconds time elapsed  ( +-  5.62% )
+
