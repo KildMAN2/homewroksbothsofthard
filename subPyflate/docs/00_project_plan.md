@@ -30,7 +30,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done.
 - [x] R17 — RTL testbenches with reference model.
 - [ ] R18 — RTL simulation logs (ModelSim/Icarus/Verilator) — run in VM.
 - [x] R19 — HW/SW interface and hardware-performance estimate.
-- [x] R20 — Report, README, prompts, presentation prep.
+- [x] R20 — Report, README, prompts.
 
 ## 2. Directory Layout
 
@@ -52,7 +52,6 @@ subPyflate/
 │   ├── tb/                <- SystemVerilog testbenches
 │   └── results/           <- simulation logs
 ├── prompts/               <- prompts.md (record of AI prompts used)
-├── presentation/          <- preparing_presentation.md
 └── logs/                  <- environment and command capture from VM
 ```
 
@@ -68,7 +67,7 @@ subPyflate/
 8. Before/after profiling (docs/07).
 9. Consistency audit (docs/08).
 10. Hardware candidate + architecture + RTL + testbenches + HW/SW interface + performance estimate (docs/09..13).
-11. Final report + audit + presentation (docs/14, reports/, presentation/).
+11. Final report + audit (docs/14, reports/).
 
 ## 4. Rules
 

@@ -410,5 +410,3 @@ Remaining work:
 - Fill in `TBD` measurements by running the VM scripts.
 - Actually run `hw/run_sim.sh` on a machine with a SV simulator to
   populate `hw/results/SIMULATION_RESULTS.txt` from the templates.
-- For the presentation: `subPyflate/presentation/preparing_presentation.md`
-  is the slide-by-slide plan.

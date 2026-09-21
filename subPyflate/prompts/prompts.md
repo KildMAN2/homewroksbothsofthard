@@ -120,7 +120,6 @@ covers one workflow stage:
 - Prompt 18 — Final report (reports/report_pyflate.md).
 - Prompt 19 — Reproducibility scripts (scripts/, README.md).
 - Prompt 20 — Final project audit (docs/14_final_audit.md).
-- Prompt 21 — Final presentation preparation (presentation/preparing_presentation.md).
 
 Every prompt ends with `STOP.` so the assistant does not run ahead into
 the next stage.
@@ -198,6 +197,3 @@ Recorded here so the AI usage log is complete. Each entry gives:
   HW/SW interface, HW performance, final audit.
 - Wrote `reports/report_pyflate.md` (+ `.txt` mirror).
 - Wrote `README.md` and this `prompts.md`.
-- Wrote `presentation/preparing_presentation.md` (25-slide outline in
-  the same "Show / Say / Key Point / Likely Question / Answer" format as
-  the raytrace preparation file).

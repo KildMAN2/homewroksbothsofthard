@@ -37,7 +37,6 @@ subPyflate/
 │   ├── run_sim.sh            picks ModelSim / Icarus / Verilator
 │   └── results/              simulation logs
 ├── prompts/                  prompts.md (AI prompts used)
-├── presentation/             preparing_presentation.md
 └── logs/                     environment and command captures
 ```
 
@@ -175,10 +174,6 @@ bash subPyflate/hw/run_sim.sh tb_huffman_decoder # one testbench
 ## 9. AI Prompts
 
 - `subPyflate/prompts/prompts.md`
-
-## 10. Presentation Material
-
-- `subPyflate/presentation/preparing_presentation.md`
 
 ## Notes For Course Staff
 
