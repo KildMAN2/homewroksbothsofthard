@@ -153,11 +153,14 @@ run_profile_mode() {
   if [ -f "$target_perf_data" ] && [ -f "$flamegraph_script" ]; then
     print_step "Generating perf flamegraph.svg from perf_${target}.data"
     cp -f "$target_perf_data" "$perf_data"
-    bash "$flamegraph_script"
-    local target_flamegraph="$SUBRAY_DIR/profiling/flamegraph_${target}.svg"
-    if [ -f "$SUBRAY_DIR/profiling/flamegraph.svg" ]; then
-      cp -f "$SUBRAY_DIR/profiling/flamegraph.svg" "$target_flamegraph"
-      echo "Perf flamegraph: $target_flamegraph"
+    if bash "$flamegraph_script"; then
+      local target_flamegraph="$SUBRAY_DIR/profiling/flamegraph_${target}.svg"
+      if [ -f "$SUBRAY_DIR/profiling/flamegraph.svg" ]; then
+        cp -f "$SUBRAY_DIR/profiling/flamegraph.svg" "$target_flamegraph"
+        echo "Perf flamegraph: $target_flamegraph"
+      fi
+    else
+      warn "perf flamegraph generation failed (likely empty perf stacks on this VM); the py-spy flamegraph is the usable evidence"
     fi
   else
     print_step "Skipping generate_flamegraph.sh"
