@@ -1,347 +1,976 @@
-# Raytrace Benchmark Report
-
-## 1. Overview
-
-This report consolidates the Raytrace project from baseline through software optimization, profiling, hardware design, interface planning, RTL simulation, and hardware performance estimation.
-
-Scope and evidence policy:
-- All claims are based on project artifacts under `Project/subRay/docs/`, `Project/subRay/results/`, `Project/subRay/profiling/`, and `Project/subRay/hw/results/`.
-- Measured results are explicitly separated from estimates.
-- No information in this report is invented.
-
-Primary final outcome:
-- Best software version selected: `Project/subRay/optimized/final/` (copied from Attempt 1).
-- Official measured improvement versus original: **75.76%**.
-- 7% target status: **achieved**.
-
-## 2. Benchmark Purpose
-
-The benchmark is `raytrace` from pyperformance. It measures execution time of a pure-Python ray tracer that performs:
-- camera ray generation,
-- ray-object intersection testing,
-- recursive reflection,
-- shadow visibility checks,
-- diffuse/specular/ambient shading,
-- per-pixel RGB output writes.
-
-The optimization objective was to improve performance while preserving correctness and keeping the original benchmark source unchanged.
-
-## 3. Libraries and Dependencies
-
-Runtime/software:
-- Python 3.10.12 (documented in baseline environment records).
-- `python3-dbg` for profiling-friendly symbol visibility.
-- `pyperformance 1.14.0` / `pyperf` benchmark framework.
-- Python stdlib modules used by benchmark implementation: `array`, `math`.
-
-Profiling/tools:
-- `perf` (`perf record`, `perf report`, `perf stat`).
-- `py-spy` for Python flame graphs (available in later profiling runs).
-
-Hardware design and verification:
-- SystemVerilog RTL in `Project/subRay/hw/rtl/`.
-- SystemVerilog testbenches in `Project/subRay/hw/tb/`.
-- ModelSim Intel FPGA Edition 10.5b (`vlog`, `vsim`) for simulation.
-
-## 4. Data Structures
-
-Original benchmark uses object-oriented geometry and scene modeling:
-- Classes: `Vector`, `Point`, `Ray`, `Sphere`, `Halfspace`, `Canvas`, `Scene`, `SimpleSurface`, `CheckerboardSurface`.
-- Scene containers:
-  - object list of `(geometry, surface)` tuples,
-  - light-point list.
-- Per-ray temporary intersection list in original `rayColour` path.
-- RGB storage in `array.array('B')` for canvas bytes.
-
-Optimized software attempts progressively replaced hot-path object/method usage with scalar float locals and tuple-based scene data.
-
-## 5. Algorithm
-
-Core algorithm flow:
-1. Build camera basis and per-pixel primary ray.
-2. Intersect ray against all scene objects (spheres and halfspace/plane).
-3. Select nearest valid hit.
-4. Compute shading:
-   - recursive specular reflection,
-   - Lambert diffuse from visible lights,
-   - ambient contribution.
-5. For each light, cast a shadow ray and test visibility.
-6. Clamp and write RGB pixel.
-
-Complexity characteristics:
-- High constant-factor Python overhead due heavy per-ray/per-pixel object and method activity.
-- Intersection and shading loops are repeated across all pixels and recursion/light paths.
-
-## 6. Original Implementation
-
-Original benchmark source was preserved under:
-- `Project/subRay/original/bm_raytrace/run_benchmark.py`
-- `Project/subRay/original/bm_raytrace/pyproject.toml`
-
-Integrity controls:
-- SHA256 checks recorded and matched against source copy evidence in benchmark-understanding documentation.
-- Original source was not modified during optimization work.
-
-## 7. Baseline Performance
-
-Early baseline run summary (from `Project/subRay/reports/baseline_results.txt`):
-- Mean: **26.8 s**
-- Std dev: **5.7 s**
-- Max: **48.7 s**
-- Warning: benchmark may be unstable.
-
-Important context:
-- This early baseline was noisy and carried instability warnings in the VM.
-- The final official before/after comparison used dedicated official measurement files and is reported in Section 15.
-
-## 8. Profiling Methodology
-
-### pyperformance
-- Used to run the benchmark with pyperf statistical methodology.
-- Provides mean/std-dev style outputs and stability warnings.
-
-### perf
-- `perf record -F 999 -g` used to capture sampled call stacks.
-- `perf report --stdio` used for hotspot extraction.
-- `perf stat` used for counter-based support data and repeatability context.
-
-### py-spy
-- Used for readable Python flame graphs.
-- Helpful when perf stacks include unresolved/noisy low-level frames.
-- Workload matching caveat documented when comparing graphs from different modes.
-
-Method controls:
-- Preserve raw artifacts.
-- Keep failed attempts/warnings visible.
-- Avoid rerunning expensive profiling when equivalent evidence already exists.
-
-## 9. Original Flame Graph Analysis
-
-Original flame graph artifacts include:
-- `Project/subRay/profiling/flamegraph.svg`
-- `Project/subRay/profiling/flamegraph_original.svg`
-- `Project/subRay/profiling/flamegraph_pyspy.svg`
-
-Observed behavior (cross-checked with perf report evidence):
-- Broad runtime share in Python interpreter/control-plane paths.
-- Significant stack presence associated with frame evaluation, Python arithmetic dispatch, lookup/deallocation activity, and benchmark orchestration.
-
-Interpretation boundary:
-- Flame-graph width was used qualitatively to locate hotspots.
-- Exact percentages were taken from perf report text where available.
-
-## 10. Bottlenecks
-
-Measured hotspot families from profiling artifacts:
-- `_PyEval_EvalFrameDefault` around ~20.6% to ~23.6% in key reports.
-- `_PyEval_MakeFrameVector`, `_PyFrame_New_NoTrack`, `frame_dealloc`.
-- `binary_op1`, `PyFloat_FromDouble`, `PyTuple_GetItem`.
-- `_PyObject_GetMethod`, `_PyType_Lookup`, dictionary lookup/deallocation helpers.
-
-Conclusion from measured data:
-- Dominant costs are Python interpreter/object overhead plus repeated scalar geometry arithmetic in hot loops, not one isolated native library kernel.
-
-## 11. Optimization Candidates
-
-Ranked candidate categories documented and reviewed:
-1. Scalarize hot vector/point/ray arithmetic and reduce object churn.
-2. Remove per-ray temporary intersections list and fold nearest-hit selection into one pass.
-3. Hoist repeated global/attribute/helper lookups.
-4. Reduce dictionary/object overhead patterns.
-5. Shading/visibility loop refactors.
-6. Pixel-write path micro-optimizations.
-
-Hardware candidate selection (separate phase):
-- Sphere/plane intersection + closest-hit reduction (including visibility blockers) selected as first accelerator target.
-
-## 12. Optimization Attempts
-
-### Attempt 1
-- Strategy: scalar float locals + tuple-based scene data in the hottest vector/point/ray paths.
-- Effect: introduced the main scalarization optimization and produced almost the entire software speedup.
-- Correctness: `IDENTICAL=YES` (`Project/subRay/results/attempt1/correctness_report.txt`).
-
-### Attempt 2
-- Strategy: local alias/lookup hoisting for hot globals/helpers in `ray_colour()` and `bench_raytrace()`.
-- Correctness: `IDENTICAL=YES` (`Project/subRay/results/attempt2_correctness_report.txt`).
-
-### Attempt 3
-- Strategy: inlined the per-light visibility check in the Lambert loop to reduce call/frame overhead.
-- Correctness: `IDENTICAL=YES` (`Project/subRay/results/attempt3_correctness_report.txt`).
-
-### Measured non-fast `perf stat` comparison
-- Attempt 1: `19.7062 ± 0.0133 s`
-- Attempt 2: `19.68433 ± 0.00708 s`
-- Attempt 3: `19.6077 ± 0.0171 s`
-
-Notes:
-- Attempt 3 was slightly faster than Attempt 1 in this later non-fast `perf stat` comparison.
-- Attempt 1 remains the official final implementation because the locked official result and the final submission pipeline were produced from Attempt 1.
-- Attempt 1 is not claimed to be the fastest in every measurement.
-- Earlier supplemental profiling step documented `py-spy` unavailable in one VM stage (`py-spy: command not found`), so that specific requested graph was not generated in that step.
-- Local virtualization/PMU limitations were encountered in some environments (hardware counters unsupported), so PMU-capable runs were done where supported.
-
-## 13. Final Software Optimization
-
-Selected final software implementation:
-- `Project/subRay/optimized/final/` (copied from Attempt 1).
-
-Selection basis:
-- Attempt 1 introduced the main scalarization optimization and produced almost the entire software speedup.
-- Attempt 1 is the locked official final because the official before/after result and the final submission pipeline were generated from Attempt 1.
-- Attempt 3 was slightly faster in the later non-fast `perf stat` comparison, but it is not the locked official final.
-
-Measured non-fast `perf stat` means:
-
-| Version | Correct | perf stat mean (non-fast) |
-|---|---|---:|
-| Attempt 1 | Yes | 19.7062 ± 0.0133 s |
-| Attempt 2 | Yes | 19.68433 ± 0.00708 s |
-| Attempt 3 | Yes | 19.6077 ± 0.0171 s |
-
-## 14. Correctness Verification
-
-Correctness checks used deterministic output comparison and SHA256 reporting at a fixed `32×32` scene.
-
-Documented outcomes:
-- Attempt 1: `IDENTICAL=YES` with matching hash (`Project/subRay/results/attempt1/correctness_report.txt`).
-- Attempt 2: `IDENTICAL=YES` with matching hash (`Project/subRay/results/attempt2_correctness_report.txt`).
-- Attempt 3: `IDENTICAL=YES` with matching hash (`Project/subRay/results/attempt3_correctness_report.txt`).
-
-Verification artifacts:
-- `Project/subRay/results/attempt1/correctness_report.txt`
-- `Project/subRay/results/attempt2_correctness_report.txt`
-- `Project/subRay/results/attempt3_correctness_report.txt`
-- checker scripts under `Project/subRay/scripts/`
-
-Scope of this evidence:
-- Exact byte/SHA256 equality proves the optimized output matches the original for the tested fixed scene and `32×32` resolution.
-- It does not prove correctness for every possible input, scene, or resolution.
-
-## 15. Official Before/After Performance
-
-Official measurement files:
-- Original: `Project/subRay/results/original_official.txt`
-- Final: `Project/subRay/results/final_official.txt`
-
-These are matched `perf stat` elapsed measurements over three complete benchmark-script executions at `64×64` (not the time to render a single image).
-
-Official results:
-
-| Version | Mean | Std Dev | Improvement | Correct |
-|---|---:|---:|---:|---|
-| ORIGINAL | 81.285 s | 0.198 s | 0.00% | Yes |
-| FINAL (Attempt 1) | 19.7062 s | 0.0133 s | 75.76% | Yes |
-
-- Speedup: approximately `4.12x` (`81.285 / 19.7062`).
-- Runtime improvement: `75.76%`.
-
-Threshold check:
-- Target `>= 7%` improvement: **achieved**.
-
-## 15A. Perf Stat Comparison (Baseline vs Final)
-
-Artifacts:
-- Baseline (non-fast): `Project/subRay/profiling/perf_stat_baseline.txt`
-- Final (non-fast): `Project/subRay/profiling/perf_stat_final.txt`
-
-| Metric | Baseline (mean of 3 runs) | Final (single run) |
-|---|---:|---:|
-| Elapsed time | 81.285 s | 19.667 s |
-| cpu-clock | 80,673 msec | 19,415 msec |
-| instructions | 387,324,411,814 | 99,522,163,151 |
-| cache-references | 404,917,856 | 198,261,770 |
-| cache-misses | 4,285,182 (1.045%) | 2,925,764 (1.476%) |
-| branches | 94,415,979,904 | 23,673,592,504 |
-| branch-misses | 865,418,173 (0.91%) | 166,181,093 (0.70%) |
-| page-faults | 89,909 | 87,875 |
-| context-switches | 2,459 | 2,101 |
-
-Notes:
-- Instructions retired dropped ~3.9x (387.3B -> 99.5B); this is the primary driver of the ~4.1x runtime reduction.
-- Branches dropped ~4.0x (94.4B -> 23.7B) and branch-misses fell ~5.2x, reflecting far less interpreter/object dispatch work.
-- Cache-references roughly halved (405M -> 198M); the cache-miss rate rose slightly (1.045% -> 1.476%) but absolute misses still fell.
-- Elapsed time dropped from 81.285 s to 19.667 s (~4.1x), consistent with the official 81.285 s -> 19.7062 s result.
-- The `cpu-cycles` counter reads `0` because the PMU cycle counter was unavailable in this environment, not because execution used zero cycles.
-
-## 15B. Perf Report Comparison (Baseline vs Final)
-
-Artifacts:
-- Baseline: `Project/subRay/profiling/perf_report_suite_baseline.txt`
-- Final: `Project/subRay/profiling/perf_report_suite_final.txt`
-
-Top self-time symbol share:
-
-| Metric | Baseline | Final |
-|---|---:|---:|
-| Samples (cpu-clock) | 117K | 34K |
-| `_PyEval_EvalFrameDefault` | 23.50% | 27.39% |
+================================================================================
+                    HWSW PROJECT - BENCHMARK REPORT: RAYTRACE
+================================================================================
+
+Benchmark : raytrace (pyperformance, bm_raytrace/run_benchmark.py)
+Scene     : 8 objects, 2 light sources, rendered at 64 x 64 pixels (official
+            project resolution; the pyperformance default is 100 x 100)
+
+Contents
+  1. Overview
+  2. Initial Analysis
+  3. Optimizations
+  4. Performance Comparison
+  5. Hardware Acceleration Proposal
+  6. Conclusion
+
+
+================================================================================
+1. OVERVIEW
+================================================================================
+
+1.1 Purpose of the benchmark
+----------------------------
+raytrace is a pyperformance benchmark that builds and renders a small 3-D
+scene using a ray tracer implemented from scratch in pure Python - there is
+no NumPy, no OpenGL binding, nothing beneath the interpreter doing the
+actual geometry. Every vector add, every sphere test, every shading
+calculation runs as ordinary Python bytecode. The workload is
+single-threaded and entirely CPU-bound.
+
+Where a benchmark like pyflate spends its time inside a handful of tight,
+repetitive loops (bit unpacking, byte-level RLE), raytrace's cost is spread
+thin across a very large number of small, individually cheap operations:
+constructing a fresh Vector or Point for nearly every arithmetic step,
+dispatching through several layers of method calls to do so, and repeating
+a linear scan over the same eight scene objects for every ray the renderer
+casts. This is why the two benchmarks were paired for this project - they
+stress the interpreter in almost opposite ways, one through raw byte
+throughput and one through object/call overhead.
+
+The script itself does not check whether the picture it produces is
+correct; it only writes a PPM file if you ask it to, and even then it never
+compares that file against anything. For this project, an independent
+equivalence check was built specifically to close that gap: render the
+scene with both the original and an optimized copy, then compare the
+SHA-256 digest of the two output images (detailed in 2.1 and exercised in
+Section 3).
+
+1.2 Workload (measured)
+-----------------------
+Each benchmark loop rebuilds the scene from scratch: one large sphere, six
+smaller spheres lined up beside it, a checkerboard-textured infinite plane
+standing in for a floor, and two point lights. A single loop then renders
+one complete 64 x 64 image.
+
+Every figure below is a property of the scene and the resolution, not of
+the machine running it or how fast it runs - so these numbers hold
+regardless of CPU speed, Python build, or measured timing. They come from
+running the unmodified benchmark once through an instrumented copy that
+counts constructor and method invocations without altering what those
+methods do, at this project's actual 64 x 64 resolution:
+
+    Image .................................... 64 x 64 = 4,096 pixels
+    Objects in the scene ..................... 8 (7 spheres, 1 halfspace)
+    Light sources ............................ 2
+
+    Ray() constructions ...................... 40,043
+      primary/camera rays .................... 4,097 (4,096 pixels + 1 eye ray)
+      reflection rays ......................... 2,164
+      shadow rays (one per object tested,
+        per light, per shaded point) .......... 33,782
+
+    Shadow-visibility tests (_lightIsVisible calls) .. 4,328
+      of which the light is visible .......... 4,187
+      average objects tested per call ........ 7.80 of 8
+        (the scan exits as soon as it finds one obstruction, so most
+         calls end up walking the entire object list unobstructed)
+
+    Intersection tests ....................... 83,694 (20.4 per pixel)
+      against spheres ........................ 73,268
+        returned an intersection time ........ 2,762
+        of those, in front of the ray ........ 1,269
+      against the halfspace .................. 10,426
+        returned an intersection time ........ 10,426
+        of those, in front of the ray ........ 1,613
+
+    Objects created .......................... 227,060 (55.4 per pixel)
+      Vector .................................. 184,841
+      Ray ...................................... 40,043
+      Point ..................................... 2,176
+
+    Vector operations
+      dot .................................... 208,135
+      mustBeVector (no-op check) ............. 212,465
+      Point.__sub__ ........................... 113,402
+      scale ....................................  61,081
+      normalized / magnitude .................... 44,822 each
+      Vector.__add__ ............................  8,192
+      Vector.__sub__ ............................  2,164
+        (this figure lines up exactly with the reflection-ray count above -
+         reflectThrough() performs one Vector subtraction per reflected
+         ray, which doubles as a sanity check that the instrumentation is
+         counting correctly)
+
+    Intersection-list construction (rayColour) ..... 6,239 lists,
+      about 49,912 temporary tuples (each list holds one tuple per scene
+      object; the count reflects how many shaded points are reached before
+      the recursion-depth cutoff)
+
+    math.sqrt() calls ........................ 47,584
+
+Nearly every halfspace test returns a value, since its formula only fails
+when a ray runs exactly parallel to the floor plane; most of those results
+are then thrown away because the intersection point sits behind the ray
+(only 1,613 of 10,426 survive that filter).
+
+Two figures matter most for what follows. First, rendering one image
+allocates 227,060 short-lived objects - about 55 for every pixel drawn.
+Second, of the 73,268 sphere tests performed, only 2,762 actually return a
+hit, meaning roughly 96 out of every 100 sphere tests do nothing but
+confirm a miss. A third, less obvious figure is worth calling out here
+because it becomes central later: 33,782 of the benchmark's 40,043 Ray
+objects - 84% of them - come from a single spot in the code,
+_lightIsVisible(), which builds a brand-new shadow ray for every object it
+checks rather than building one ray and reusing it (see 1.8).
+
+1.3 Libraries and dependencies
+------------------------------
+
+From the standard library:
+
+  math     - supplies sqrt() for magnitude and sphere-intersection work,
+             and pi/tan() once, up front, to size the camera's field of
+             view. 47,584 sqrt() calls occur in one 64 x 64 loop.
+
+  array    - backs the output canvas with a flat array.array('B') of raw
+             bytes, three per pixel; at 64 x 64 that is 12,288 bytes total.
+
+From outside the standard library:
+
+  pyperf         - supplies the timing harness. The benchmark registers
+                   itself with a pyperf.Runner via bench_time_func(), and
+                   exposes --width, --height and --filename as extra
+                   command-line switches. This project always supplies
+                   --width=64 --height=64 explicitly.
+
+  pyperformance  - the outer framework that discovers, launches and manages
+                   bm_raytrace as one of its bundled benchmarks, including
+                   spawning the worker subprocess that does the actual
+                   timed work.
+
+Nothing outside the benchmark's own source touches the geometry, shading or
+recursion - it is all ordinary Python, top to bottom. Because the script
+provides no way to check its own output, this project relies entirely on
+the external SHA-256 comparison described in 2.1 and used throughout
+Section 3.
+
+1.4 Program structure and execution flow
+------------------------------------------
+
+Ignoring the harness overhead around it, one timed loop looks like this:
+
+  bench_raytrace(loops, width, height, filename)
+    start timer
+
+    repeat loops times:
+      build a fresh Canvas (64 x 64 x 3 bytes)
+      build a fresh Scene: 7 spheres, 1 checkerboard floor, 2 lights
+      render(canvas):
+        derive the camera's viewing plane from its field of view
+        for each of the 4,096 pixels, in row-major order:
+          work out that pixel's ray direction from the camera basis
+          build a primary Ray
+          rayColour(ray):
+            past recursion depth 3? return black immediately
+            ask every one of the 8 objects for an intersection time
+            firstIntersection() picks the smallest valid, forward time
+            no hit at all -> return the background colour
+            otherwise, at the hit point:
+              colourAt(...) blends three terms:
+                the base surface colour (flat, or checkerboard)
+                a recursive reflection, if the surface is specular
+                a Lambert diffuse term, built from whichever lights
+                  survive a per-light _lightIsVisible() shadow test
+                a constant ambient term
+          Canvas.plot(...) converts the resulting colour to three bytes
+          and writes them into the canvas buffer
+
+    stop timer
+    optionally write the canvas out as a PPM file
+    return the elapsed time
+
+Recursion always begins, because every surface in this scene ships with a
+specular coefficient of 0.2 (greater than zero), and it always ends by
+depth 4 regardless of what the ray hits after that. Rebuilding the scene
+and canvas inside the timed region does add a small constant cost, but at
+only 8 objects it is dwarfed by the per-pixel work that follows.
+
+1.5 Algorithms
+---------------
+
+(a) Building the primary rays
+
+The camera is defined by a position, a look-at point, and a field of view;
+from those, render() derives two basis vectors (vpRight, vpUp) spanning a
+virtual viewing plane in front of the camera. Each of the 4,096 pixels maps
+to one point on that plane, and a normalized ray is built from the camera
+position through that point.
+
+(b) Sphere intersection
+
+Plugging the ray equation into the sphere equation yields a standard
+quadratic in the intersection parameter t. Its discriminant tells the
+story:
+
+    negative  -> the ray misses the sphere entirely
+    zero      -> the ray just grazes it (one root)
+    positive  -> the ray passes through it (two roots)
+
+The code takes the smaller root, v - sqrt(discriminant), without first
+checking its sign - anything behind the ray gets filtered out later, by
+the caller. At this project's resolution, close to 96% of all sphere tests
+never get that far, because the discriminant comes back negative.
+
+(c) Halfspace (floor) intersection
+
+The floor's intersection routine is short:
+
+    v = ray.vector.dot(normal)
+    if v:
+        return 1 / -v
+
+This is a shortcut, not the textbook ray-plane formula - it never looks at
+the ray's origin or the plane's actual position at all. It happens to give
+the right answer for this specific scene, where the floor passes through
+the world origin with an upward normal, but only for rays whose origin
+happens to sit exactly one unit above the plane. It stays exactly as
+written, because changing it would change the rendered picture (1.8).
+
+(d) Picking the nearest hit
+
+rayColour() collects a candidate time from every object, then hands the
+list to firstIntersection(), which keeps only candidates with
+t > -EPSILON and returns whichever of those is smallest. The small
+negative tolerance exists to avoid rejecting a ray that starts almost
+exactly on a surface due to floating-point rounding.
+
+(e) Shading
+
+Once a hit point is known, colourAt() adds together up to three
+contributions: a flat ambient term, a Lambert diffuse term driven by the
+angle between the surface normal and each visible light, and - despite the
+name "specular" - a full recursive mirror reflection rather than a
+localized highlight.
+
+(f) Shadows
+
+For every light in the scene, the renderer fires a ray from the hit point
+toward that light and asks _lightIsVisible() whether anything else in the
+scene sits in the way before the ray reaches it. The first object it finds
+in the way is enough to call the light blocked; a small epsilon keeps a
+surface from shadowing itself.
+
+(g) Reflection and the recursion limit
+
+A specular surface reflects the incoming ray direction around the surface
+normal, fires a brand-new ray from the hit point in that direction, and
+blends whatever colour comes back with the surface's own colour. That new
+ray can itself hit another specular surface and reflect again - capped at
+four levels deep so the recursion always terminates.
+
+(h) The checkerboard pattern
+
+The floor's two-tone pattern comes from the parity of
+int(|x|+0.5) + int(|y|+0.5) + int(|z|+0.5) evaluated at the hit point. One
+line of this routine, v.scale(1.0 / checkSize), computes a scaled vector
+and then throws the result away without using it - scale() returns a new
+object rather than mutating in place, so checkSize silently has no effect
+on the pattern at all. Left in place, because at the default checkSize of
+1 it is invisible in the output.
+
+1.6 Main data structures
+--------------------------
+
+  Vector, Point   Plain x/y/z containers with no __slots__ declaration, so
+                  each instance carries its own attribute dictionary on top
+                  of its three coordinates. One loop allocates 184,841
+                  Vectors and 2,176 Points.
+
+  Ray             Pairs an origin Point with a direction Vector; the
+                  constructor immediately normalizes that direction,
+                  which itself allocates further Vectors and calls
+                  magnitude() and sqrt(). 40,043 Ray objects per loop.
+
+  Scene.objects       A flat Python list of the 8 (geometry, surface)
+                      pairs, walked linearly on every intersection search.
+
+  Scene.lightPoints   The 2 light positions, as Point objects.
+
+  Canvas.bytes        The output image as an array.array('B'); 12,288
+                      bytes at 64 x 64.
+
+  intersections       A short-lived list rebuilt inside rayColour() on
+                      every call that has not yet hit the recursion limit;
+                      6,239 of these per loop, holding roughly 49,912
+                      tuples between them.
+
+  surfaces            8 SimpleSurface/CheckerboardSurface instances (one
+                      per scene object), each carrying a base colour and
+                      the ambient/diffuse/specular coefficients used in
+                      1.5(e).
+
+1.7 Candidate costs to investigate
+-------------------------------------
+
+Reading the code alongside the measured counts in 1.2 points at seven
+places worth checking against a real profile:
+
+  H1. What a single intersection test actually costs
+      Even a miss requires a subtraction, two dot products, and a
+      comparison; a hit adds a square root on top. With 73,268 sphere
+      tests per loop and a 96% miss rate, the cost of the miss path alone
+      is worth scrutinizing.
+
+  H2. The sheer number of temporary objects
+      227,060 Vector/Point/Ray allocations per loop - every one of them a
+      full Python object with its own attribute dictionary, even when the
+      value it holds is used exactly once and discarded.
+
+  H3. How finely the vector arithmetic is split across methods
+      dot() alone is called 208,135 times, __sub__ another 113,402+2,164,
+      scale() 61,081 times, normalized() 44,822 times - meaning one
+      geometric calculation typically costs several separate Python calls
+      rather than one.
+
+  H4. The intersection-list-then-scan pattern
+      Building a full list of per-object candidates before picking the
+      best one (6,239 lists, ~49,912 tuples per loop) does more
+      allocation than tracking the running minimum during the scan would.
+
+  H5. Shadow rays rebuilt inside the object loop
+      33,782 of the benchmark's 40,043 Ray() calls - 84% of all of
+      them - come from _lightIsVisible() constructing a fresh ray for
+      every object it checks, rather than once per light per shaded
+      point. Nothing else in 1.2's numbers comes close to this share.
+
+  H6. Fixed per-pixel overhead
+      render()'s own loop bookkeeping and Canvas.plot()'s byte conversion
+      run once per pixel regardless of scene complexity, and may become
+      more noticeable once the geometry cost above is reduced.
+
+  H7. Type-check calls that do nothing
+      mustBeVector() is called 212,465 times purely to enforce an
+      argument type, and its entire body in the success case is
+      "return self" - no computation at all.
+
+Building the scene itself (8 objects, once per loop) is not expected to
+register as a meaningful cost. Section 2 checks these seven hypotheses
+against an actual profile.
+
+1.8 Relevant implementation limitations
+-------------------------------------------
+
+  - The benchmark has no self-check: with default arguments it never even
+    writes its output to disk, let alone verifies it. This project
+    supplies its own SHA-256-based equivalence test instead (2.1, Section
+    3) to make sure an "optimization" never quietly changes a pixel.
+
+  - The floor's intersection formula (1 / -v) is a shortcut rather than a
+    true ray-plane solver - it ignores both the ray's origin and the
+    plane's position. It is left untouched, since the currently-rendered
+    image is the thing this project's correctness checks are built to
+    preserve.
+
+  - Sphere intersection only ever returns the closer of the two possible
+    roots. A ray whose closer root lies behind it but whose farther root
+    is still ahead would be handled wrong - not a concern for any ray in
+    this particular scene, but worth noting as a general limitation of
+    the formula.
+
+  - The checkerboard surface computes a scaled coordinate vector and then
+    never uses it, so its checkSize parameter is entirely inert. Invisible
+    at the default value of 1, and left as-is for the same reason as the
+    floor formula above.
+
+  - Unlike those three items, the shadow-ray reconstruction in H5 is
+    treated as fair game for optimization rather than preserved as-is: it
+    is a cost internal to how the calculation is carried out, not
+    something a viewer of the final image could ever detect, and it is
+    tackled directly in Section 3.
+
+  - Calls like mustBeVector() exist purely to assert an argument's type;
+    212,465 such calls per loop add pure Python-call overhead without
+    performing any part of the actual geometry calculation.
+
+
+
+================================================================================
+2. INITIAL ANALYSIS
+================================================================================
+
+2.1 Environment and measurement method
+------------------------------------------
+
+  Host guest ............ Ubuntu 22.04 (jammy) cloud image inside QEMU
+  Accel ................. KVM
+  Logical CPUs .......... 1 (single virtual CPU)
+  Interpreter (timing) .. CPython 3.10.12 (python3-dbg build used throughout,
+                          for consistent symbol resolution across timing and
+                          profiling runs)
+  Kernel ................ Linux 5.15.0-1106-kvm-x86_64
+  Benchmark tools ....... pyperformance 1.14.0, pyperf 2.10.0
+  Profiling tools ....... Linux perf, py-spy, Brendan Gregg's FlameGraph
+                          scripts (perf script -> stackcollapse-perf.pl ->
+                          flamegraph.pl)
+
+Two profiling methods were used, and they are not equivalent:
+
+  - py-spy attaches to a single process by PID. Without --subprocesses, it
+    never follows a child process that the target forks - and
+    pyperformance's own harness (`-m pyperformance run --bench raytrace`)
+    launches the actual measured work in a forked worker process. Every
+    py-spy capture taken this way showed the PARENT harness process
+    blocked waiting on a pipe for its worker to finish (up to 87.8% of
+    samples in one capture), never the ray tracer's own code. These
+    captures are preserved as supplemental, historical evidence (Section
+    2.3) but are not used for any hotspot percentage in this report.
+
+  - perf operates at the kernel/CPU level: it samples whatever is actually
+    executing on the CPU at each timer tick, following forked children
+    automatically. Run through the identical `-m pyperformance run`
+    invocation, perf correctly captures time spent inside the worker
+    process actually rendering the scene. The perf-based captures
+    (Section 2.3, Section 4) are the authoritative hotspot evidence in this
+    report.
+
+Correctness checking
+  raytrace verifies nothing about its own output (see 1.8). Every
+  optimization in Section 3 is therefore checked by rendering the scene
+  with the original and the optimized benchmark and comparing the SHA-256
+  digest of the two output images at a fixed resolution. An optimization
+  that changes any pixel fails this check even if the benchmark still runs
+  and reports a shorter time.
+
+2.2 Baseline results
+------------------------
+
+Two distinct baseline measurements exist in this project's records, and they
+measure different things - this is recorded explicitly rather than
+resolved by picking one and discarding the other:
+
+  Early exploratory baseline (VM, before the official measurement stage)
+    Mean ................. 26.8 s
+    Std dev .............. 5.7 s
+    Max .................. 48.7 s
+    Warning .............. benchmark result may be unstable
+
+  Official baseline (perf stat -r 3, full 64 x 64, non-fast)
+    Elapsed .............. 81.285 s +- 0.198 s (+- 0.24%)
+    task-clock ........... 80,673 msec
+    instructions ......... 387,324,411,814
+    branches ............. 94,415,979,904
+    branch-misses ........ 865,418,173 (0.91% of branches)
+    cache-references ..... 404,917,856
+    cache-misses ......... 4,285,182 (1.045% of cache refs)
+    page-faults .......... 89,909
+    context-switches ..... 2,459
+
+The official baseline is `perf stat -r 3 -- python3-dbg -m pyperformance run
+--bench raytrace`, run three times and averaged by perf stat itself. This
+measures the wall-clock time of the ENTIRE pyperformance harness invocation
+- including its internal calibration and its own repeated measurement
+loops/values - not a single rendered image's time. This is an important
+methodological note: unlike a benchmark that reports a clean per-loop
+"Mean +- std dev" from pyperf's own statistics, the 81.285 s figure is a
+harness-session time, and is compared on that same basis against the
+optimized version's harness-session time in Section 4. It is not directly
+comparable to a hypothetical single-image render time, and this report does
+not present it as one.
+
+The early exploratory baseline (26.8 s) was measured earlier in the project,
+in the same VM, and carries its own instability warning; it is preserved as
+historical evidence of the measurement process but is not the number used
+for the official before/after comparison (Section 4), which uses the
+81.285 s figure and its corresponding final-version counterpart.
+
+2.3 Flame graphs and profiling
+------------------------------------
+
+perf report, sampled via the cpu-clock software event (the virtual CPU
+exposes no usable hardware performance counters for sampling; perf stat's
+hardware counters in 2.2 and Section 4 are captured through a separate,
+counting-only interface that IS supported), on the debug interpreter:
+
+  _PyEval_EvalFrameDefault (bytecode interpreter loop) ......... 20.6-23.6%
+    (range across two independent captures of the same baseline code;
+     see Section 4 for the specific matched-methodology capture used in
+     the before/after comparison)
+  _PyEval_MakeFrameVector, _PyFrame_New_NoTrack, frame_dealloc
+    (frame creation/teardown) .................................. ~7-9%
+  _PyDict_GetItemHint, lookdict_unicode_nodummy, _PyType_Lookup,
+    lookdict_split, _PyObject_GetMethod
+    (attribute and dictionary lookups) .......................... ~9%
+  binary_op1, PyFloat_FromDouble (float arithmetic/boxing),
+    PyTuple_GetItem (tuple access) .............................. ~4%
+
+py-spy flame graphs (supplemental, not used for percentages; see 2.1):
+
+  flamegraph_pyspy_baseline.svg - 87.77% of samples in the parent harness
+  process's spawn_worker -> read(pipe) wait chain; 0% inside the ray
+  tracer.
+  flamegraph_pyspy_final.svg (several captures across the project, 28-51
+  samples each) - the same wait pattern, plus Python's own module-import
+  bootstrap; still 0% inside the ray tracer.
+
+Correctly-attributed, kernel-level flame graphs exist as a separate
+artifact pair and ARE used for the before/after comparison: see Section 4,
+flamegraph_suite_baseline.svg / flamegraph_suite_final.svg, built from perf
+data (perf script -> FlameGraph.pl) rather than py-spy, and independently
+confirmed to match the perf report percentages exactly.
+
+2.4 Identified bottlenecks
+------------------------------
+
+The perf evidence confirms the hypotheses in 1.7 without isolating one
+dominant native kernel - the cost is spread across CPython's own
+interpreter and object machinery rather than concentrated in a single
+identifiable library function:
+
+1. Interpreter dispatch overhead (20.6-23.6% self time)
+   _PyEval_EvalFrameDefault is the CPython bytecode dispatch loop; every
+   opcode in every method call (dot, mustBeVector, scale, __sub__, and so
+   on - 208,135 + 212,465 + 61,081 + 113,402 calls respectively per image)
+   passes through it. This confirms H3 and H7: fine-grained method calls
+   and no-op type checks both funnel cost through this one path.
+
+2. Frame and object churn (~7-9% + attribute/dict lookup ~9%)
+   227,060 objects created per image, each needing a new frame for its
+   __init__ call and its own attribute dictionary (no __slots__). This
+   confirms H2.
+
+3. Shadow-ray reconstruction (H5, the largest single Ray()-related cost)
+   33,782 of 40,043 Ray() constructions (84%) come from _lightIsVisible()
+   rebuilding the shadow ray inside its per-object loop rather than once
+   per light per shaded point. This is the clearest, most concrete
+   optimization target identified from the measured counts in 1.2.
+
+4. Intersection-list materialization (H4)
+   6,239 lists and about 49,912 temporary tuples per image, built and then
+   scanned by firstIntersection() - real but proportionally smaller than
+   items 1-3.
+
+Unlike a benchmark with one dominant hot function, no single change was
+expected to dominate here: the work is spread across many small,
+individually cheap operations. The optimizations in Section 3 target this
+per-operation overhead directly, rather than any one stage.
+
+
+================================================================================
+3. OPTIMIZATIONS
+================================================================================
+
+Three independent optimization attempts were written and measured
+separately (not as cumulative steps building on one another), each starting
+from the preserved original and each verified for correctness before being
+measured. This differs from a cumulative-step methodology and is recorded
+here explicitly: attempts 2 and 3 are alternatives to attempt 1's approach,
+not built on top of it.
+
+3.1 Attempt 1 - Scalarization
+------------------------------
+Strategy: replace Vector/Point/Ray object arithmetic in the hottest
+geometry paths with scalar float locals and tuple-based scene data,
+directly addressing H2, H3 and H7 (object churn, fine-grained method
+calls, and no-op type checks) by removing the object layer itself in the
+hot loop rather than optimizing its individual methods.
+
+Correctness: IDENTICAL=YES, SHA-256 match against the preserved original
+(subRay/results/attempt1/correctness_report.txt).
+
+3.2 Attempt 2 - Lookup hoisting
+--------------------------------
+Strategy: hoist repeated hot global, attribute and helper lookups (in
+ray_colour() and bench_raytrace()) into local variables, addressing the
+attribute/dictionary-lookup share of the profile (~9%, item 2 in 2.4)
+without restructuring the object model itself.
+
+Correctness: IDENTICAL=YES, SHA-256 match (subRay/results/attempt2/
+attempt2_correctness_report.txt).
+
+3.3 Attempt 3 - Visibility inlining
+--------------------------------------
+Strategy: inline the per-light visibility check directly in the Lambert
+shading loop, reducing call and frame overhead around the
+_lightIsVisible()/visibleLights() path (H5 territory) without the full
+scalarization of Attempt 1.
+
+Correctness: IDENTICAL=YES, SHA-256 match (subRay/results/attempt3/
+attempt3_correctness_report.txt).
+
+3.4 Selection
+----------------
+All three attempts are correct. Attempt 1 was selected as the official
+final implementation. The basis for this selection, and an important
+honesty note about it, is given in full in Section 4 alongside the
+measured numbers: at full official scale the three attempts are
+statistically close (within 0.2 percentage points of each other), and
+Attempt 1's selection reflects that the official measurement and reporting
+pipeline were already built around it, not that it measured strictly
+fastest in every capture.
+
+3.5 Optimizations considered and not adopted
+-----------------------------------------------
+
+  - Rewriting the renderer to use a numerical or graphics library was not
+    adopted, as it would move the studied computation out of the Python
+    interpreter and change the nature of the workload being measured.
+
+  - A spatial acceleration structure (for example a BVH) was not pursued.
+    With only eight scene objects, the construction and traversal overhead
+    of a tree structure, plus its own Python object cost, would likely
+    outweigh the saving from reducing 73,268 sphere tests - this is a
+    scene where linear search over 7-8 objects is already close to
+    optimal, and the real cost (per 2.4) is in what each test does, not
+    how many objects are scanned per test.
+
+  - Multi-process or multi-threaded rendering was not pursued for the same
+    reason given in the pyflate report: CPython's GIL prevents
+    CPU-bound bytecode from running in parallel across threads, and a
+    multiprocessing split would add process-management and communication
+    costs while changing the benchmark's structure.
+
+
+================================================================================
+4. PERFORMANCE COMPARISON
+================================================================================
+
+4.1 Official before/after result
+------------------------------------
+
+Both figures below are `perf stat -r 3` elapsed times for the complete
+`-m pyperformance run --bench {raytrace,raytrace_final}` invocation at
+64 x 64 (harness-session time, not a single image's render time - see the
+methodological note in 2.2).
+
+  Version              Mean          Std dev     Improvement   Correct
+  ORIGINAL             81.285 s      0.198 s      0.00%         Yes
+  FINAL (Attempt 1)    19.7062 s     0.0133 s     75.76%        Yes
+
+  Speedup: approximately 4.12x (81.285 / 19.7062)
+  Target >= 7% improvement: ACHIEVED, with roughly 10x margin.
+
+4.2 perf stat hardware-counter comparison (baseline vs. final)
+-------------------------------------------------------------------
+
+  Metric               Baseline (3-run mean)   Final (1 run)   % change
+  Elapsed              81.285 s                19.667 s        -75.8%
+  Instructions         387,324,411,814         99,522,163,151   -74.3%
+  Branches             94,415,979,904          23,673,592,504   -74.9%
+  Branch-misses        865,418,173             166,181,093      -80.8%
+  Cache-references     404,917,856             198,261,770      -51.0%
+  Cache-misses         4,285,182 (1.045%)       2,925,764 (1.476%) -31.7%
+  Page-faults          89,909                   87,875           -2.3%
+  Context-switches     2,459                    2,101            -14.6%
 
 Interpretation:
-- The `perf_report_suite_*.txt` pair is the authoritative, matched-methodology capture (baseline via `run_baseline.sh`, final via the `raytrace_final` manifest, both through the identical pyperformance harness invocation), superseding the earlier `perf_report_baseline.txt`/`perf_report_final.txt` pair.
-- perf report percentages are RELATIVE shares of each run's samples, not absolute time.
-- Sample counts differ (117K vs 34K) because perf samples at a fixed rate and the baseline runs much longer than the final; both are large enough for a stable top-symbol ranking.
-- The interpreter dispatch loop `_PyEval_EvalFrameDefault` grew in relative share (23.50% -> 27.39%) even though total runtime fell ~4.1x.
-- This is expected: the optimization removed large amounts of object/attribute/dict overhead (baseline families such as `_PyType_Lookup`, `dict_dealloc`, `lookdict_unicode_nodummy`), so the remaining core interpreter loop is a bigger fraction of a much smaller total.
-- In the final report the next costs are arithmetic/boxing and frame handling (`binary_op1`, `float_*`, `PyFloat_FromDouble`, `frame_dealloc`, `call_function`), consistent with a tighter scalar compute path.
-- Conclusion: a rising relative percentage does NOT mean regression; wall-clock time and perf_stat elapsed both confirm the speedup.
+  - Every "work done" indicator falls by roughly three-quarters
+    (instructions, branches, branch-misses), consistent with an
+    optimization that removes interpreter/object-dispatch work rather
+    than tightening memory access.
+  - Cache-misses fall in absolute count but their RATE rises (1.045% to
+    1.476%): the optimized code makes far fewer memory references overall
+    (fewer objects, fewer attribute dictionaries), so the references that
+    remain are proportionally less cache-friendly. Both statements are
+    true simultaneously and are reported together rather than picking one.
+  - Page-faults are essentially flat (-2.3%): the same image size and
+    pixel count mean the same output memory footprint: the optimization
+    targeted CPU/interpreter work, not I/O or allocation volume.
 
-## 16. Before/After Flame Graph Comparison
+4.3 Three attempts compared - fast-mode cross-check vs. full official scale
+----------------------------------------------------------------------------
 
-Primary matched full-suite flame-graph artifacts:
-- Baseline: `Project/subRay/profiling/flamegraph_suite_baseline.svg`
-- Final: `Project/subRay/profiling/flamegraph_suite_final.svg`
+  Attempt   Fast-mode (harness, real samples)   Full-scale (official)   Improvement
+  1         227-236 ms (3 separate runs)        19.7062 s +- 0.0133 s    75.76%
+  2         285 ms +- 91 ms (noisy)             19.6843 s +- 0.00708 s   75.78%
+  3         229 ms +- 24 ms                     19.6077 s +- 0.0171 s    75.88%
 
-Authoritative matched profiling reports (same captures):
-- Baseline: `Project/subRay/profiling/perf_report_suite_baseline.txt` (`_PyEval_EvalFrameDefault` approximately `23.50%`)
-- Final: `Project/subRay/profiling/perf_report_suite_final.txt` (`_PyEval_EvalFrameDefault` approximately `27.39%`)
+Honesty note, recorded rather than smoothed over: an earlier, informal
+fast-mode test called the script directly with --fast but no explicit
+--width/--height, so it silently fell back to the benchmark's own 100x100
+default instead of this project's actual 64x64 resolution. That test
+showed a large gap favoring Attempt 1 (103 ms vs. 242-243 ms) - but since
+it was not even rendering the same-size image as the official measurement,
+it is NOT comparable and is not reported here. The fast-mode figures in the
+table above instead come from a later, properly matched re-measurement:
+pyperformance's own --fast flag invoked through the identical harness
+mechanism and manifest files as the official run, at the same resolution,
+with real perf samples captured on every run (14,000-48,000 samples each);
+for reference, baseline under this same method measured 1.20 s +- 0.14 s.
 
-Interpretation:
-- These percentages are relative shares of each run's samples. The final `_PyEval_EvalFrameDefault` share can increase even while total runtime decreases, because other object, lookup, dictionary, and allocation overhead was removed, leaving the core interpreter loop as a larger fraction of a much smaller total.
+At full official scale, the three attempts are within 0.2 percentage
+points of each other, and Attempt 3 is marginally the fastest of the
+three, not Attempt 1. The properly matched fast-mode cross-check agrees
+with this: Attempt 1/Final and Attempt 3 both land around 227-236 ms,
+faster than Attempt 2's noisier 285 ms. Attempt 1 remains the official
+final implementation because the official before/after result and the
+full reporting/artifact pipeline (Section 4.1, Section 4.4, Section 4.5)
+were built around it before this discrepancy was found; re-deriving that
+whole pipeline around Attempt 3 for a difference of a few tenths of a
+percent was judged not worth the risk of introducing a new inconsistency
+this late in the project. This is stated plainly rather than presenting
+Attempt 1 as though it had been chosen for being fastest.
 
-py-spy flame graphs (supplemental only):
-- `Project/subRay/profiling/flamegraph_pyspy_baseline.svg` and `Project/subRay/profiling/flamegraph_pyspy_final.svg` are preserved as supplemental historical evidence.
-- They contain very few samples and mainly show pyperf manager/import/worker-control paths.
-- The profiling script currently defaults to `PYSPY_SUBPROCESSES=0`, and pyperf launches benchmark workers as subprocesses, so these py-spy graphs do not capture the benchmark kernel and should not be treated as primary kernel evidence.
+Two measurement scales, four orders of magnitude apart (roughly 0.2 s
+fast-mode vs. roughly 20 s full scale), agree that the three attempts are
+close together, which is the load-bearing claim here, not the exact
+ranking between them.
 
-## 17. Hardware Acceleration Motivation
+4.4 perf report comparison - where the bottleneck's shape changed
+------------------------------------------------------------------------
 
-Why hardware was pursued:
-- Software profiling showed persistent heavy numeric/interpreter overhead in intersection-heavy hot paths.
-- Intersection and closest-hit logic are high-frequency, arithmetic-dense, and structurally suitable for hardware pipelining/parallelism.
+Artifacts: perf_report_suite_baseline.txt (117K samples) vs.
+perf_report_suite_final.txt (34K samples), both captured through the
+identical pyperformance harness invocation (matched methodology - baseline
+via run_baseline.sh, final via the raytrace_final manifest).
 
-Evidence boundaries (kept explicit):
+Symbols whose share of runtime shrank sharply (the object/attribute/method
+overhead that Attempt 1's scalarization specifically targeted):
 
-IMPLEMENTED:
-- Q16.16 fixed-point RTL modules in `Project/subRay/hw/rtl/` (`fxp_sqrt.sv`, `sphere_intersect.sv`, `intersect_accel.sv`).
-- Direct testbench port-level interface in `Project/subRay/hw/tb/`.
+  Symbol                      Baseline   Final    Relative drop
+  _PyFrame_New_NoTrack         3.66%      0.67%     -82%
+  _PyDict_GetItemHint          2.67%      0.15%     -94%
+  _PyObject_GetMethod          1.73%      0.17%     -90%
+  _PyType_Lookup               1.98%      0.44%     -78%
+  lookdict_split                2.08%      0.24%     -88%
 
-SIMULATED:
-- ModelSim compile: 0 errors, 0 warnings.
-- All `18/18` functional checks passed (`tb_fxp_sqrt`: 11, `tb_intersect_accel`: 7); evidence in `Project/subRay/hw/results/`.
+Symbols whose share of runtime grew (the irreducible interpreter/arithmetic
+core that remains once the surrounding overhead is removed):
 
-ESTIMATED (not measured):
-- `200 MHz` target clock, cycles/ray, throughput, Amdahl-based speedups, area, power, and bandwidth (see `Project/subRay/docs/09_hardware_performance.md`).
+  Symbol                      Baseline   Final
+  _PyEval_EvalFrameDefault     23.50%     27.39%
+  float_dealloc                 1.21%      3.39%
+  binary_op1                    1.49%      2.62%
+  PyFloat_FromDouble             1.19%      2.75%
 
-PROPOSED (not implemented):
-- MMIO register map, DMA, input/output buffering, Python/C wrapper, driver, and real FPGA integration (see `Project/subRay/docs/08_hw_sw_interface.md`).
+perf report percentages are relative shares of each run's own total
+samples, not absolute time. _PyEval_EvalFrameDefault's rising share
+(23.50% to 27.39%) does not indicate a regression: total runtime fell about
+4.1x, so once the object/method/attribute overhead above was cut by
+78-94%, the interpreter's own bytecode-dispatch cost - which cannot be
+removed without leaving Python entirely - necessarily fills a larger
+fraction of a much smaller total. This is confirmed independently by the
+perf stat instruction/branch counts in 4.2, which show the absolute amount
+of interpreter work also fell (fewer instructions, fewer branches), just by
+a smaller percentage than the overhead categories above.
 
-Architecture note:
-- The RTL implemented and simulated so far is the iterative Q16.16 v1 design.
-- The higher-performance estimates (cycles/ray, throughput, speedups) refer to a future pipelined, multi-lane target architecture, not the current iterative v1.
+4.5 Flame graph comparison
+--------------------------------
 
-No claim is made of synthesis, FPGA deployment, measured hardware speedup, measured area, measured power, or measured operating frequency.
+Two flame-graph pairs exist in this project's records, built by different
+tools, and only one is used as evidence here (see the methodological note
+in 2.1 and 2.3):
 
-## 18. Final Conclusions and Remaining Work
+  - flamegraph_suite_baseline.svg / flamegraph_suite_final.svg: built from
+    perf.data via perf script -> FlameGraph.pl. These are the authoritative
+    pair - perf follows forked children automatically, so these correctly
+    sample inside the ray tracer's own code, and their percentages match
+    the perf_report_suite_*.txt tables in 4.4 exactly.
 
-Conclusions:
-- The Raytrace project produced a verified and substantially faster software final version.
-- Official measured software gain is **75.76%**, far exceeding the 7% requirement.
-- Correctness was preserved for evaluated attempts used in final selection workflow.
-- Hardware accelerator RTL and testbench are implemented and simulation-verified, with interface and performance plans documented.
+  - flamegraph_pyspy_baseline.svg / flamegraph_pyspy_final.svg: py-spy
+    captures, preserved as supplemental historical evidence only (see 2.1,
+    2.3). These show the parent harness process waiting on a pipe for its
+    forked worker (87.8% of baseline's samples) and Python's own
+    module-import bootstrap, never the ray tracer's code. They are not
+    used for any percentage claim in this report.
 
-Remaining work to transition from prototype to measured hardware acceleration:
-- Implement real HW/SW runtime integration (driver/wrapper, register map/DMA path).
-- Run apples-to-apples workload-matched before/after flame graphs if strict visual comparison is needed.
-- Perform synthesis/place-route for real area/timing/power numbers.
-- Execute hardware-in-the-loop benchmarking to replace Amdahl-based estimates with measured end-to-end acceleration.
+
+================================================================================
+5. HARDWARE ACCELERATION PROPOSAL
+================================================================================
+
+5.1 Choice of component
+---------------------------
+Even after the 75.76% software improvement, intersection testing remains
+the highest-frequency numeric kernel in the benchmark: 83,694 tests per
+image (1.2), each a short, fixed sequence of floating-point operations with
+no data dependence between one test and the next. Two alternative
+candidates were considered and ranked below the intersection kernel:
+
+  - A vector normalize/reflect arithmetic unit. Good arithmetic fit, but
+    narrower impact if the intersection scan itself stays in software -
+    normalize/reflect calls are already coupled to, and gated by, the
+    intersection control flow that decides whether they run at all.
+
+  - A shading-tail unit (checkerboard color selection, color blend/clamp).
+    Low arithmetic intensity per invocation; likely bound by
+    transfer/control overhead rather than compute if offloaded alone.
+
+The selected kernel - sphere/plane intersection plus closest-hit reduction,
+covering both the nearest-hit search in rayColour() and the any-hit search
+in _lightIsVisible() - is executed 21 times for spheres and 3 times for the
+plane per shaded point before recursion (7 spheres x 3 rays [camera +
+2 lights], 1 plane x 3 rays), making it the clearest, highest-frequency
+pipelining target of the three.
+
+5.2 Function
+----------------
+The accelerator holds the scene locally (seven spheres and one halfspace)
+and implements the search in two modes, matching the two call sites
+exactly:
+
+  MODE_NEAREST   test every object, keep the smallest t with t > -EPSILON,
+                 matching firstIntersection()'s rule.
+  MODE_ANYHIT    stop at the first object with t > EPSILON and report it,
+                 matching _lightIsVisible()'s early-exit rule.
+
+The arithmetic follows the benchmark's own formulas (1.5(b), 1.5(c)):
+
+    cp   = centre - origin
+    v    = dot(cp, direction)
+    c2   = dot(cp, cp)
+    disc = r*r - (c2 - v*v)
+    t    = v - sqrt(disc)                      (sphere)
+    t    = 1 / -dot(direction, normal)          (halfspace, matching 1.5(c)
+                                                  exactly, including its
+                                                  known limitation)
+
+5.3 Architecture and numeric format
+---------------------------------------
+Implemented as three SystemVerilog modules under subRay/hw/rtl/:
+fxp_sqrt.sv (iterative fixed-point square root), sphere_intersect.sv
+(candidate-t computation per the formula above), and intersect_accel.sv
+(top-level control: iterates the scene, drives the two modules, and
+performs the nearest-hit/any-hit reduction). Control uses a start/busy/done
+handshake with iterative per-object processing in this version; deeper
+pipelining and multi-lane parallelism are proposed future work, not part of
+the implemented v1.
+
+Numeric format is signed fixed-point Q16.16 rather than the benchmark's
+native IEEE-754 double precision. This is recorded as a deliberate scope
+decision, not an oversight: Q16.16 is a practical, synthesizable first
+implementation, while a full FP32 or FP64 pipeline would substantially
+increase the scope of the RTL work. Because of this format difference, the
+hardware design is not expected to reproduce the software's bit-exact
+output, and no claim of bit-exact hardware/software equivalence is made
+anywhere in this report - the SHA-256 correctness checks in Section 3 cover
+the software attempts only.
+
+5.4 Interfaces (implemented vs. proposed)
+------------------------------------------------
+
+Implemented (direct RTL port-level handshake, driven by the testbench in
+simulation):
+  - start / mode / epsilon / ray inputs, Q16.16 fixed-point.
+  - busy / done / hit_valid / hit_kind / hit_id / hit_t outputs.
+
+Proposed for deployment (not implemented):
+  - A memory-mapped register block (CTRL / STATUS / RAY_* / HIT_*).
+  - Descriptor-based DMA for ray-batch streaming, so per-ray transfer
+    overhead does not erase the compute-side gain: the benchmark casts
+    40,043 rays per image (1.2), and even a small fixed per-ray transfer
+    cost, unbatched, would be comparable to or larger than the compute
+    time it is meant to save.
+  - A Python driver/wrapper for register access or DMA setup.
+  - An error-status bit for a malformed batch or buffer underrun.
+
+5.5 Simulation results
+---------------------------
+Simulated in ModelSim Intel FPGA Edition 10.5b (vlog/vsim): 0 compile
+errors, 0 compile warnings. Two testbenches, 18 total checks, all passing:
+
+  tb_fxp_sqrt:         11/11 checks passed (0, 1, non-squares, perfect
+                       squares, 65535 squared, and Q32.32->Q16.16 scaling)
+  tb_intersect_accel:   7/7 checks passed (direct hit, plane-only hit,
+                       no-hit, off-axis, and blocked/clear visibility cases)
+
+This demonstrates logical correctness of the implemented RTL against its
+own specification; it does not measure deployed FPGA performance, area or
+power, all of which remain estimates (5.6).
+
+5.6 Expected performance (estimated, not measured)
+----------------------------------------------------------
+Target clock 200 MHz (labeled ESTIMATE throughout the project's hardware
+documentation, not synthesized or measured). Using Amdahl's Law with the
+accelerated fraction P and the accelerated section's own speedup S:
+
+    Speedup = 1 / ( (1 - P) + P/S )
+
+  Realistic:   P = 0.50, S = 8    -> 1.78x overall speedup over final
+               software, assuming moderate batching (transfer overhead
+               still costs a meaningful share).
+  Optimistic:  P = 0.70, S = 100  -> 3.26x overall speedup, assuming
+               aggressive batching/DMA (overhead approximately negligible).
+
+These figures are estimates only: no synthesis, no FPGA bring-up, and no
+measured hardware-in-the-loop timing exist for this design. The single
+largest risk to realizing either figure is data-transfer overhead without
+the batching described in 5.4 - with 40,043 rays per image and no batching,
+even microsecond-scale per-ray overhead would add tens of milliseconds,
+comparable to or larger than the compute-side saving.
+
+5.7 Trade-offs
+------------------
+Precision. Q16.16 fixed-point trades reduced dynamic range and precision
+for a substantially smaller and faster implementation than IEEE-754 double
+precision; because of this, no bit-exact equivalence with the software path
+is claimed (5.3).
+
+Area/complexity. Iterative, shared-unit processing (v1) keeps the design
+small at the cost of throughput; the proposed pipelined/multi-lane variant
+would trade increased area for higher throughput, following the same
+per-object-independence property noted in 5.1.
+
+Parallelism ceiling. Even in the optimistic Amdahl scenario, the
+non-accelerated 30% of runtime caps total speedup well below what the
+accelerated section's own 100x internal speedup would otherwise suggest -
+the ceiling is Amdahl's law and interface bandwidth, not the datapath
+itself.
+
+
+================================================================================
+6. CONCLUSION
+================================================================================
+
+raytrace renders a small scene with a ray tracer written entirely in
+Python, so it measures the interpreter executing vector arithmetic and
+object-heavy geometry code rather than any one dominant native kernel. One
+64 x 64 image requires 227,060 temporary Vector/Ray/Point objects and
+83,694 intersection tests, of which 96.2% of sphere tests end in the miss
+path; no single profiled function exceeded about 24% of self time in
+either the baseline or the final version.
+
+Profiling (perf, kernel-level, following the harness's forked worker
+process - see 2.1 for why py-spy could not do this) confirmed the
+hypotheses formed from reading the code: interpreter dispatch overhead
+(20.6-23.6% of samples), frame/object churn, attribute and dictionary
+lookups, and - measured precisely for the first time via direct
+instrumentation in this report - a specific, concrete inefficiency in
+_lightIsVisible(), which reconstructs its shadow ray inside the per-object
+loop, accounting for 33,782 of the benchmark's 40,043 total Ray()
+constructions (84%).
+
+Three independent optimization attempts were written and verified correct
+by SHA-256 digest against the preserved original. Attempt 1
+(scalarization) was selected as the official final implementation and
+measured at 75.76% improvement (81.285 s to 19.7062 s), more than ten
+times the project's 7% requirement. This report also states plainly, where
+the earlier draft did not, that at full official scale the three attempts
+are within 0.2 percentage points of each other and Attempt 3 is marginally
+the fastest - Attempt 1's selection reflects that the official measurement
+and reporting pipeline were already built around it, not a claim that it
+measured fastest in every capture.
+
+Hardware counters independently confirm the software result beyond
+wall-clock time: instructions retired fell 74.3%, branches 74.9%, branch
+mispredictions 80.8% - all consistent with removing interpreter/dispatch
+work rather than tightening memory access. The perf report comparison adds
+a further, non-obvious finding: the object/attribute/method-dispatch
+overhead that scalarization targeted shrank 78-94%, while the interpreter's
+own irreducible dispatch cost grew as a SHARE of the (much smaller) total,
+exactly as Amdahl's reasoning predicts when the surrounding overhead is cut
+this aggressively.
+
+The intersection kernel - repeated 21 times for spheres and 3 times for
+the plane per shaded point, with no dependence between tests - was
+selected for hardware acceleration on this evidence. Three SystemVerilog
+modules were implemented in Q16.16 fixed point (a deliberate scope decision
+over full double precision) and verified in ModelSim: 0 compile
+errors/warnings and 18 of 18 functional checks passed. This demonstrates
+the design's logical correctness, not deployed hardware performance;
+Amdahl's Law, applied to two labeled assumption scenarios, estimates
+1.78x (realistic) to 3.26x (optimistic) further speedup over the software
+final, contingent on batching to control the per-ray transfer overhead
+implied by the benchmark's 40,043 rays per image. No synthesis, FPGA
+deployment, or measured hardware performance is claimed anywhere in this
+report.
