@@ -1,0 +1,17 @@
+Final Software Comparison
+
+Selected implementation: Attempt 1 copied to Project/subRay/optimized/final/
+Reason: lowest preliminary mean among the correct attempts.
+
+Official measurements:
+- ORIGINAL: 81.285 s +- 0.198 s
+- FINAL: 19.7062 s +- 0.0133 s
+
+Improvement % = (81.285 - 19.7062) / 81.285 * 100 = 75.76%
+
+Threshold check:
+- >= 7% achieved: YES
+
+Notes:
+- Official measurements were recorded with the same pyperformance-based methodology and environment.
+- Result sources: Project/subRay/results/original_official.txt and Project/subRay/results/final_official.txt
