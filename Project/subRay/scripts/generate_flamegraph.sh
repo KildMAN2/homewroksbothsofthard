@@ -8,6 +8,17 @@ LOG_DIR="$ROOT_DIR/logs"
 
 mkdir -p "$DATA_DIR" "$LOG_DIR"
 
+# Detect the FlameGraph install: $FLAMEGRAPH_DIR, then common locations.
+if [ -z "${FLAMEGRAPH_DIR:-}" ]; then
+  for d in "$HOME/FlameGraph" /opt/FlameGraph /usr/local/FlameGraph /usr/share/flamegraph; do
+    if [ -x "$d/stackcollapse-perf.pl" ] && [ -x "$d/flamegraph.pl" ]; then
+      FLAMEGRAPH_DIR="$d"
+      break
+    fi
+  done
+fi
+FLAMEGRAPH_DIR="${FLAMEGRAPH_DIR:-/opt/FlameGraph}"
+
 STEP_LOG="$LOG_DIR/04_flamegraph_step.txt"
 SCRIPT_ERR="$LOG_DIR/04_flamegraph_perf_script_stderr.txt"
 COLLAPSE_ERR="$LOG_DIR/04_flamegraph_stackcollapse_stderr.txt"
@@ -16,16 +27,17 @@ RENDER_ERR="$LOG_DIR/04_flamegraph_render_stderr.txt"
 {
   echo "DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "PWD=$(pwd)"
+  echo "FLAMEGRAPH_DIR=$FLAMEGRAPH_DIR"
   echo "COMMAND_1=/usr/bin/perf script -i $PROF_DIR/perf.data > $DATA_DIR/out.perf"
-  echo "COMMAND_2=/opt/FlameGraph/stackcollapse-perf.pl $DATA_DIR/out.perf > $DATA_DIR/out.folded"
-  echo "COMMAND_3=/opt/FlameGraph/flamegraph.pl $DATA_DIR/out.folded > $PROF_DIR/flamegraph.svg"
+  echo "COMMAND_2=$FLAMEGRAPH_DIR/stackcollapse-perf.pl $DATA_DIR/out.perf > $DATA_DIR/out.folded"
+  echo "COMMAND_3=$FLAMEGRAPH_DIR/flamegraph.pl $DATA_DIR/out.folded > $PROF_DIR/flamegraph.svg"
 } > "$STEP_LOG"
 
 cd "$PROF_DIR"
 
 /usr/bin/perf script -i perf.data > flamegraph_data/out.perf 2> "$SCRIPT_ERR"
-/opt/FlameGraph/stackcollapse-perf.pl flamegraph_data/out.perf > flamegraph_data/out.folded 2> "$COLLAPSE_ERR"
-/opt/FlameGraph/flamegraph.pl flamegraph_data/out.folded > flamegraph.svg 2> "$RENDER_ERR"
+"$FLAMEGRAPH_DIR/stackcollapse-perf.pl" flamegraph_data/out.perf > flamegraph_data/out.folded 2> "$COLLAPSE_ERR"
+"$FLAMEGRAPH_DIR/flamegraph.pl" flamegraph_data/out.folded > flamegraph.svg 2> "$RENDER_ERR"
 
 {
   echo "OUT_PERF_BYTES=$(wc -c < flamegraph_data/out.perf)"

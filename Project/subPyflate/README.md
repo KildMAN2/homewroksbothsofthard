@@ -761,6 +761,14 @@ Every hardware number that has not been measured on real hardware is labeled **E
 
 Run commands from the repository root.
 
+### First-time setup (install dependencies)
+
+```bash
+bash Project/subPyflate/scripts/script_pyflate.sh setup
+```
+
+This detects the OS/package manager and installs the system packages (`python3`, `python3-pip`, `python3-dbg`, `perf`/`linux-tools`, `git`), the Python tools (`pyperformance`, `pyperf`, `py-spy`), and clones FlameGraph into `$HOME/FlameGraph`. Flame-graph generation also detects `/opt/FlameGraph` or a `FLAMEGRAPH_DIR` override.
+
 ### Main orchestrator
 
 ```bash
@@ -770,6 +778,7 @@ bash Project/subPyflate/scripts/script_pyflate.sh
 Useful modes:
 
 ```bash
+bash Project/subPyflate/scripts/script_pyflate.sh setup
 bash Project/subPyflate/scripts/script_pyflate.sh baseline
 bash Project/subPyflate/scripts/script_pyflate.sh attempt1
 bash Project/subPyflate/scripts/script_pyflate.sh optimize

@@ -273,19 +273,19 @@ Three **independent** optimization attempts were written and measured separately
 
 **Strategy:** replace Vector/Point/Ray object arithmetic in the hottest geometry paths with scalar float locals and tuple-based scene data — directly addressing H2, H3 and H7 by removing the object layer itself in the hot loop, rather than optimizing its individual methods.
 
-**Correctness:** `IDENTICAL=YES`, SHA-256 match against the preserved original (`subRay/results/attempt1/correctness_report.txt`).
+**Correctness:** `IDENTICAL=YES`, SHA-256 match against the preserved original (`Project/subRay/results/attempt1/correctness_report.txt`).
 
 ### 3.2 Attempt 2 — Lookup Hoisting
 
 **Strategy:** hoist repeated hot global, attribute and helper lookups (in `ray_colour()` and `bench_raytrace()`) into local variables — addressing the attribute/dictionary-lookup share of the profile (~9%) without restructuring the object model.
 
-**Correctness:** `IDENTICAL=YES`, SHA-256 match (`subRay/results/attempt2/attempt2_correctness_report.txt`).
+**Correctness:** `IDENTICAL=YES`, SHA-256 match (`Project/subRay/results/attempt2/attempt2_correctness_report.txt`).
 
 ### 3.3 Attempt 3 — Visibility Inlining
 
 **Strategy:** inline the per-light visibility check directly in the Lambert shading loop, reducing call/frame overhead around `_lightIsVisible()`/`visibleLights()` (H5 territory) without full scalarization.
 
-**Correctness:** `IDENTICAL=YES`, SHA-256 match (`subRay/results/attempt3/attempt3_correctness_report.txt`).
+**Correctness:** `IDENTICAL=YES`, SHA-256 match (`Project/subRay/results/attempt3/attempt3_correctness_report.txt`).
 
 ### 3.4 Selection
 
@@ -412,7 +412,7 @@ t    = 1 / -dot(direction, normal)          (halfspace, matching §1.5c exactly,
 
 ### 5.3 Architecture and Numeric Format
 
-Implemented as three SystemVerilog modules under `subRay/hw/rtl/`:
+Implemented as three SystemVerilog modules under `Project/subRay/hw/rtl/`:
 
 | Module | Role |
 |---|---|

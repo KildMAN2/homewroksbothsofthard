@@ -607,6 +607,14 @@ real FPGA deployment
 
 Run commands from the repository root.
 
+### First-time setup (install dependencies)
+
+```bash
+bash Project/subRay/scripts/script_raytrace.sh setup
+```
+
+This detects the OS/package manager and installs the system packages (`python3`, `python3-pip`, `python3-dbg`, `perf`/`linux-tools`, `git`), the Python tools (`pyperformance`, `pyperf`, `py-spy`), and clones FlameGraph into `$HOME/FlameGraph`. Flame-graph generation also detects `/opt/FlameGraph` or a `FLAMEGRAPH_DIR` override.
+
 ### Main orchestrator
 
 ```bash
@@ -616,6 +624,7 @@ bash Project/subRay/scripts/script_raytrace.sh
 Useful modes:
 
 ```bash
+bash Project/subRay/scripts/script_raytrace.sh setup
 bash Project/subRay/scripts/script_raytrace.sh baseline
 bash Project/subRay/scripts/script_raytrace.sh optimize
 bash Project/subRay/scripts/script_raytrace.sh profile

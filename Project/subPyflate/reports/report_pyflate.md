@@ -355,17 +355,17 @@ Bit management (`RBitfield`'s `readbits`/`snoopbits`, 313,416 calls) maps natura
 
 ### 5.3 Architecture
 
-Implemented as three SystemVerilog modules under `subPyflate/hw/rtl/`: `bit_shifter.sv`, `huff_lut.sv`, `huffman_decoder.sv`, with matching testbenches under `subPyflate/hw/tb/` and a simulator-autodetecting runner at `subPyflate/hw/run_sim.sh` (ModelSim, Icarus Verilog, or Verilator).
+Implemented as three SystemVerilog modules under `Project/subPyflate/hw/rtl/`: `bit_shifter.sv`, `huff_lut.sv`, `huffman_decoder.sv`, with matching testbenches under `Project/subPyflate/hw/tb/` and a simulator-autodetecting runner at `Project/subPyflate/hw/run_sim.sh` (ModelSim, Icarus Verilog, or Verilator).
 
 ### 5.4 Interfaces — Implemented vs. Proposed
 
 **Implemented:** direct RTL port-level interfaces on `bit_shifter`, `huff_lut` and `huffman_decoder`, driven by their testbenches in simulation.
 
-**Proposed for deployment (not implemented):** MMIO register map, AXI4-Lite control paired with AXI4-Stream for the compressed byte stream, a DMA path for bulk transfer, a Python C-extension wrapper, a real device driver, and actual FPGA integration (`subPyflate/docs/12_hw_sw_interface.md`).
+**Proposed for deployment (not implemented):** MMIO register map, AXI4-Lite control paired with AXI4-Stream for the compressed byte stream, a DMA path for bulk transfer, a Python C-extension wrapper, a real device driver, and actual FPGA integration (`Project/subPyflate/docs/12_hw_sw_interface.md`).
 
 ### 5.5 Simulation Results
 
-Simulated with **Icarus Verilog 12.0** (Windows, 2026-09-21); results in `subPyflate/hw/results/SIMULATION_RESULTS.txt`:
+Simulated with **Icarus Verilog 12.0** (Windows, 2026-09-21); results in `Project/subPyflate/hw/results/SIMULATION_RESULTS.txt`:
 
 | Testbench | Checks | Result |
 |---|---:|---|
@@ -378,7 +378,7 @@ This demonstrates the implemented RTL's logical correctness against its own spec
 
 ### 5.6 Expected Performance (Estimated, Not Measured)
 
-Target clock: **200 MHz** (labeled ESTIMATE). Estimated latency: **3 cycles/symbol** (v1 design), **1 cycle/symbol** (proposed v2 pipeline) — `subPyflate/docs/13_hardware_performance.md`. Area, power and achievable bandwidth are likewise documented there as estimates only.
+Target clock: **200 MHz** (labeled ESTIMATE). Estimated latency: **3 cycles/symbol** (v1 design), **1 cycle/symbol** (proposed v2 pipeline) — `Project/subPyflate/docs/13_hardware_performance.md`. Area, power and achievable bandwidth are likewise documented there as estimates only.
 
 No synthesis, no FPGA bring-up, and no measured hardware-in-the-loop timing exists — the same evidence boundary maintained throughout the `raytrace` hardware proposal.
 

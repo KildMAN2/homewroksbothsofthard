@@ -576,7 +576,7 @@ calls, and no-op type checks) by removing the object layer itself in the
 hot loop rather than optimizing its individual methods.
 
 Correctness: IDENTICAL=YES, SHA-256 match against the preserved original
-(subRay/results/attempt1/correctness_report.txt).
+(Project/subRay/results/attempt1/correctness_report.txt).
 
 3.2 Attempt 2 - Lookup hoisting
 --------------------------------
@@ -585,7 +585,7 @@ ray_colour() and bench_raytrace()) into local variables, addressing the
 attribute/dictionary-lookup share of the profile (~9%, item 2 in 2.4)
 without restructuring the object model itself.
 
-Correctness: IDENTICAL=YES, SHA-256 match (subRay/results/attempt2/
+Correctness: IDENTICAL=YES, SHA-256 match (Project/subRay/results/attempt2/
 attempt2_correctness_report.txt).
 
 3.3 Attempt 3 - Visibility inlining
@@ -595,7 +595,7 @@ shading loop, reducing call and frame overhead around the
 _lightIsVisible()/visibleLights() path (H5 territory) without the full
 scalarization of Attempt 1.
 
-Correctness: IDENTICAL=YES, SHA-256 match (subRay/results/attempt3/
+Correctness: IDENTICAL=YES, SHA-256 match (Project/subRay/results/attempt3/
 attempt3_correctness_report.txt).
 
 3.4 Selection
@@ -827,7 +827,7 @@ The arithmetic follows the benchmark's own formulas (1.5(b), 1.5(c)):
 
 5.3 Architecture and numeric format
 ---------------------------------------
-Implemented as three SystemVerilog modules under subRay/hw/rtl/:
+Implemented as three SystemVerilog modules under Project/subRay/hw/rtl/:
 fxp_sqrt.sv (iterative fixed-point square root), sphere_intersect.sv
 (candidate-t computation per the formula above), and intersect_accel.sv
 (top-level control: iterates the scene, drives the two modules, and

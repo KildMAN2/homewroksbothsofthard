@@ -733,10 +733,10 @@ Two RTL modules implement this pairing directly:
 
 5.3 Architecture
 --------------------
-Implemented as three SystemVerilog modules under subPyflate/hw/rtl/:
+Implemented as three SystemVerilog modules under Project/subPyflate/hw/rtl/:
 bit_shifter.sv, huff_lut.sv, and huffman_decoder.sv, with matching
-testbenches under subPyflate/hw/tb/ and a simulator-autodetecting runner
-at subPyflate/hw/run_sim.sh (ModelSim, Icarus Verilog, or Verilator).
+testbenches under Project/subPyflate/hw/tb/ and a simulator-autodetecting runner
+at Project/subPyflate/hw/run_sim.sh (ModelSim, Icarus Verilog, or Verilator).
 
 5.4 Interfaces (implemented vs. proposed)
 ------------------------------------------------
@@ -748,12 +748,12 @@ Proposed for deployment (not implemented): an MMIO register map, an
 AXI4-Lite control interface paired with AXI4-Stream for the compressed
 byte stream, a DMA path for bulk transfer, a Python C-extension wrapper,
 a real device driver, and actual FPGA integration
-(subPyflate/docs/12_hw_sw_interface.md).
+(Project/subPyflate/docs/12_hw_sw_interface.md).
 
 5.5 Simulation results
 ---------------------------
 Simulated with Icarus Verilog 12.0 (Windows, 2026-09-21); results in
-subPyflate/hw/results/SIMULATION_RESULTS.txt:
+Project/subPyflate/hw/results/SIMULATION_RESULTS.txt:
 
   tb_huff_lut:         5 checks, 0 errors - ALL PASS
   tb_bit_shifter:      8 checks, 0 errors - ALL PASS
@@ -769,7 +769,7 @@ or power, all of which remain estimates (5.6).
 ----------------------------------------------------------
 Target clock: 200 MHz (labeled ESTIMATE, not synthesized or measured).
 Estimated latency: 3 cycles per decoded symbol for the v1 design, 1
-cycle per symbol for a proposed v2 pipeline (subPyflate/docs/13_hardware_
+cycle per symbol for a proposed v2 pipeline (Project/subPyflate/docs/13_hardware_
 performance.md). Area, power and achievable bandwidth are likewise
 documented there as estimates only.
 

@@ -18,6 +18,7 @@ die()        { echo "[script_pyflate][error] $1" >&2; exit 1; }
 usage() {
   cat <<'USAGE'
 Usage:
+  bash Project/subPyflate/scripts/script_pyflate.sh setup
   bash Project/subPyflate/scripts/script_pyflate.sh baseline
   bash Project/subPyflate/scripts/script_pyflate.sh optimize
   bash Project/subPyflate/scripts/script_pyflate.sh attempt1
@@ -59,6 +60,103 @@ raise SystemExit(0 if importlib.util.find_spec('pyperformance') else 1)
 PY
   then
     warn "python module 'pyperformance' not found; baseline profiling script may fail"
+  fi
+}
+
+# Environment + dependency installation. Detects OS/package manager and installs
+# system packages, Python tools, and FlameGraph. Requires network + privileges.
+run_setup_mode() {
+  print_step "Mode: setup (environment and dependency installation)"
+
+  local os_id="unknown"
+  if [ -r /etc/os-release ]; then
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    os_id="${ID:-unknown}"
+  fi
+  echo "Detected OS: ${os_id} ($(uname -s 2>/dev/null || echo unknown))"
+
+  local pm=""
+  if command -v apt-get >/dev/null 2>&1; then pm="apt"
+  elif command -v dnf >/dev/null 2>&1; then pm="dnf"
+  elif command -v yum >/dev/null 2>&1; then pm="yum"
+  elif command -v pacman >/dev/null 2>&1; then pm="pacman"
+  elif command -v brew >/dev/null 2>&1; then pm="brew"
+  fi
+  echo "Package manager: ${pm:-none-detected}"
+
+  local sudo_cmd=""
+  if [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null 2>&1; then sudo_cmd="sudo"; fi
+
+  local fail=0
+
+  print_step "Installing system packages (python3, python3-pip, python3-dbg, perf/linux-tools, git)"
+  case "$pm" in
+    apt)
+      local kernel; kernel="$(uname -r)"
+      $sudo_cmd apt-get update || { warn "apt-get update failed"; fail=1; }
+      if ! $sudo_cmd apt-get install -y python3 python3-pip python3-dbg git \
+             "linux-tools-${kernel}" linux-tools-common linux-tools-generic; then
+        warn "apt install failed for one or more packages (perf/linux-tools names vary by kernel)"
+        fail=1
+      fi
+      ;;
+    dnf|yum)
+      $sudo_cmd "$pm" install -y python3 python3-pip python3-debug git perf \
+        || { warn "$pm install failed"; fail=1; }
+      ;;
+    pacman)
+      $sudo_cmd pacman -S --noconfirm python python-pip git perf \
+        || { warn "pacman install failed"; fail=1; }
+      ;;
+    brew)
+      warn "macOS/brew detected: install python via 'brew install python'; Linux 'perf' is unavailable on macOS."
+      fail=1
+      ;;
+    *)
+      warn "No supported package manager found. Install manually: python3 python3-pip python3-dbg perf(linux-tools) git."
+      fail=1
+      ;;
+  esac
+
+  print_step "Installing Python tools (pyperformance, pyperf, py-spy)"
+  local pip_cmd=""
+  if command -v pip3 >/dev/null 2>&1; then pip_cmd="pip3"
+  elif command -v pip >/dev/null 2>&1; then pip_cmd="pip"
+  fi
+  if [ -n "$pip_cmd" ]; then
+    "$pip_cmd" install --user pyperformance pyperf py-spy \
+      || { warn "pip install of pyperformance/pyperf/py-spy failed"; fail=1; }
+  else
+    warn "pip not found; cannot install pyperformance/pyperf/py-spy"
+    fail=1
+  fi
+
+  print_step "Setting up FlameGraph"
+  local fg_dir="${FLAMEGRAPH_DIR:-$HOME/FlameGraph}"
+  if [ -x "$fg_dir/flamegraph.pl" ] && [ -x "$fg_dir/stackcollapse-perf.pl" ]; then
+    echo "FlameGraph already present at $fg_dir"
+  elif [ -x "/opt/FlameGraph/flamegraph.pl" ]; then
+    echo "FlameGraph already present at /opt/FlameGraph"
+  elif command -v git >/dev/null 2>&1; then
+    if git clone https://github.com/brendangregg/FlameGraph.git "$fg_dir"; then
+      echo "Cloned FlameGraph into $fg_dir"
+    else
+      warn "FlameGraph clone failed; run: git clone https://github.com/brendangregg/FlameGraph.git \"$fg_dir\""
+      fail=1
+    fi
+  else
+    warn "git not available to clone FlameGraph into $fg_dir"
+    fail=1
+  fi
+  echo "Flame-graph tooling is detected from: \$FLAMEGRAPH_DIR, \$HOME/FlameGraph, or /opt/FlameGraph."
+
+  print_step "Setup summary"
+  if [ "$fail" -eq 0 ]; then
+    echo "SETUP OK: all required dependencies installed or already present."
+  else
+    warn "SETUP INCOMPLETE: one or more required steps failed. Fix the reported items and re-run 'setup'."
+    return 1
   fi
 }
 
@@ -295,6 +393,7 @@ print_step "Repository root: $REPO_ROOT"
 print_step "subPyflate root: $SUBPYFLATE_DIR"
 
 case "$MODE" in
+  setup)         run_setup_mode ;;
   baseline)      run_baseline_mode ;;
   attempt1)      run_attempt1_mode ;;
   optimize)      run_optimize_mode ;;
