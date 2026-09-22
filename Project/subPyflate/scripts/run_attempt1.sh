@@ -13,6 +13,9 @@ MANIFEST="$ROOT_DIR/optimized/attempt1/MANIFEST"
 
 mkdir -p "$RESULT_DIR" "$ROOT_DIR/logs"
 
+# Run from the project root so the manifest's relative metafile resolves.
+cd "$ROOT_DIR"
+
 echo "COMMAND=perf record -F 999 -g -- python3-dbg -m pyperformance run --manifest $MANIFEST --bench pyflate_attempt1" > "$LOG_FILE"
 
 set +e
