@@ -13,6 +13,15 @@ PERF_SCRIPT_FILE="$DATA_DIR/perf_script.out"
 FOLDED_FILE="$DATA_DIR/out.folded"
 FLAMEGRAPH_FILE="$PROFILE_DIR/flamegraph.svg"
 
+# Auto-detect the FlameGraph install if FLAMEGRAPH_DIR was not provided.
+if [ -z "${FLAMEGRAPH_DIR:-}" ]; then
+  for d in "$HOME/FlameGraph" /opt/FlameGraph /usr/local/FlameGraph /usr/share/flamegraph; do
+    if [ -x "$d/stackcollapse-perf.pl" ] && [ -x "$d/flamegraph.pl" ]; then
+      FLAMEGRAPH_DIR="$d"
+      break
+    fi
+  done
+fi
 FLAMEGRAPH_DIR="${FLAMEGRAPH_DIR:-$HOME/FlameGraph}"
 
 if [ ! -f "$PERF_DATA_FILE" ]; then
