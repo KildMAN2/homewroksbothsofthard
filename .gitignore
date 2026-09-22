@@ -1,2 +1,6 @@
 Project/*.img
 Project/*.qcow2
+jammyLocal/*.img
+jammyLocal/*.qcow2
+*.img
+*.qcow2
