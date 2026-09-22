@@ -1,27 +1,35 @@
 # subPyflate AI Prompt Record
 
-**Created:** 2026-09-20
-**Source of truth:** this Markdown file
-**Format policy:** Markdown only (matches the raytrace subproject decision).
+**Created:** 2026-09-20  
+**Updated:** 2026-09-22  
+**AI tools used:** ChatGPT / GitHub Copilot  
+**Repository:** `KildMAN2/homewroksbothsofthard`  
+**Project root:** `Project/subPyflate/`  
+**Source of truth:** this Markdown file  
+**Format policy:** Markdown only.
 
-Two kinds of prompts are recorded here:
+## Disclosure
 
-1. The user-authored "21 Copilot prompts" sequence that steered the whole
-   pyflate workflow (received via the ChatGPT continuation on 2026-09-20 —
-   see `HWSW_ChatGPT_Chat_Continuous.txt` in the repository root).
-2. A short "Build" section documenting the actual instructions used to
-   produce this repository content, so the AI usage record is complete.
+This file documents the material prompts and instructions used during the Pyflate part of the HWSW project.
 
-## Section A — Copilot Prompt Sequence (21 prompts, as received)
+The prompts below are reconstructed from the project conversation and the actual repository artifacts and are lightly edited for clarity. They are not presented as a verbatim export of every chat message.
 
-The prompt bodies are stored verbatim below and were intended to be run
-sequentially against Copilot in the VM, each ending with `STOP.` so
-Copilot does not run ahead. When run they build `Project/subPyflate/` incrementally
-from the pyperformance benchmark discovery through to the final
-presentation prep. The actual invocation on the VM should follow this
-order.
+AI was used to:
+- understand the Pyflate benchmark,
+- plan and interpret profiling,
+- suggest software optimizations,
+- draft scripts,
+- help design the hardware accelerator,
+- draft SystemVerilog and testbenches,
+- help organize the final documentation.
 
-### Prompt 1 — Pyflate project setup and source investigation
+All reported performance values came from actual benchmark/profiling runs. AI-generated optimization ideas were accepted only after correctness verification and measurement.
+
+---
+
+# Section A — Copilot Prompt Sequence
+
+## Prompt 1 — Pyflate project setup and source investigation
 
 ```text
 We are starting the SECOND benchmark for the performance-engineering project.
@@ -37,6 +45,8 @@ IMPORTANT:
 - Do NOT modify anything inside Project/subRay/.
 - Create a completely separate project area:
   Project/subPyflate/
+- Use Project/subRay/ only as a template for workflow, organization, and evidence style.
+- Do NOT copy Raytrace-specific code, measurements, bottlenecks, optimizations, or hardware conclusions.
 - Do NOT optimize anything yet.
 - Do NOT run expensive benchmarks yet.
 - Do NOT guess the Pyflate command.
@@ -61,7 +71,6 @@ Project/subPyflate/
 First investigate the actual Pyflate benchmark.
 
 Find and document:
-
 1. Where Pyflate is implemented.
 2. The benchmark entry point.
 3. The exact source files involved.
@@ -87,113 +96,927 @@ Separate:
 ### Source-Code Observations
 ### Initial Hypotheses
 
-Create Project/subPyflate/docs/01_understanding.md with the sections listed by the
-outer plan; create Project/subPyflate/prompts/prompts.md and record this prompt
-there.
+Create:
+Project/subPyflate/docs/01_understanding.md
+
+Create:
+Project/subPyflate/prompts/prompts.md
+
+Record this prompt there.
 
 STOP.
 ```
 
-### Prompts 2..21
+## Prompt 2 — Original Pyflate baseline
 
-Prompts 2 through 21 follow the same structure. The full text is preserved
-in `HWSW_ChatGPT_Chat_Continuous.txt` at the repository root. Each prompt
-covers one workflow stage:
+```text
+Continue only inside Project/subPyflate/.
 
-- Prompt 2  — Original pyflate baseline (results/baseline/, reports/baseline_results.txt).
-- Prompt 3  — Original perf profiling (perf stat / perf record / perf report).
-- Prompt 4  — Clean Python flame graph with py-spy (workload discovery, no invented arguments).
-- Prompt 5  — Confirm the real bottleneck (docs/04_bottleneck_analysis.md).
-- Prompt 6  — Optimization Attempt 1 (canonical Huffman LUT).
-- Prompt 7  — Optimization Attempt 2 (MTF/BWT/int2byte cleanup).
-- Prompt 8  — Optional Optimization Attempt 3 (hot-loop hoisting + RLE).
-- Prompt 9  — Select the final software implementation (docs/06_final_software.md).
-- Prompt 10 — Official before/after performance (results/original_official.txt,
-             results/final_official.txt, reports/final_performance_comparison.txt).
-- Prompt 11 — Re-profile the final optimized version.
-- Prompt 12 — Consistency audit (docs/08_consistency_audit.md).
-- Prompt 13 — Choose the hardware acceleration candidate (docs/09_hardware_candidate.md).
-- Prompt 14 — Hardware architecture (docs/10_hardware_architecture.md).
-- Prompt 15 — SystemVerilog RTL and testbench (hw/rtl/, hw/tb/, hw/results/).
-- Prompt 16 — Hardware/software interface (docs/12_hw_sw_interface.md).
-- Prompt 17 — Hardware performance, Amdahl, area, and power (docs/13_hardware_performance.md).
-- Prompt 18 — Final report (reports/report_pyflate.md).
-- Prompt 19 — Reproducibility scripts (scripts/, README.md).
-- Prompt 20 — Final project audit (docs/14_final_audit.md).
+Do NOT modify the original benchmark.
 
-Every prompt ends with `STOP.` so the assistant does not run ahead into
-the next stage.
+Use the Raytrace baseline workflow as a methodology template, but use the real
+Pyflate benchmark and its real environment.
 
-## Section B — Build Instructions Used to Produce This Content
+Create/update:
+Project/subPyflate/docs/02_baseline.md
+Project/subPyflate/scripts/run_baseline.sh
 
-The initial content of `Project/subPyflate/` (this commit) was generated in a
-single session on 2026-09-20 by following the intent of Section A. The
-key differences from a literal execution of the 21 prompts:
+Record:
+- Python version
+- python3-dbg availability
+- pyperformance version
+- exact Pyflate benchmark name
+- exact baseline command
+- environment details
+- pyperf mean/std-dev
+- stability warnings
 
-- All work happened outside the VM on a Windows workstation, so
-  measurements labeled "TO BE COLLECTED IN VM" are placeholders inside
-  `docs/`, `results/`, and `reports/` and are filled in after running the
-  scripts from `Project/subPyflate/scripts/` on the VM.
-- The RTL under `hw/rtl/` and the testbenches under `hw/tb/` are complete
-  self-checking SystemVerilog and are runnable by
-  `Project/subPyflate/hw/run_sim.sh` which autodetects ModelSim / Icarus /
-  Verilator. `hw/results/SIMULATION_RESULTS.txt` is a template rewritten
-  by the script.
-- The Copilot prompt sequence in Section A remains the intended way to
-  reproduce or extend this work in the VM; the current commit is the
-  scaffold that Section A's prompts iterate on.
+Run the untouched original benchmark.
 
-## Section C — Prompts and Instructions Actually Executed This Session
+Preserve raw stdout/stderr and results under:
+Project/subPyflate/results/baseline/
+Project/subPyflate/logs/
 
-Recorded here so the AI usage log is complete. Each entry gives:
-- Date
-- User-facing purpose
-- The instruction given to the assistant
+Create:
+Project/subPyflate/reports/baseline_results.txt
 
-### 2026-09-20 — Repository preservation and initial investigation
+Do not optimize.
 
-- Cloned `KildMAN2/homewroksbothsofthard` (`master` branch) into
-  `repo_clone/` to study `Project/subRay/` structure.
-- Downloaded the pyperformance pyflate source
-  (`bm_pyflate/run_benchmark.py` + `pyproject.toml`) into
-  `Project/subPyflate/original/bm_pyflate/`.
+STOP.
+```
 
-### 2026-09-20 — Software attempts
+## Prompt 3 — Original perf profiling
 
-- Wrote `Project/subPyflate/optimized/attempt1/run_benchmark.py` (canonical
-  Huffman LUT with lazy per-direction build and fallback linear scan).
-- Wrote `Project/subPyflate/optimized/attempt2/run_benchmark.py` by starting from
-  attempt1 and applying three targeted edits (MTF pop/insert, BWT
-  single-pass count, `_INT2BYTE` table).
-- Wrote `Project/subPyflate/optimized/attempt3/run_benchmark.py` by starting from
-  attempt2 and adding hot-loop attribute hoisting inside
-  `decode_huffman_block` plus a tighter end-of-block RLE decoder.
-- Copied attempt3 to `Project/subPyflate/optimized/final/` as the default choice
-  (final selection is confirmed by `docs/06_final_software.md` after VM
-  measurement).
+```text
+Profile the ORIGINAL Pyflate implementation.
 
-### 2026-09-20 — Reproducibility scripts
+Do not change benchmark code.
 
-- Wrote `scripts/script_pyflate.sh` (orchestrator mirroring
-  `Project/subRay/scripts/script_raytrace.sh`).
-- Wrote `scripts/run_baseline.sh`, `scripts/run_attempt1.sh`,
-  `scripts/run_profile.sh`, `scripts/generate_flamegraph.sh`.
-- Wrote per-attempt correctness scripts under `scripts/`.
+Create/update:
+Project/subPyflate/docs/03_profiling.md
 
-### 2026-09-20 — Hardware
+Collect:
+- perf stat
+- perf record
+- perf report
 
-- Designed the accelerator as three cooperating modules:
-  `huff_lut` (BRAM-backed canonical LUT), `bit_shifter` (MSB-first
-  rolling buffer mirroring `RBitfield`), and `huffman_decoder` (top
-  FSM). Wrote the three RTL modules and three self-checking testbenches.
-- Wrote `hw/run_sim.sh` that picks ModelSim / Icarus / Verilator and
-  produces a summary log.
+Prefer cpu-clock sampling if hardware PMU cycle sampling is unreliable.
 
-### 2026-09-20 — Documentation and presentation
+Preserve:
+Project/subPyflate/profiling/perf_baseline.data
+Project/subPyflate/profiling/perf_report_baseline.txt
+Project/subPyflate/profiling/perf_stat_baseline.txt
 
-- Wrote `docs/00..14` covering plan, understanding, baseline, profiling,
-  bottlenecks, optimization, final software, before/after profiling,
-  consistency audit, HW candidate, HW architecture, RTL implementation,
-  HW/SW interface, HW performance, final audit.
-- Wrote `reports/report_pyflate.md` (+ `.txt` mirror).
-- Wrote `README.md` and this `prompts.md`.
+Document unsupported PMU counters exactly.
+If cycles reports zero because of KVM/PMU limitations, record that as an
+environment limitation rather than a real zero-cycle result.
+
+Separate measured facts from interpretation.
+
+STOP.
+```
+
+## Prompt 4 — Clean Python flame graph with py-spy
+
+```text
+Add a Python-level flame graph for Pyflate.
+
+First determine the exact direct benchmark workload command.
+Do not guess arguments.
+
+Check:
+py-spy --version
+
+Profile the actual Pyflate decompression workload rather than only pyperf
+manager/worker overhead.
+
+Generate:
+Project/subPyflate/profiling/flamegraph_pyspy_baseline.svg
+
+Use a sufficiently long but practical repeated workload so the graph has enough
+samples.
+
+Record:
+- exact command
+- sampling rate
+- repeated workload count
+- sample count
+- top Python frames
+- limitations
+
+Keep the workload/settings reusable so later attempt/final graphs can be
+compared fairly.
+
+Do not optimize in this prompt.
+
+STOP.
+```
+
+## Prompt 5 — Confirm the real bottleneck
+
+```text
+Use:
+- perf stat
+- perf report
+- py-spy flame graph
+- original run_benchmark.py
+
+Create/update:
+Project/subPyflate/docs/04_bottleneck_analysis.md
+
+Rank the real hotspots.
+
+Pay special attention to:
+- HuffmanTable.find_next_symbol
+- RBitfield.readbits / snoopbits / needbits
+- move_to_front
+- BWT transform/reverse work
+- list slicing/list assignment
+- bytes.find
+- int2byte / struct.pack
+- RLE output loop
+- Python attribute lookup/interpreter overhead
+
+Create a table:
+
+| Rank | Function / Cost Family | Evidence | Why Expensive | Optimization Potential |
+
+Separate:
+# Measured Facts
+# Interpretation
+# Ranked Optimization Opportunities
+
+Do not modify source yet.
+
+STOP.
+```
+
+## Prompt 6 — Optimization Attempt 1: canonical Huffman LUT
+
+```text
+Create:
+Project/subPyflate/optimized/attempt1/
+
+Do not modify Project/subPyflate/original/.
+
+Target the measured HuffmanTable.find_next_symbol bottleneck.
+
+The original implementation scans the Huffman table for every decoded symbol.
+
+Implement a canonical Huffman lookup-table optimization:
+- determine max_bits
+- build a lookup structure for relevant prefixes
+- support the bzip2 MSB-first RBitfield path
+- preserve reversed/non-reversed semantics where needed
+- cache the LUT on the HuffmanTable instance
+- keep a safe fallback to the original scan for misses/end-of-stream cases
+
+Create/update:
+Project/subPyflate/docs/05_optimization.md
+
+Before timing, verify decompressed output is byte-identical and matches the
+reference MD5.
+
+Save correctness evidence under:
+Project/subPyflate/results/attempt1/
+
+Then measure the attempt independently and preserve the result even if it is
+slower.
+
+STOP.
+```
+
+## Prompt 7 — Optimization Attempt 2: MTF, BWT, and int2byte cleanup
+
+```text
+Start from Attempt 1 and create:
+
+Project/subPyflate/optimized/attempt2/
+
+Use the new profile and source inspection to reduce remaining Python overhead.
+
+Apply these focused changes only if they preserve behavior:
+
+1. Replace move_to_front list slicing/concatenation with pop/insert.
+2. Replace repeated bytes.find scans in BWT setup with one byte-count pass
+   plus cumulative positions.
+3. Precompute a 256-entry bytes lookup table for int2byte instead of repeated
+   struct.pack calls.
+
+Preserve all original edge/sentinel behavior.
+
+Run the correctness checker.
+Require:
+IDENTICAL=YES
+MATCHES_REFERENCE=YES
+
+Then benchmark Attempt 2 with the same preliminary methodology.
+
+Keep Attempt 1 and Attempt 2 separately.
+
+STOP.
+```
+
+## Prompt 8 — Optional Optimization Attempt 3: hot-loop hoisting and RLE cleanup
+
+```text
+Start from Attempt 2 and create:
+
+Project/subPyflate/optimized/attempt3/
+
+Target remaining tight-loop interpreter overhead in decode_huffman_block.
+
+Apply:
+- local binding of find_next_symbol
+- local binding of favourites.pop / favourites.insert
+- local binding of output append
+- local binding of the precomputed byte table
+- refresh the bound Huffman method when the active Huffman table changes
+- skip pop/insert when the MTF index is already zero
+- simplify the final RLE byte loop using direct bytes indexing rather than
+  repeated one-byte slices and ord()
+
+Do not change decompression semantics.
+
+Verify:
+IDENTICAL=YES
+MATCHES_REFERENCE=YES
+
+Then benchmark Attempt 3 using the same methodology as earlier attempts.
+
+STOP.
+```
+
+## Prompt 9 — Select the final software implementation
+
+```text
+Compare:
+- original
+- attempt1
+- attempt2
+- attempt3
+
+Use correctness as a hard requirement.
+
+Create/update:
+Project/subPyflate/docs/06_final_software.md
+
+Compare both:
+- cold/simple timing behavior
+- pyperformance behavior
+
+Explain any disagreement between the measurements rather than hiding it.
+
+In particular, investigate whether the Python Huffman LUT build cost makes
+Attempt 1 slow in cold runs while pyperf amortizes this setup cost over repeated
+loops.
+
+Choose the fastest correct cumulative implementation under the project
+measurement methodology.
+
+Copy the selected version to:
+Project/subPyflate/optimized/final/
+
+Do not delete the other attempts.
+
+STOP.
+```
+
+## Prompt 10 — Official before/after performance
+
+```text
+Run the official ORIGINAL vs FINAL Pyflate comparison.
+
+Use the same environment and methodology for both.
+
+Save:
+Project/subPyflate/results/original_official.txt
+Project/subPyflate/results/final_official.txt
+Project/subPyflate/reports/final_performance_comparison.txt
+
+Record:
+- mean
+- standard deviation
+- run mode
+- environment
+- speedup
+- improvement percentage
+- correctness status
+
+Calculate:
+Improvement % =
+(original - final) / original * 100
+
+State whether the >= 7% project target was achieved.
+
+Keep Windows cross-check numbers and course-VM numbers clearly separated.
+
+Do not replace one environment's result with another.
+
+STOP.
+```
+
+## Prompt 11 — Re-profile the final optimized version
+
+```text
+Profile the selected FINAL Pyflate implementation using the same methodology as
+the original wherever possible.
+
+Generate:
+- final perf stat
+- final perf record/report
+- final py-spy flame graph
+
+Save under:
+Project/subPyflate/profiling/
+
+Compare original vs final:
+- elapsed time
+- instructions
+- branches
+- branch misses
+- cache references/misses
+- top perf report symbols
+- py-spy samples / stack widths
+
+Explain relative percentages correctly:
+a function can have a larger percentage of a much shorter final run.
+
+Look specifically for evidence that list slicing/list-assignment overhead from
+the original MTF path was reduced.
+
+Update:
+Project/subPyflate/docs/07_before_after_profiling.md
+
+STOP.
+```
+
+## Prompt 12 — Consistency audit
+
+```text
+Audit all Pyflate software documentation and result files.
+
+Create/update:
+Project/subPyflate/docs/08_consistency_audit.md
+
+Check:
+- benchmark names
+- commands
+- source paths
+- selected final version
+- correctness MD5
+- preliminary vs official numbers
+- Windows vs VM numbers
+- perf/stat/profile filenames
+- flame graph workload matching
+- unsupported PMU counters
+- no estimates presented as measurements
+
+Correct documentation inconsistencies only.
+Do not rerun experiments unless evidence is missing.
+
+STOP.
+```
+
+## Prompt 13 — Choose the hardware acceleration candidate
+
+```text
+Use the final profiling evidence to choose one Pyflate hardware accelerator.
+
+Create:
+Project/subPyflate/docs/09_hardware_candidate.md
+
+Compare candidates such as:
+- canonical Huffman LUT decoder
+- bit-buffer/bit-reader unit
+- inverse BWT
+- move-to-front
+- final RLE output stage
+
+For each candidate discuss:
+- measured relevance
+- regularity
+- parallelism/pipeline potential
+- local memory requirement
+- software/hardware interface cost
+- implementation complexity
+- expected benefit
+
+Select the canonical Huffman LUT decoder if the profiling evidence supports it.
+
+Explain why it is a better hardware boundary than the alternatives.
+
+Do not implement RTL yet.
+
+STOP.
+```
+
+## Prompt 14 — Hardware architecture
+
+```text
+Design the selected Pyflate Huffman accelerator.
+
+Create:
+Project/subPyflate/docs/10_hardware_architecture.md
+
+Match bzip2's MSB-first RBitfield semantics.
+
+Define:
+- LUT write interface
+- byte input interface
+- byte_valid / byte_ready
+- start
+- max_symbols
+- symbol_out
+- symbol_bits
+- symbol_valid
+- busy
+- done
+- error
+- parameter widths
+- bit buffer
+- BRAM-shaped canonical Huffman LUT
+- decoder FSM
+- internal state
+- latency
+- throughput
+- target-frequency assumption
+- HW/SW boundary
+- block diagram
+
+Use a simple v1 design first.
+Document a future pipelined 1-symbol/cycle version separately as PROPOSED.
+
+Label all unmeasured frequency/throughput numbers ESTIMATE.
+
+STOP.
+```
+
+## Prompt 15 — SystemVerilog RTL and testbench
+
+```text
+Implement the Pyflate Huffman accelerator in SystemVerilog.
+
+Create:
+Project/subPyflate/hw/rtl/huff_lut.sv
+Project/subPyflate/hw/rtl/bit_shifter.sv
+Project/subPyflate/hw/rtl/huffman_decoder.sv
+
+Create self-checking testbenches:
+Project/subPyflate/hw/tb/tb_huff_lut.sv
+Project/subPyflate/hw/tb/tb_bit_shifter.sv
+Project/subPyflate/hw/tb/tb_huffman_decoder.sv
+
+Verification requirements:
+- LUT write/read checks
+- bit-buffer snoop/consume/refill behavior
+- MSB-first semantics
+- known canonical Huffman table
+- known compressed byte stream
+- exact expected symbol sequence
+- error behavior
+- valid/ready/backpressure where applicable
+
+Create:
+Project/subPyflate/hw/run_sim.sh
+
+Let it use ModelSim, Icarus, or Verilator if available.
+
+Save logs and a summary under:
+Project/subPyflate/hw/results/
+
+Do not claim synthesis results.
+
+STOP.
+```
+
+## Prompt 16 — Hardware/software interface
+
+```text
+Create/update:
+Project/subPyflate/docs/12_hw_sw_interface.md
+
+Document how software would use the accelerator.
+
+Software should remain responsible for:
+- building the canonical Huffman tables
+- uploading LUT contents
+- feeding compressed bytes
+- consuming decoded symbols
+- continuing MTF, inverse BWT, and RLE in software
+
+Hardware should handle:
+- rolling MSB-first bit buffer
+- Huffman lookup
+- consuming code bits
+- streaming decoded symbols
+
+Clearly distinguish:
+IMPLEMENTED RTL PORTS
+from
+PROPOSED SYSTEM INTEGRATION
+
+Discuss:
+- MMIO / AXI wrapper
+- stream interface
+- DMA/buffering
+- start/busy/done/error
+- table upload
+- fallback behavior
+- Python C-extension/driver
+- communication overhead
+
+STOP.
+```
+
+## Prompt 17 — Hardware performance, Amdahl, area, and power
+
+```text
+Create/update:
+Project/subPyflate/docs/13_hardware_performance.md
+
+Use measured software results and simulated RTL behavior as evidence.
+
+Clearly separate:
+MEASURED SOFTWARE
+SIMULATED RTL
+ESTIMATED HARDWARE
+PROPOSED INTEGRATION
+
+Use Amdahl's Law where appropriate:
+
+Speedup = 1 / ((1-P) + P/S)
+
+Do not invent P.
+If the accelerated fraction is not isolated exactly, use a justified range.
+
+Estimate:
+- v1 symbols/cycle
+- future pipelined v2 symbols/cycle
+- table-upload overhead
+- byte/symbol interface bandwidth
+- latency
+- throughput
+- BRAM usage
+- logic complexity
+- power qualitatively
+
+Do not claim measured FPGA speedup, measured area, measured frequency, or
+measured power.
+
+STOP.
+```
+
+## Prompt 18 — Final report
+
+```text
+Create/update:
+Project/subPyflate/reports/report_pyflate.md
+Project/subPyflate/reports/report_pyflate.txt
+
+Use only saved project evidence.
+
+Include:
+1. Overview
+2. Benchmark purpose
+3. Pyflate/bzip2 algorithm
+4. Libraries and data structures
+5. Original implementation
+6. Baseline
+7. Profiling methodology
+8. Bottlenecks
+9. Attempt 1
+10. Attempt 2
+11. Attempt 3
+12. Correctness
+13. Final software selection
+14. Official before/after result
+15. Before/after profiling
+16. Hardware candidate
+17. Hardware architecture
+18. RTL/testbench
+19. Simulation
+20. HW/SW interface
+21. Hardware estimates
+22. Area/power/performance tradeoffs
+23. Limitations
+24. Conclusion
+
+Include the important finding that the Huffman LUT can regress in a cold
+pure-Python measurement because LUT construction is expensive, even though the
+lookup idea is algorithmically better.
+
+STOP.
+```
+
+## Prompt 19 — Reproducibility scripts and README
+
+```text
+Create/update:
+Project/subPyflate/scripts/script_pyflate.sh
+Project/subPyflate/README.md
+
+The script should reproduce as much of the project as practical:
+- environment capture
+- baseline
+- correctness checks
+- software attempts
+- perf stat
+- perf record/report
+- py-spy flame graphs
+- final comparison
+
+Do not overwrite historical evidence by default.
+
+README must explain:
+- directory structure
+- benchmark
+- how to run baseline
+- how to run profiling
+- how to check correctness
+- how to run final version
+- how to simulate RTL
+- where reports/results are stored
+
+STOP.
+```
+
+## Prompt 20 — Final project audit
+
+```text
+Perform a final audit of Project/subPyflate/.
+
+Create/update:
+Project/subPyflate/docs/14_final_audit.md
+
+Check that:
+- original source is preserved
+- all attempts are still present
+- every accepted attempt passes correctness
+- the final version matches the selected attempt lineage
+- all official measurements have source files
+- Windows and VM results are labeled separately
+- perf/flame-graph claims point to actual artifacts
+- hardware simulation claims point to logs
+- estimated hardware values are labeled ESTIMATE
+- proposed MMIO/DMA/driver work is not described as implemented
+- README, report, scripts, prompts, and presentation files are present
+
+List any remaining limitations honestly.
+
+STOP.
+```
+
+## Prompt 21 — Presentation preparation
+
+```text
+The Pyflate project is complete.
+
+Do not rerun benchmarks.
+Do not modify software or RTL.
+
+Create:
+Project/subPyflate/presentation/preparing_presentation.md
+
+Prepare a 20–25 minute presentation.
+
+Suggested story:
+
+1. Project goal
+2. What Pyflate does
+3. bzip2 decompression pipeline
+4. Original implementation
+5. Baseline
+6. Profiling methodology
+7. perf results
+8. py-spy flame graph
+9. Main bottlenecks
+10. Attempt 1: Huffman LUT
+11. Why the LUT can regress in a cold Python measurement
+12. Attempt 2: MTF/BWT/int2byte cleanup
+13. Attempt 3: hot-loop/RLE cleanup
+14. Correctness verification
+15. Final software result
+16. Before/after profiling
+17. Hardware acceleration motivation
+18. Huffman accelerator choice
+19. Architecture
+20. Bit shifter + LUT + FSM
+21. SystemVerilog implementation
+22. Testbench/simulation
+23. HW/SW interface
+24. Estimated hardware performance
+25. Area/power/performance tradeoffs
+26. Limitations
+27. Conclusion
+
+For every slide write:
+
+## Slide N — Title
+
+### Show
+### Say
+### Key Point
+### Likely Question
+### Answer
+
+At the end add:
+
+# Questions I Must Know
+
+Give around 20 technical questions and answers about:
+- Pyflate
+- bzip2
+- Huffman coding
+- RBitfield
+- MTF
+- BWT
+- RLE
+- profiling
+- flame graphs
+- optimization
+- correctness
+- SystemVerilog
+- FSM
+- BRAM/LUT
+- valid/ready
+- latency vs throughput
+- Amdahl's Law
+- HW/SW overhead
+
+Then add:
+
+# 2-Minute Summary
+# 30-Second Summary
+
+STOP.
+```
+
+---
+
+# Section B — Build Instructions Used to Produce This Content
+
+The Pyflate project was built incrementally using the prompt sequence above and the completed Raytrace project as the workflow template.
+
+Important implementation details reflected in the current repository:
+
+- Original Pyflate source and input data are preserved under `Project/subPyflate/original/`.
+- Attempt 1 implements a canonical Huffman LUT with fallback behavior.
+- Attempt 2 builds on Attempt 1 with MTF `pop/insert`, BWT single-pass counting, and a precomputed `_INT2BYTE` table.
+- Attempt 3 builds on Attempt 2 with hot-loop local bindings and tighter RLE handling.
+- `Project/subPyflate/optimized/final/` follows the Attempt 3 line of work.
+- Correctness is checked against the reference decompressed MD5:
+  `afa004a630fe072901b1d9628b960974`.
+- The final repository contains baseline/final py-spy flame graphs and per-attempt flame graphs.
+- Linux `perf` and PMU evidence was collected in the course VM.
+- The Pyflate accelerator is implemented as:
+  - `huff_lut.sv`
+  - `bit_shifter.sv`
+  - `huffman_decoder.sv`
+- Matching self-checking testbenches are under `Project/subPyflate/hw/tb/`.
+- `Project/subPyflate/hw/run_sim.sh` runs the available simulator and preserves logs.
+
+The initial project scaffold was prepared outside the course VM, but the repository was later updated with real VM measurements. Therefore old text saying all VM values were still “TO BE COLLECTED” should not be treated as the final project state.
+
+---
+
+# Section C — Prompts and Instructions Actually Executed
+
+## 2026-09-20 — Repository preservation and initial investigation
+
+- Used the existing repository and `Project/subRay/` structure as the template.
+- Preserved the Pyflate benchmark source under `Project/subPyflate/original/bm_pyflate/`.
+- Preserved the real benchmark input data.
+- Created the documentation, script, result, profiling, hardware, prompt, and presentation directories.
+
+## 2026-09-20 — Software optimization work
+
+- Created `optimized/attempt1/` with the canonical Huffman LUT optimization.
+- Created `optimized/attempt2/` by extending Attempt 1 with:
+  - MTF `pop/insert`,
+  - BWT single-pass counting,
+  - `_INT2BYTE` lookup.
+- Created `optimized/attempt3/` by extending Attempt 2 with:
+  - hot-loop attribute/local binding,
+  - tighter RLE processing.
+- Copied the selected Attempt 3 line into `optimized/final/`.
+- Preserved all attempts rather than overwriting them.
+
+## 2026-09-20 to 2026-09-21 — Correctness verification
+
+- Verified original and optimized decompressed outputs.
+- All accepted attempts matched the reference MD5:
+  `afa004a630fe072901b1d9628b960974`.
+- Correctness evidence is preserved under the attempt result directories.
+
+## 2026-09-21 — Windows cross-check measurements
+
+- Non-fast pyperformance:
+  - Original: `516 ms ± 29 ms`
+  - Final: `362 ms ± 22 ms`
+  - Improvement: `29.84%`
+  - Speedup: about `1.425×`
+
+- Preliminary `--fast` pyperformance also showed the cumulative optimization trend.
+
+- A separate cold/custom `time.perf_counter` measurement exposed an important result:
+  Attempt 1 alone can regress because Python LUT construction cost is large in cold decompressions.
+
+## 2026-09-21 — Course-VM performance and profiling
+
+Course VM environment:
+- Ubuntu 22.04.5
+- `python3-dbg` 3.10.12
+- `perf` 5.15.209
+- pyperformance 1.14.0
+- QEMU/KVM with PMU passthrough
+
+Measured original vs final `perf stat -r 3 --fast`:
+
+- Original elapsed: `120.99 ± 6.80 s`
+- Final elapsed: `76.307 ± 0.236 s`
+- Speedup: `1.586×`
+- Improvement: `36.93%`
+
+Hardware-counter changes:
+- instructions: `-32.87%`
+- branches: `-33.51%`
+- branch misses: `-37.82%`
+- cache references: `-24.53%`
+- cache misses: approximately flat/slightly higher in absolute count
+- page faults: approximately flat
+- context switches: reduced
+
+The cycle counter reported `0` because of a KVM/PMU limitation and is not interpreted as real zero-cycle execution.
+
+Perf report evidence also showed that list-related costs targeted by the MTF optimization dropped substantially from the final top-cost list.
+
+## 2026-09-21 — Flame-graph collection
+
+py-spy graphs were preserved for:
+- baseline,
+- Attempt 1,
+- Attempt 2,
+- Attempt 3,
+- final.
+
+The same repeated-decompression workload was used so sample counts and stack widths could be compared qualitatively.
+
+## 2026-09-20 to 2026-09-21 — Hardware work
+
+Implemented RTL modules:
+- `Project/subPyflate/hw/rtl/huff_lut.sv`
+- `Project/subPyflate/hw/rtl/bit_shifter.sv`
+- `Project/subPyflate/hw/rtl/huffman_decoder.sv`
+
+Implemented self-checking testbenches:
+- `tb_huff_lut.sv`
+- `tb_bit_shifter.sv`
+- `tb_huffman_decoder.sv`
+
+Created:
+- `Project/subPyflate/hw/run_sim.sh`
+- simulation logs/results under `Project/subPyflate/hw/results/`
+
+The implemented accelerator is a v1 Huffman decoder using a BRAM-shaped lookup table, an MSB-first rolling bit buffer, and an FSM.
+
+A more deeply pipelined one-symbol-per-cycle design is documented only as future/proposed work.
+
+## 2026-09-20 to 2026-09-22 — Documentation
+
+Created/updated:
+- `docs/00_project_plan.md`
+- `docs/01_understanding.md`
+- `docs/02_baseline.md`
+- `docs/03_profiling.md`
+- `docs/04_bottleneck_analysis.md`
+- `docs/05_optimization.md`
+- `docs/06_final_software.md`
+- `docs/07_before_after_profiling.md`
+- `docs/08_consistency_audit.md`
+- `docs/09_hardware_candidate.md`
+- `docs/10_hardware_architecture.md`
+- `docs/11_rtl_implementation.md`
+- `docs/12_hw_sw_interface.md`
+- `docs/13_hardware_performance.md`
+- `docs/14_final_audit.md`
+- `reports/report_pyflate.md`
+- `reports/report_pyflate.txt`
+- `README.md`
+- reproducibility scripts
+- this prompt record
+
+---
+
+# Performed by Us
+
+- Preserved the original benchmark and input data.
+- Ran correctness checks for optimized attempts.
+- Verified final decompressed output against the reference MD5.
+- Ran Windows pyperformance cross-checks.
+- Ran course-VM perf-stat and perf-report measurements.
+- Generated py-spy flame graphs.
+- Preserved failed/regressed attempts and environment limitations.
+- Implemented and simulated the SystemVerilog Huffman accelerator.
+- Kept measured software results separate from simulated RTL and estimated hardware performance.
+- Did not claim measured FPGA speedup, measured synthesis frequency, measured area, or measured power.

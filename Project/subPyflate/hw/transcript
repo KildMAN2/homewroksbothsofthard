@@ -1,0 +1,24 @@
+# vsim -c -do "run -all; quit -f" work.tb_huffman_decoder 
+# Start time: 17:06:30 on Sep 22,2026
+# Loading sv_std.std
+# Loading work.tb_huffman_decoder
+# Loading work.huffman_decoder
+# Loading work.bit_shifter
+# Loading work.huff_lut
+# run -all
+# PASS [0] symbol=0
+# PASS [1] symbol=1
+# PASS [2] symbol=2
+# PASS [3] symbol=3
+# PASS [4] symbol=4
+# PASS [5] symbol=0
+# PASS [6] symbol=4
+# PASS [7] symbol=1
+# PASS error clear at end of session
+# --------------------------------------------------
+# DECODER TESTS: checks=9 errors=0
+# DECODER RESULT: ALL PASS
+# ** Note: $finish    : tb/tb_huffman_decoder.sv(206)
+#    Time: 540 ns  Iteration: 1  Instance: /tb_huffman_decoder
+# End time: 17:06:30 on Sep 22,2026, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0

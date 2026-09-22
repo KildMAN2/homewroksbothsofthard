@@ -1000,7 +1000,7 @@ Created/updated:
 
 ---
 
-VERIFICATION PERFORMED BY US
+PERFORMED BY US
 ============================
 
 - Preserved the original benchmark and input data.
